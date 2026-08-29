@@ -1,0 +1,5 @@
+allowBuilds:
+  # Required by Vite and Drizzle Kit. Keep the allowlist explicit.
+  esbuild: true
+  sharp: false
+  unrs-resolver: false

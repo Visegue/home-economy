@@ -1,0 +1,19 @@
+name: Förbättring
+description: Föreslå ett bättre ekonomiflöde eller en ny funktion
+title: "feat: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Användarbehov
+      description: Vilket problem i vardagen ska lösas?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Önskat resultat
+      description: Beskriv resultatet hellre än en teknisk lösning.
+    validations:
+      required: true

@@ -1,0 +1,24 @@
+name: Felrapport
+description: Rapportera något som inte fungerar som förväntat
+title: "fix: "
+labels: [bug]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Vad hände?
+      description: Beskriv beteendet utan att klistra in personlig ekonomidata.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Förväntat beteende
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Så återskapas felet
+    validations:
+      required: true

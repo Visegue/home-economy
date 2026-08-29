@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1787981145269,
+      "tag": "0000_stormy_slipstream",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787981340546,
+      "tag": "0001_household_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787981503080,
+      "tag": "0002_owner_household_visibility",
+      "breakpoints": true
+    }
+  ]
+}
