@@ -28,9 +28,9 @@ flowchart LR
 
 ## Anslutningar och migrationer
 
-Applikationen återanvänder en liten pool och har prepared statements avstängda, vilket fungerar med Neons poolade transaktionsanslutning. `DATABASE_URL` används av appen; `DATABASE_MIGRATION_URL` kan peka på en separat ägaranslutning med DDL-rättigheter. Lokala migrationer använder samma SQL-filer mot PGlite, vilket gör scaffoldade projekt och tester oberoende av molnresurser.
+Applikationen återanvänder en liten pool och har prepared statements avstängda, vilket fungerar med Neons poolade transaktionsanslutning. `DATABASE_URL` använder en branchspecifik `home_economy_runtime`-roll utan admin- eller RLS-bypass. `DATABASE_MIGRATION_URL` använder ägarrollen och får endast användas för migrationer. Lokala migrationer använder samma SQL-filer mot PGlite, vilket gör scaffoldade projekt och tester oberoende av molnresurser.
 
-Ett Neon-projekt äger de hostade miljöerna. Produktionsdatabasen ligger på rotbranchen, Neons långlivade `development`-branch används som staging och framtida PR-preview ligger på kortlivade `preview/pr-*`-branches. Miljöbeslutet och de övervägda alternativen finns i [ADR 0001](adr/0001-data-and-auth-platform.md).
+Ett Neon-projekt i AWS Frankfurt äger de hostade miljöerna. Produktionsdatabasen ligger på rotbranchen `production`, den långlivade `development`-branchen används som staging och framtida PR-preview ligger på kortlivade `preview/pr-*`-branches. Branchspecifika anslutningar finns som secrets i motsvarande GitHub environment. Miljöbeslutet och de övervägda alternativen finns i [ADR 0001](adr/0001-data-and-auth-platform.md).
 
 ## Pengar och datum
 

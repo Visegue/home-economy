@@ -51,17 +51,19 @@ pnpm db:migrate
 pnpm db:studio
 ```
 
-För drift kopieras Neons poolade anslutningssträng till `DATABASE_URL`. Använd helst en separat ägaranslutning i `DATABASE_MIGRATION_URL`; applikationsanslutningen bör ha minsta nödvändiga privilegier. Prepared statements är avstängda för kompatibilitet med transaktionspoolning.
+För drift används en poolad Neon-anslutning med den begränsade rollen `home_economy_runtime` i `DATABASE_URL`. Den separata ägaranslutningen i `DATABASE_MIGRATION_URL` används endast för migrationer. Prepared statements är avstängda för kompatibilitet med transaktionspoolning.
 
 Hushållstabellerna har tvingande row-level security. All serverkod som läser eller skriver hushållsdata använder `withAuthenticatedDatabase(operation)`, som validerar sessionen och sätter användarkontext endast för den aktuella transaktionen.
 
 Miljöerna delar samma migrationer men inte samma databasanslutning:
 
-| Miljö            | Databas                     | Användning                                           |
-| ---------------- | --------------------------- | ---------------------------------------------------- |
-| Lokal utveckling | PGlite i `.data/pglite`     | Snabb utveckling utan molnresurs                     |
-| Staging/preview  | Neon-branchen `development` | Integrationstest och förhandsgranskning före release |
-| Produktion       | Neon root branch            | Verklig hushållsdata                                 |
+| Miljö            | Databas                       | Användning                                           |
+| ---------------- | ----------------------------- | ---------------------------------------------------- |
+| Lokal utveckling | PGlite i `.data/pglite`       | Snabb utveckling utan molnresurs                     |
+| Staging/preview  | Neon-branchen `development`   | Integrationstest och förhandsgranskning före release |
+| Produktion       | Neon-rotbranchen `production` | Verklig hushållsdata                                 |
+
+De hostade databaserna ligger i Neon-projektet [`home-economy`](https://console.neon.tech/app/projects/wandering-king-47243958) i AWS Frankfurt (`aws-eu-central-1`), den närmaste tillgängliga Neon-regionen till Sverige. GitHub environments `staging` och `production` innehåller branchspecifika `DATABASE_URL`- och `DATABASE_MIGRATION_URL`-secrets samt projekt- och branch-ID som variabler.
 
 Enskilda pull requests kan senare få kortlivade Neon-branches med namnet `preview/pr-*`. De ska tas bort när preview-miljön stängs.
 

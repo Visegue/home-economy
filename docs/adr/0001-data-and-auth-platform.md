@@ -12,6 +12,11 @@ child branch serves as staging, and pull-request previews may create short-lived
 `preview/pr-*` branches. Runtime traffic uses pooled connections; schema
 migrations use direct owner connections.
 
+The hosted project uses AWS Frankfurt (`aws-eu-central-1`) because Neon does not
+currently offer a Swedish region. Runtime connections use a dedicated
+`home_economy_runtime` role without administrative attributes or RLS bypass;
+the Neon owner role is reserved for migrations.
+
 Authentication is handled directly by Better Auth, initially with Google OAuth
 only. Auth records live beside the finance schema in PostgreSQL. Household data
 is protected with forced row-level security and a transaction-local user
@@ -43,5 +48,8 @@ context.
   delegating those changes to Neon.
 - Runtime and migration connection strings are separate deployment secrets and
   must never be committed.
+- The Free plan does not support protected branches, so production protection
+  relies on restricted runtime credentials and the release process until the
+  project moves to a paid plan.
 - PGlite is close to PostgreSQL but cannot prove every hosted behavior; RLS and
   migration checks must also run against staging before release.
