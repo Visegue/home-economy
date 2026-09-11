@@ -55,16 +55,24 @@ export function LoginForm({
   async function signInWithGoogle() {
     startAction("google");
 
-    const { error } = await authClient.signIn.social({
-      provider: "google",
-      callbackURL: "/",
-      errorCallbackURL: "/login?error=oauth",
-    });
+    try {
+      const { error } = await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/",
+        errorCallbackURL: "/login?error=oauth",
+      });
 
-    if (error) {
-      setPendingAction(null);
-      setMessage("Inloggningen kunde inte startas. Försök igen.");
+      if (!error) {
+        return;
+      }
+    } catch {
+      // Network and runtime timeouts reject instead of returning an auth error.
     }
+
+    setPendingAction(null);
+    setMessage(
+      "Inloggningen kunde inte startas. Kontrollera anslutningen och försök igen.",
+    );
   }
 
   async function signInWithEmail(event: FormEvent<HTMLFormElement>) {

@@ -79,4 +79,23 @@ describe("LoginForm", () => {
       screen.getByText("Lösenorden stämmer inte överens."),
     ).toBeInTheDocument();
   });
+
+  it("recovers when Google sign-in rejects", async () => {
+    authMocks.signInSocial.mockRejectedValue(new Error("network timeout"));
+    const user = userEvent.setup();
+
+    render(<LoginForm emailConfigured googleConfigured />);
+    await user.click(
+      screen.getByRole("button", { name: "Fortsätt med Google" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "Inloggningen kunde inte startas. Kontrollera anslutningen och försök igen.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Fortsätt med Google" }),
+    ).toBeEnabled();
+  });
 });
