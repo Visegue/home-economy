@@ -58,8 +58,11 @@ export function LoginForm({
     try {
       const { error } = await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/",
-        errorCallbackURL: "/login?error=oauth",
+        callbackURL: new URL("/", window.location.origin).toString(),
+        errorCallbackURL: new URL(
+          "/login?error=oauth",
+          window.location.origin,
+        ).toString(),
       });
 
       if (!error) {

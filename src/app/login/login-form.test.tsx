@@ -89,6 +89,11 @@ describe("LoginForm", () => {
       screen.getByRole("button", { name: "Fortsätt med Google" }),
     );
 
+    expect(authMocks.signInSocial).toHaveBeenCalledWith({
+      provider: "google",
+      callbackURL: "http://localhost:3000/",
+      errorCallbackURL: "http://localhost:3000/login?error=oauth",
+    });
     expect(
       await screen.findByText(
         "Inloggningen kunde inte startas. Kontrollera anslutningen och försök igen.",
