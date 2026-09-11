@@ -77,6 +77,17 @@ describe("auth configuration", () => {
     ]);
   });
 
+  it("uses the stable Vercel project URL in production", () => {
+    vi.stubEnv("BETTER_AUTH_URL", "");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("VERCEL_URL", "home-economy-abc-visegue.vercel.app");
+    vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "home-economy.vercel.app");
+
+    expect(getAuthEnvironment().baseUrl).toBe(
+      "https://home-economy.vercel.app",
+    );
+  });
+
   it("keeps password registration disabled without secure e-mail delivery", () => {
     vi.stubEnv("BETTER_AUTH_SECRET", "test-secret-at-least-32-characters");
     vi.stubEnv("RESEND_API_KEY", "");

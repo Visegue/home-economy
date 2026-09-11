@@ -51,6 +51,7 @@ function getTrustedOrigins(): string[] {
 
 function getBaseUrl(): string {
   const vercelUrl = asHttpsUrl(process.env.VERCEL_URL);
+  const productionUrl = asHttpsUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL);
 
   if (process.env.VERCEL_ENV === "preview" && vercelUrl) {
     return vercelUrl;
@@ -58,6 +59,7 @@ function getBaseUrl(): string {
 
   return (
     asHttpsUrl(process.env.BETTER_AUTH_URL) ||
+    (process.env.VERCEL_ENV === "production" ? productionUrl : undefined) ||
     vercelUrl ||
     "http://localhost:3000"
   );
