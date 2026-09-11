@@ -206,7 +206,13 @@ function MonthTimeline() {
   );
 }
 
-export function OverviewDashboard({ userName }: { userName?: string }) {
+export function OverviewDashboard({
+  householdName,
+  userName,
+}: {
+  householdName: string;
+  userName: string;
+}) {
   const netWorthInOre = accounts.reduce(
     (total, account) => total + account.amountInOre,
     0,
@@ -225,6 +231,9 @@ export function OverviewDashboard({ userName }: { userName?: string }) {
                 Min ekonomi
               </h1>
               <Badge variant="secondary" className="rounded-full">
+                {householdName}
+              </Badge>
+              <Badge variant="outline" className="rounded-full">
                 Demodata
               </Badge>
             </div>
@@ -233,7 +242,7 @@ export function OverviewDashboard({ userName }: { userName?: string }) {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {userName ? <UserMenu name={userName} /> : null}
+            <UserMenu name={userName} />
             <Button className="rounded-xl shadow-sm">
               <Plus className="size-4" aria-hidden="true" />
               Planera månaden

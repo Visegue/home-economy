@@ -3,6 +3,7 @@ import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
+import { getDatabaseConfig } from "./config";
 import { preparePgliteDataDir } from "./pglite";
 import { schema } from "./schema";
 
@@ -12,12 +13,12 @@ const globalDatabase = globalThis as typeof globalThis & {
 };
 
 function createDatabase() {
-  const databaseUrl = process.env.DATABASE_URL;
+  const config = getDatabaseConfig();
 
-  if (databaseUrl) {
+  if (config.provider === "postgres") {
     const client =
       globalDatabase.homeEconomyPostgres ??
-      postgres(databaseUrl, {
+      postgres(config.url, {
         max: Number(process.env.DATABASE_POOL_SIZE ?? 5),
         prepare: false,
       });
@@ -31,9 +32,7 @@ function createDatabase() {
 
   const client =
     globalDatabase.homeEconomyPglite ??
-    new PGlite(
-      preparePgliteDataDir(process.env.PGLITE_DATA_DIR ?? ".data/pglite"),
-    );
+    new PGlite(preparePgliteDataDir(config.dataDir));
 
   if (process.env.NODE_ENV !== "production") {
     globalDatabase.homeEconomyPglite = client;

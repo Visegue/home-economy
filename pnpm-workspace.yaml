@@ -3,3 +3,7 @@ allowBuilds:
   esbuild: true
   sharp: false
   unrs-resolver: false
+
+overrides:
+  esbuild: 0.28.2
+  qs: 6.16.0

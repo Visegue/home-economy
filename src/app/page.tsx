@@ -1,10 +1,19 @@
+import { redirect } from "next/navigation";
+
 import { OverviewDashboard } from "@/features/dashboard/overview-dashboard";
-import { isAuthConfigured } from "@/lib/auth/config";
+import { getCurrentHousehold } from "@/features/households/data";
 import { requireSession } from "@/lib/auth/session";
 
 export default async function Home() {
-  if (!isAuthConfigured()) return <OverviewDashboard />;
-
   const session = await requireSession();
-  return <OverviewDashboard userName={session.user.name} />;
+  const household = await getCurrentHousehold();
+
+  if (!household) redirect("/onboarding");
+
+  return (
+    <OverviewDashboard
+      householdName={household.name}
+      userName={session.user.name}
+    />
+  );
 }

@@ -63,6 +63,14 @@ describe("household row-level security", () => {
         .values({ name: "Testhushåll", ownerUserId: "owner" })
         .returning({ id: households.id });
 
+      const duplicateHousehold = await transaction
+        .insert(households)
+        .values({ name: "Dubblett", ownerUserId: "owner" })
+        .onConflictDoNothing({ target: households.ownerUserId })
+        .returning({ id: households.id });
+
+      expect(duplicateHousehold).toHaveLength(0);
+
       await transaction.insert(householdMembers).values({
         householdId: household.id,
         userId: "member",

@@ -6,12 +6,16 @@ import { migrate as migratePostgres } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
+import nextEnv from "@next/env";
+import { getDatabaseConfig, getMigrationUrl } from "../src/db/config.ts";
+
+nextEnv.loadEnvConfig(process.cwd(), process.env.NODE_ENV !== "production");
 
 const migrationsFolder = "drizzle";
-const hostedUrl =
-  process.env.DATABASE_MIGRATION_URL ?? process.env.DATABASE_URL;
+const config = getDatabaseConfig();
 
-if (hostedUrl) {
+if (config.provider === "postgres") {
+  const hostedUrl = getMigrationUrl();
   const client = postgres(hostedUrl, { max: 1, prepare: false });
   try {
     await migratePostgres(drizzlePostgres(client), { migrationsFolder });
@@ -20,7 +24,7 @@ if (hostedUrl) {
     await client.end();
   }
 } else {
-  const dataDir = process.env.PGLITE_DATA_DIR ?? ".data/pglite";
+  const dataDir = config.dataDir;
   if (!dataDir.includes("://")) {
     mkdirSync(dirname(resolve(dataDir)), { recursive: true });
   }
