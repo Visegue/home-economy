@@ -1,0 +1,15 @@
+.data
+.env*
+.git
+.next
+.tmp
+.vercel
+coverage
+global
+node_modules
+out
+package-manager-store
+playwright-report
+store
+test-results
+*.tsbuildinfo
