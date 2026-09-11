@@ -8,7 +8,7 @@ Dashboarden använder en varm sandfärgad grund med aubergine, dammigt blått, s
 
 - Next.js 16, React 19 och TypeScript
 - Tailwind CSS 4 och shadcn/ui (Radix)
-- Neon Postgres, Drizzle ORM och Better Auth med Google OAuth
+- Neon Postgres, Drizzle ORM och Better Auth med verifierad e-post/lösenord samt Google OAuth
 - PGlite för lokal Postgres utan Docker eller molnprojekt
 - Oxlint för linting, separat `tsc` för typkontroll
 - Vitest, Testing Library och Playwright
@@ -26,7 +26,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-Öppna [http://localhost:3000](http://localhost:3000). Översikten fungerar med syntetisk demodata även innan Google OAuth eller Neon har konfigurerats.
+Öppna [http://localhost:3000](http://localhost:3000). Alla appvyer kräver en databasvaliderad session. Konfigurera minst ett inloggningssätt enligt nedan; ekonomidatan kan fortfarande köras helt lokalt i PGlite.
 
 ## Kvalitetskontroller
 
@@ -43,15 +43,22 @@ pnpm test:e2e
 
 ## Databas
 
-När `DATABASE_URL` saknas kör appen Postgres lokalt via PGlite i `.data/pglite`. Ingen Docker eller separat molndatabas krävs. Drizzle-schemat är källa för både PGlite och Neon:
+Lokal apputveckling använder Neon-branchen `dev/alexander` i samma projekt som Preview och Production. Lägg dess poolade runtime-anslutning i `DATABASE_URL` och dess direkta ägaranslutning i `DATABASE_MIGRATION_URL` i den Git-ignorerade `.env.local`. Appen och migrationsverktygen läser samma miljöfil. En ny utvecklare ska använda en egen branch, exempelvis `dev/<namn>`, med syntetiska testdata.
+
+Drizzle-schemat och samma SQL-migrationer används i alla miljöer:
 
 ```bash
 pnpm db:generate
 pnpm db:migrate
+pnpm db:check
 pnpm db:studio
 ```
 
-För drift används en poolad Neon-anslutning med den begränsade rollen `home_economy_runtime` i `DATABASE_URL`. Den separata ägaranslutningen i `DATABASE_MIGRATION_URL` används endast för migrationer. Prepared statements är avstängda för kompatibilitet med transaktionspoolning.
+Lokalt och i drift används en poolad Neon-anslutning med den begränsade rollen `home_economy_runtime` i `DATABASE_URL`. Den separata ägaranslutningen i `DATABASE_MIGRATION_URL` används endast för migrationer. Prepared statements är avstängda för kompatibilitet med transaktionspoolning.
+
+`pnpm db:check` verifierar runtime-rollens rättigheter, auth-tabeller, sessionslagring, tvingande RLS och transaktionsisolering mot den konfigurerade Neon-branchen. Syntetiska testposter skapas inom en transaktion som alltid rullas tillbaka. Testet ersätter inte ett fullständigt Google- eller e-postflöde i webbläsaren.
+
+Saknad `DATABASE_URL` ger ett tydligt fel. Offline-läge väljs uttryckligen med `DATABASE_PROVIDER=pglite`; kör då `DATABASE_PROVIDER=pglite pnpm db:migrate` och `DATABASE_PROVIDER=pglite pnpm dev`. PGlite är förbjudet i produktionsläge och på Vercel. Unit-tester och de isolerade Playwright-smoketesterna använder PGlite utan att röra din utvecklingsdatabas.
 
 Hushållstabellerna har tvingande row-level security. All serverkod som läser eller skriver hushållsdata använder `withAuthenticatedDatabase(operation)`, som validerar sessionen och sätter användarkontext endast för den aktuella transaktionen.
 
@@ -59,7 +66,7 @@ Miljöerna delar samma migrationer men inte samma databasanslutning:
 
 | Miljö            | Databas                       | Användning                                           |
 | ---------------- | ----------------------------- | ---------------------------------------------------- |
-| Lokal utveckling | PGlite i `.data/pglite`       | Snabb utveckling utan molnresurs                     |
+| Lokal utveckling | Neon-branchen `dev/alexander` | Egen databas för lokala konton och integrationstest  |
 | Staging/preview  | Neon-branchen `development`   | Integrationstest och förhandsgranskning före release |
 | Produktion       | Neon-rotbranchen `production` | Verklig hushållsdata                                 |
 
@@ -67,7 +74,9 @@ De hostade databaserna ligger i Neon-projektet [`home-economy`](https://console.
 
 Enskilda pull requests kan senare få kortlivade Neon-branches med namnet `preview/pr-*`. De ska tas bort när preview-miljön stängs.
 
-## Google-inloggning
+Better Auth lagrar konton och sessioner i respektive databas. Lokal Google-inloggning använder den befintliga localhost-klienten och lokal `BETTER_AUTH_SECRET`. Samma Google-identitet kan användas i alla miljöer, men appkonton och hushållsdata är separata. Konton från tidigare PGlite-utveckling migreras inte automatiskt. Verifiering och återställning via e-post kräver lokala Resend-inställningar även när databasen är Neon.
+
+## Inloggning
 
 Skapa en OAuth-klient av typen “Web application” i Google Cloud och lägg till följande redirect URI lokalt:
 
@@ -75,10 +84,17 @@ Skapa en OAuth-klient av typen “Web application” i Google Cloud och lägg ti
 http://localhost:3000/api/auth/callback/google
 ```
 
-I drift används motsvarande HTTPS-adress på den riktiga domänen. Sätt därefter `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` och `AUTH_ALLOWED_EMAILS` i `.env.local` eller hostingmiljön. `AUTH_ALLOWED_EMAILS` är en kommaseparerad allowlist; Google-kontot kontrolleras vid varje inloggning. Generera auth-hemligheten med exempelvis `openssl rand -base64 32`.
+I produktion registreras endast den stabila callback-adressen, till exempel `https://home-economy.vercel.app/api/auth/callback/google`. Vercels dynamiska PR-previews använder Better Auths OAuth Proxy: Google återvänder till produktionen, som skickar en kortlivad krypterad profil vidare till rätt preview. Produktionen skriver inte preview-användaren till sin databas.
 
-Auth är avsiktligt begränsad till Google i första versionen. Implicit kontolänkning är avstängd, så en framtida extra leverantör måste länkas uttryckligen från en redan autentiserad session.
-Google-token krypteras innan lagring och OAuth-state sparas som en engångspost i databasen.
+Sätt `GOOGLE_CLIENT_ID` och `GOOGLE_CLIENT_SECRET` från produktionsklienten i både Vercel Preview och Production. `BETTER_AUTH_SECRET` ska vara miljöspecifik, medan en separat `OAUTH_PROXY_SECRET` måste ha samma värde i Preview och Production. `OAUTH_PROXY_PRODUCTION_URL` är den stabila produktionsadressen. `BETTER_AUTH_TRUSTED_ORIGINS` innehåller ett snävt mönster för projektets egna previewdomäner, exempelvis `https://home-economy-*-visegue.vercel.app`; använd inte det breda `https://*.vercel.app`.
+
+I Preview ska `BETTER_AUTH_URL` lämnas tom så att den aktuella adressen härleds från Vercels `VERCEL_URL`. I Production sätts den till den stabila produktionsadressen. Generera auth- och proxyhemligheter med exempelvis `openssl rand -base64 32`.
+
+E-post och lösenord använder Resend för verifiering och lösenordsåterställning. Skapa en Resend API-nyckel, verifiera avsändardomänen och sätt `RESEND_API_KEY` samt `AUTH_EMAIL_FROM`. Lösenord måste vara 12–128 tecken och e-postadressen måste verifieras före första inloggningen.
+
+Alla Google-konton kan registrera sig. Efter den första inloggningen skapar användaren ett eget hushåll; en unik databasregel säkerställer ett personligt ägarhushåll per konto. Hushållets data skyddas därefter av tvingande row-level security även om en applikationsfråga skulle sakna ett vanligt filter.
+
+Google och lösenord länkas automatiskt till samma användare när de har samma verifierade e-postadress. Ett befintligt Google-konto kan få ett lösenord via “Glömt lösenord?”. Google-token krypteras innan lagring och OAuth-state sparas som en engångspost i databasen.
 
 ## Dokumentation
 
