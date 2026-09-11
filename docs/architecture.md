@@ -2,7 +2,7 @@
 
 ## Översikt
 
-Next.js App Router ansvarar för UI, serverrendering och små server actions. Better Auth hanterar Google OAuth och lagrar sessioner i samma Postgres-schema som ekonomidatan. Drizzle är databasgränsen. Lokalt körs schemat i PGlite; i drift används Neon via en poolad Postgres-anslutning. Dashboardens nuvarande fixtures är en avgränsad prototyp och byts stegvis mot repository-funktioner som läser per hushåll.
+Next.js App Router ansvarar för UI, serverrendering och små server actions. Better Auth hanterar verifierad e-post/lösenord och Google OAuth samt lagrar sessioner i samma Postgres-schema som ekonomidatan. Drizzle är databasgränsen. Lokal apputveckling och drift använder isolerade Neon-branches via poolade Postgres-anslutningar. PGlite används endast för snabba tester och uttryckligt offline-läge. Dashboardens nuvarande fixtures är en avgränsad prototyp och byts stegvis mot repository-funktioner som läser per hushåll.
 
 ```mermaid
 flowchart LR
@@ -11,16 +11,18 @@ flowchart LR
   Auth --> Session["Databasvaliderad session"]
   Session --> Context["Transaktionslokal användarkontext"]
   Context --> RLS["Tvingande RLS per hushåll"]
-  RLS --> DB["PGlite lokalt eller Neon i drift"]
+  RLS --> DB["Miljöns isolerade Neon-branch"]
 ```
 
 ## Säkerhetsgränser
 
 - OAuth-hemligheter, auth-hemlighet och databasanslutningar finns endast på servern.
 - Proxy-lagret gör bara en snabb cookie-kontroll. Skyddade sidor och mutationer validerar alltid sessionen mot Better Auths databas.
-- Google-identiteten måste finnas i serverns e-postallowlist vid varje OAuth-inloggning.
+- Alla Google-konton kan registrera sig. Efter den första inloggningen skapas ett eget ägarhushåll genom en autentiserad server action.
+- Lösenordskonton kräver e-postverifiering. Google länkas automatiskt till ett befintligt konto endast när samma lokalt verifierade e-postadress matchar.
 - OAuth-token krypteras med Better Auth-hemligheten och OAuth-state förbrukas från databasen.
-- Implicit kontolänkning är avstängd för att undvika att en ny leverantör automatiskt tar över ett konto med samma e-postadress.
+- Vercels dynamiska previews använder Better Auths OAuth Proxy via den stabila produktionsdomänen. Endast en separat, kortlivad proxyhemlighet delas mellan Preview och Production; deras vanliga auth-hemligheter och databaser förblir separata.
+- Verifierings- och återställningsmail skickas server-side via Resend; API-nyckeln exponeras aldrig för klienten.
 - Alla hushållstabeller har tvingande RLS och separata policyer för select, insert, update och delete.
 - Medlemskontroll ligger i ett `private`-schema. Hushållsdata nås genom `withAuthenticatedDatabase()`, som validerar sessionen och sätter `app.user_id` transaktionslokalt.
 - Främmande nycklar och vanliga hushålls-/datumfrågor har index.
@@ -28,9 +30,11 @@ flowchart LR
 
 ## Anslutningar och migrationer
 
-Applikationen återanvänder en liten pool och har prepared statements avstängda, vilket fungerar med Neons poolade transaktionsanslutning. `DATABASE_URL` använder en branchspecifik `home_economy_runtime`-roll utan admin- eller RLS-bypass. `DATABASE_MIGRATION_URL` använder ägarrollen och får endast användas för migrationer. Lokala migrationer använder samma SQL-filer mot PGlite, vilket gör scaffoldade projekt och tester oberoende av molnresurser.
+Applikationen återanvänder en liten pool och har prepared statements avstängda, vilket fungerar med Neons poolade transaktionsanslutning. `DATABASE_URL` använder en branchspecifik `home_economy_runtime`-roll utan admin- eller RLS-bypass. `DATABASE_MIGRATION_URL` kräver en direkt ägaranslutning och används endast för migrationer. App och migrationsverktyg läser samma lokala miljöfiler. Saknad `DATABASE_URL` ger ett fel; PGlite kräver `DATABASE_PROVIDER=pglite` och är förbjudet i drift.
 
-Ett Neon-projekt i AWS Frankfurt äger de hostade miljöerna. Produktionsdatabasen ligger på rotbranchen `production`, den långlivade `development`-branchen används som staging och framtida PR-preview ligger på kortlivade `preview/pr-*`-branches. Branchspecifika anslutningar finns som secrets i motsvarande GitHub environment. Miljöbeslutet och de övervägda alternativen finns i [ADR 0001](adr/0001-data-and-auth-platform.md).
+Ett Neon-projekt i AWS Frankfurt äger alla miljöer. Lokal apputveckling använder `dev/alexander`, skapad från den tomma stagingdatabasen; produktionsdatabasen ligger på rotbranchen `production` och den långlivade `development`-branchen används som staging/Preview. Framtida PR-preview kan få kortlivade `preview/pr-*`-branches. Konton och sessioner lagras separat per branch. Lokala anslutningar finns i Git-ignorerade `.env.local`, hostade runtime-anslutningar i Vercel och migrationsanslutningar i GitHub environments. Miljöbeslutet finns i [ADR 0001](adr/0001-data-and-auth-platform.md).
+
+`pnpm db:check` verifierar auth-lagring, runtime-roll, tvingande RLS och transaktionsisolering på en riktig Neon-anslutning. Testposter rullas tillbaka. PGlite-testerna kompletterar detta med snabba lokala kontroller. Inloggning genom Google och Vercels OAuth-proxy behöver även verifieras i webbläsaren.
 
 ## Pengar och datum
 
@@ -38,4 +42,4 @@ Klientens domänfunktioner använder heltals-öre för exakta beräkningar. Data
 
 ## Nästa vertikala flöde
 
-Den första persistenta funktionen bör vara “skapa månadsplan”: skapa hushåll, registrera inkomster och återkommande poster, generera månadens rader och visa kvar efter plan. Därefter kan historisk import och kontosnapshots läggas på utan att ändra kärnmodellen.
+Nästa persistenta funktion bör vara “skapa månadsplan”: registrera inkomster och återkommande poster, generera månadens rader och visa kvar efter plan. Inloggning och skapandet av användarens privata hushåll utgör nu den första vertikala grunden. Därefter kan historisk import och kontosnapshots läggas på utan att ändra kärnmodellen.

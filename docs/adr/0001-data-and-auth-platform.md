@@ -6,7 +6,9 @@ date: 2026-08-29
 # Use Neon, Better Auth, and PGlite
 
 The application will use PostgreSQL through Drizzle in every environment. Local
-development runs on PGlite without a cloud dependency. Hosted environments run
+development uses an isolated Neon branch, `dev/alexander`, to exercise the same
+driver, runtime role, pooling, and TLS as hosted environments. PGlite remains an
+explicit offline and automated-test option. All Neon environments run
 in one Neon project: the root branch is production, the long-lived `development`
 child branch serves as staging, and pull-request previews may create short-lived
 `preview/pr-*` branches. Runtime traffic uses pooled connections; schema
@@ -17,8 +19,9 @@ currently offer a Swedish region. Runtime connections use a dedicated
 `home_economy_runtime` role without administrative attributes or RLS bypass;
 the Neon owner role is reserved for migrations.
 
-Authentication is handled directly by Better Auth, initially with Google OAuth
-only. Auth records live beside the finance schema in PostgreSQL. Household data
+Authentication is handled directly by Better Auth with verified email/password
+and Google OAuth. Matching verified email addresses link both methods to one
+user. Auth records live beside the finance schema in PostgreSQL. Household data
 is protected with forced row-level security and a transaction-local user
 context.
 
@@ -34,9 +37,10 @@ context.
 - **Separate Neon projects per environment.** Rejected for the initial version.
   Neon branches provide isolated schema, data, credentials, and compute while
   avoiding a full project per preview or staging environment.
-- **Docker-based PostgreSQL locally.** Rejected as the default because PGlite
-  makes a new checkout and small proof of concept usable without Docker. A
-  regular PostgreSQL instance can still be selected through `DATABASE_URL`.
+- **PGlite as the default local database.** Revised on 2026-09-11: fast setup
+  does not validate Neon connectivity, pooling, or runtime-role permissions.
+  Neon is now the local default; PGlite is limited to explicit offline use and
+  fast tests. Local work requires network access and uses Neon compute.
 
 ## Consequences
 
@@ -51,5 +55,12 @@ context.
 - The Free plan does not support protected branches, so production protection
   relies on restricted runtime credentials and the release process until the
   project moves to a paid plan.
-- PGlite is close to PostgreSQL but cannot prove every hosted behavior; RLS and
-  migration checks must also run against staging before release.
+- Missing runtime credentials fail explicitly, including locally. Hosted
+  environments must never fall back to PGlite. Migration commands load the same
+  environment files as Next.js and require separate direct owner credentials.
+- Local auth accounts remain in the developer branch. Do not seed development
+  branches with production personal data. Google credentials and auth secrets
+  remain environment-specific.
+- PGlite tests cannot prove every hosted behavior; `pnpm db:check` exercises
+  auth storage and RLS with the actual Neon runtime connection. Google OAuth
+  and the preview proxy still require browser validation in their environments.

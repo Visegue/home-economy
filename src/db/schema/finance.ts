@@ -84,7 +84,7 @@ export const households = pgTable(
       "households_name_length",
       sql`char_length(${table.name}) between 1 and 120`,
     ),
-    index("households_owner_user_id_idx").on(table.ownerUserId),
+    uniqueIndex("households_owner_user_id_uidx").on(table.ownerUserId),
   ],
 );
 

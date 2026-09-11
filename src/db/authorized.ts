@@ -8,6 +8,9 @@ import { db } from "./index";
 
 type TransactionCallback = Parameters<typeof db.transaction>[0];
 export type AuthorizedTransaction = Parameters<TransactionCallback>[0];
+export type AuthenticatedUser = Awaited<
+  ReturnType<typeof requireSession>
+>["user"];
 
 export async function withUserDatabase<T>(
   userId: string,
@@ -25,8 +28,13 @@ export async function withUserDatabase<T>(
 }
 
 export async function withAuthenticatedDatabase<T>(
-  operation: (transaction: AuthorizedTransaction) => Promise<T>,
+  operation: (
+    transaction: AuthorizedTransaction,
+    user: AuthenticatedUser,
+  ) => Promise<T>,
 ): Promise<T> {
   const session = await requireSession();
-  return withUserDatabase(session.user.id, operation);
+  return withUserDatabase(session.user.id, (transaction) =>
+    operation(transaction, session.user),
+  );
 }

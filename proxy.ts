@@ -2,13 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
-import { isAuthConfigured } from "@/lib/auth/config";
-
 export async function proxy(request: NextRequest) {
-  if (!isAuthConfigured() || request.nextUrl.pathname === "/login") {
-    return NextResponse.next();
-  }
-
   const sessionCookie = getSessionCookie(request);
   if (!sessionCookie) {
     return NextResponse.redirect(new URL("/login", request.url));
@@ -20,5 +14,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/"],
+  matcher: [
+    "/((?!api|login|forgot-password|reset-password|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
+  ],
 };

@@ -22,6 +22,18 @@ export default defineConfig({
   webServer: {
     command: "pnpm dev",
     url: "http://127.0.0.1:3000",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
+    env: {
+      DATABASE_PROVIDER: "pglite",
+      PGLITE_DATA_DIR: "memory://",
+      DATABASE_URL: "",
+      DATABASE_MIGRATION_URL: "",
+      BETTER_AUTH_URL: "http://127.0.0.1:3000",
+      BETTER_AUTH_SECRET: "synthetic-playwright-secret-only-for-tests",
+      GOOGLE_CLIENT_ID: "synthetic-google-client",
+      GOOGLE_CLIENT_SECRET: "synthetic-google-secret",
+      RESEND_API_KEY: "synthetic-resend-key",
+      AUTH_EMAIL_FROM: "test@example.test",
+    },
   },
 });

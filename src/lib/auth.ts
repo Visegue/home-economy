@@ -1,26 +1,70 @@
 import { betterAuth } from "better-auth/minimal";
+import { oAuthProxy } from "better-auth/plugins";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { after } from "next/server";
 
 import { db } from "@/db";
 import { schema } from "@/db/schema";
-import { getAllowedEmails, getAuthEnvironment } from "@/lib/auth/config";
+import { getAuthEnvironment, isEmailAuthConfigured } from "@/lib/auth/config";
+import { sendAuthEmail } from "@/lib/auth/email";
 
 const environment = getAuthEnvironment();
+const emailAuthConfigured = isEmailAuthConfigured();
 
 export const auth = betterAuth({
   appName: "Hemekonomi",
   baseURL: environment.baseUrl,
   secret: environment.secret,
+  trustedOrigins: environment.trustedOrigins,
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,
   }),
+  advanced: {
+    backgroundTasks: {
+      handler: (promise) => after(() => promise),
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    sendOnSignIn: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url, token }) =>
+      sendAuthEmail({
+        to: user.email,
+        subject: "Verifiera din e-postadress",
+        intro:
+          "Bekräfta din e-postadress för att börja använda Hemekonomi med e-post och lösenord.",
+        actionLabel: "Verifiera e-postadressen",
+        actionUrl: url,
+        idempotencyKey: `verify-email-${token}`,
+      }),
+  },
+  emailAndPassword: {
+    enabled: emailAuthConfigured,
+    requireEmailVerification: true,
+    minPasswordLength: 12,
+    maxPasswordLength: 128,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url, token }) =>
+      sendAuthEmail({
+        to: user.email,
+        subject: "Välj ett nytt lösenord",
+        intro:
+          "Följ länken för att välja ett nytt lösenord till ditt Hemekonomi-konto.",
+        actionLabel: "Välj nytt lösenord",
+        actionUrl: url,
+        idempotencyKey: `reset-password-${token}`,
+      }),
+  },
   account: {
     identityStrategy: "provider-id",
     encryptOAuthTokens: true,
     storeStateStrategy: "database",
     accountLinking: {
-      disableImplicitLinking: true,
+      enabled: true,
+      disableImplicitLinking: false,
+      requireLocalEmailVerified: true,
     },
   },
   socialProviders: {
@@ -30,18 +74,12 @@ export const auth = betterAuth({
       prompt: "select_account",
     },
   },
-  user: {
-    validateUserInfo: ({ source, user }) => {
-      if (source.oauth?.providerId !== "google") return;
-
-      const allowedEmails = getAllowedEmails();
-      if (!user.email || !allowedEmails.has(user.email.toLowerCase())) {
-        return {
-          error: "email_not_allowed",
-          errorDescription:
-            "Det här Google-kontot har inte åtkomst till Hemekonomi.",
-        };
-      }
-    },
-  },
+  plugins: environment.oauthProxy
+    ? [
+        oAuthProxy({
+          productionURL: environment.oauthProxy.productionUrl,
+          secret: environment.oauthProxy.secret,
+        }),
+      ]
+    : [],
 });

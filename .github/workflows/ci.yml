@@ -26,8 +26,11 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
-      - run: PGLITE_DATA_DIR=memory:// pnpm db:migrate
+      - run: DATABASE_PROVIDER=pglite PGLITE_DATA_DIR=memory:// pnpm db:migrate
       - run: pnpm build
+        env:
+          # Build imports auth/database configuration but does not query Postgres.
+          DATABASE_URL: postgresql://build:unused@127.0.0.1:5432/build_only
 
   end-to-end:
     runs-on: ubuntu-latest
