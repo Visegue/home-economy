@@ -60,7 +60,17 @@ describe("LoginForm", () => {
       password: "a-long-password",
       callbackURL: "/",
     });
-    expect(screen.getByText(/Om adressen är ny/)).toBeInTheDocument();
+    const status = screen.getByRole("status");
+    const googleButton = screen.getByRole("button", {
+      name: "Fortsätt med Google",
+    });
+
+    expect(status).toHaveTextContent("Kontrollera din inkorg");
+    expect(status).toHaveTextContent(/Om adressen är ny/);
+    expect(
+      status.compareDocumentPosition(googleButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("does not submit mismatching passwords", async () => {

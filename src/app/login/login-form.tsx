@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CircleAlert, CircleCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -258,6 +259,37 @@ export function LoginForm({
         </TabsContent>
       </Tabs>
 
+      {message ? (
+        <output
+          role={success ? "status" : "alert"}
+          className={
+            success
+              ? "flex items-start gap-2.5 rounded-lg border border-accent-foreground/20 bg-accent px-3 py-2.5 text-sm text-accent-foreground"
+              : "flex items-start gap-2.5 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive"
+          }
+        >
+          {success ? (
+            <CircleCheck
+              aria-hidden="true"
+              className="mt-0.5 size-4 shrink-0"
+            />
+          ) : (
+            <CircleAlert
+              aria-hidden="true"
+              className="mt-0.5 size-4 shrink-0"
+            />
+          )}
+          <span className="leading-relaxed">
+            {success ? (
+              <strong className="block font-medium">
+                Kontrollera din inkorg
+              </strong>
+            ) : null}
+            {message}
+          </span>
+        </output>
+      ) : null}
+
       {!emailConfigured ? (
         <p className="text-sm text-muted-foreground">
           E-postinloggning aktiveras när e-postleveransen har konfigurerats.
@@ -292,18 +324,6 @@ export function LoginForm({
         Samma verifierade e-postadress ger samma konto oavsett om du använder
         lösenord eller Google.
       </p>
-
-      {message ? (
-        <output
-          className={
-            success
-              ? "block text-sm text-emerald-700"
-              : "block text-sm text-destructive"
-          }
-        >
-          {message}
-        </output>
-      ) : null}
     </div>
   );
 }
