@@ -110,7 +110,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          deployment_url="$(pnpm dlx vercel@59.16.0 deploy --prod --skip-domain --yes --no-color --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN")"
+          deployment_url="$(pnpm dlx vercel@59.16.0 deploy --prod --skip-domain --yes --no-color --token "$VERCEL_TOKEN")"
           echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
       - name: Apply production migrations
         env:
@@ -130,4 +130,24 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-        run: pnpm dlx vercel@59.16.0 promote "${{ steps.stage.outputs.url }}" --yes --no-color --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN"
+          DEPLOYMENT_URL: ${{ steps.stage.outputs.url }}
+        run: |
+          deployment_host="${DEPLOYMENT_URL#https://}"
+          deployment_json="$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v13/deployments/$deployment_host?teamId=$VERCEL_ORG_ID")"
+          deployment_id="$(jq --raw-output '.id // empty' <<< "$deployment_json")"
+          deployment_project_id="$(jq --raw-output '.projectId // empty' <<< "$deployment_json")"
+
+          if [ -z "$deployment_id" ] || [ "$deployment_project_id" != "$VERCEL_PROJECT_ID" ]; then
+            echo "::error::Den staged deploymenten kunde inte verifieras mot Vercel-projektet."
+            exit 1
+          fi
+
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $VERCEL_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data '{}' \
+            "https://api.vercel.com/v10/projects/$VERCEL_PROJECT_ID/promote/$deployment_id?teamId=$VERCEL_ORG_ID" \
+            >/dev/null
