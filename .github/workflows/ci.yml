@@ -22,6 +22,15 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Verify committed Drizzle migrations
+        run: |
+          pnpm db:generate
+          migration_changes="$(git status --porcelain --untracked-files=all -- drizzle)"
+          if [ -n "$migration_changes" ]; then
+            echo "::error::Databasschemat har ändrats utan motsvarande incheckad Drizzle-migration."
+            echo "$migration_changes"
+            exit 1
+          fi
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
@@ -55,3 +64,70 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  deploy-production:
+    name: Deploy production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [quality, end-to-end]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: production
+      url: ${{ steps.stage.outputs.url }}
+    concurrency:
+      group: production-deployment
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate production configuration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          missing=0
+          for variable in DATABASE_URL DATABASE_MIGRATION_URL VERCEL_ORG_ID VERCEL_PROJECT_ID VERCEL_TOKEN; do
+            if [ -z "${!variable:-}" ]; then
+              echo "::error::$variable saknas i GitHub-miljön production."
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - name: Stage production deployment
+        id: stage
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          deployment_url="$(pnpm dlx vercel@59.16.0 deploy --prod --skip-domain --yes --no-color --token "$VERCEL_TOKEN")"
+          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
+      - name: Apply production migrations
+        env:
+          DATABASE_PROVIDER: postgres
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          NODE_ENV: production
+        run: pnpm db:migrate
+      - name: Verify production database
+        env:
+          DATABASE_PROVIDER: postgres
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: production
+        run: pnpm db:check
+      - name: Promote production deployment
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: pnpm dlx vercel@59.16.0 promote "${{ steps.stage.outputs.url }}" --yes --no-color --token "$VERCEL_TOKEN"
