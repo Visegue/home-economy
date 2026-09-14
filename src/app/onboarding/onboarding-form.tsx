@@ -44,6 +44,11 @@ export function OnboardingForm() {
           className="text-sm text-destructive"
         >
           {state.error}
+          {state.errorReference ? (
+            <span className="mt-1 block font-mono text-xs">
+              Referens: {state.errorReference}
+            </span>
+          ) : null}
         </p>
       ) : null}
 
