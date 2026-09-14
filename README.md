@@ -41,6 +41,25 @@ pnpm test:e2e
 
 `pnpm check` kör alla kontroller utom Playwright. Oxlints vanliga React-, accessibility-, import-, promise-, Vitest- och Next.js-regler är aktiverade. Typmedvetet Oxlint-läge är medvetet avstängt tills projektet kan gå till TypeScript 7; `tsc --noEmit` är därför den auktoritativa typkontrollen.
 
+### Isolerade tester och resursanvändning
+
+Databastesterna kör migrationerna i PGlite och testar RLS med en begränsad roll.
+Playwright skapar en separat temporär PGlite-databas med syntetiska användare och
+sessioner innan appen startar. Testerna verifierar hushållsskapande, återbesök och
+nekad åtkomst med saknad eller utgången databassession. Appens vanliga
+sessionskontroll används; ingen testinloggningsroute finns i appen.
+Den temporära databasen tas bort när testservern stängs.
+
+Dessa tester ansluter inte till Neon och skickar inga riktiga mail. De testar inte
+Googles OAuth-flöde eller leverans av verifierings- och återställningsmail.
+`pnpm db:check` är en separat integrationskontroll mot den konfigurerade
+Neon-utvecklingsbranchen och förbrukar Neon-kvot trots att testdata rullas tillbaka.
+Kör den vid ändringar i databaskoppling, migrationer eller behörigheter; den ingår
+inte i de vanliga PR-testerna.
+
+CI sparar Playwright-rapporter och traces vid fel i sju dagar. Testkörningar och
+rapporter använder GitHub Actions-tid och lagring, men ingen Neon-kvot.
+
 ## Databas
 
 Lokal apputveckling använder Neon-branchen `dev/alexander` i samma projekt som Preview och Production. Lägg dess poolade runtime-anslutning i `DATABASE_URL` och dess direkta ägaranslutning i `DATABASE_MIGRATION_URL` i den Git-ignorerade `.env.local`. Appen och migrationsverktygen läser samma miljöfil. En ny utvecklare ska använda en egen branch, exempelvis `dev/<namn>`, med syntetiska testdata.
