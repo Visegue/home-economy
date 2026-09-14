@@ -1,9 +1,11 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 
 import { createPersonalHousehold } from "@/features/households/data";
+import { logServerError } from "@/lib/server-error-log";
 
 const householdNameSchema = z
   .string()
@@ -13,6 +15,7 @@ const householdNameSchema = z
 
 export interface OnboardingState {
   error?: string;
+  errorReference?: string;
 }
 
 export async function createHouseholdAction(
@@ -29,8 +32,15 @@ export async function createHouseholdAction(
     await createPersonalHousehold(parsedName.data);
   } catch (error) {
     unstable_rethrow(error);
+    const errorReference = randomUUID();
+    logServerError({
+      error,
+      event: "household.create.failed",
+      reference: errorReference,
+    });
     return {
       error: "Hushållet kunde inte skapas just nu. Försök igen om en stund.",
+      errorReference,
     };
   }
 
