@@ -36,6 +36,8 @@ Ett Neon-projekt i AWS Frankfurt äger alla miljöer. Lokal apputveckling använ
 
 `pnpm db:check` verifierar auth-lagring, runtime-roll, tvingande RLS och transaktionsisolering på en riktig Neon-anslutning. Testposter rullas tillbaka. PGlite-testerna kompletterar detta med snabba lokala kontroller. Inloggning genom Google och Vercels OAuth-proxy behöver även verifieras i webbläsaren.
 
+GitHub Actions äger produktionsreleasen. Vercel bygger först en staged produktionsdeployment utan att flytta produktionsdomänen. Därefter applicerar GitHub Actions väntande Drizzle-migrationer med den direkta ägaranslutningen och kör databaskontrollen med den begränsade runtime-rollen. Deploymenten promoveras endast om båda databasstegen lyckas. Jobbet är serialiserat och automatiska Vercel-deployments från `main` är avstängda, medan PR-previews fortsätter via Git-integrationen. Migrationer måste följa expand/contract så att det föregående appbygget förblir kompatibelt om promotionen inte genomförs.
+
 ## Pengar och datum
 
 Klientens domänfunktioner använder heltals-öre för exakta beräkningar. Databasen använder `numeric(14,2)`. Månadsperioder sparas som första dagen i månaden och valideras i databasen. Datum utan tid lagras som `date`; auditfält använder `timestamptz`.

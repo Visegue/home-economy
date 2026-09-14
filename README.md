@@ -59,6 +59,32 @@ inte i de vanliga PR-testerna.
 
 CI sparar Playwright-rapporter och traces vid fel i sju dagar. Testkörningar och
 rapporter använder GitHub Actions-tid och lagring, men ingen Neon-kvot.
+CI kör också `pnpm db:generate` och stoppar en PR om Drizzle genererar
+oincheckade migrationsfiler. En schemaändring kan därför inte mergas utan sin
+migration.
+
+### Produktionsrelease
+
+Efter en merge till `main` väntar produktionsjobbet på både kvalitetskontroller
+och Playwright. Därefter byggs en staged Vercel-deployment utan produktionsdomän,
+alla väntande Drizzle-migrationer appliceras mot Neon med den direkta
+ägaranslutningen och `pnpm db:check` verifierar runtime-roll och RLS. Först när
+samtliga steg lyckas promoveras deploymenten till produktionsdomänen.
+
+GitHub-miljön `production` måste innehålla följande secrets:
+
+- `DATABASE_URL`: poolad runtime-anslutning med rollen `home_economy_runtime`
+- `DATABASE_MIGRATION_URL`: direkt ägaranslutning utan pooler
+- `VERCEL_TOKEN`: token med deploybehörighet till Vercel-projektet
+- `VERCEL_ORG_ID`: Vercel-teamets ID
+- `VERCEL_PROJECT_ID`: Vercel-projektets ID
+
+Produktionsjobbet är serialiserat så att högst en migration och promotion körs
+åt gången. Vercels automatiska Git-deployment är avstängd enbart för `main` i
+`vercel.json`; automatiska PR-previews påverkas inte. Databasmigrationer ska vara
+bakåtkompatibla med föregående appversion. Destruktiva ändringar delas upp enligt
+expand/contract så att en misslyckad promotion kan lämna den gamla deploymenten
+körande mot det nya schemat.
 
 ## Databas
 
