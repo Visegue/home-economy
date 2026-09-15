@@ -4,10 +4,19 @@ import { PGlite } from "@electric-sql/pglite";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import {
   categories,
+  householdMemberIncome,
   householdMembers,
   households,
   schema,
@@ -34,6 +43,10 @@ vi.mock("@/db", () => ({
 }));
 
 import { withAuthenticatedDatabase } from "./authorized";
+import {
+  getMonthlyNetIncome,
+  saveMonthlyNetIncome,
+} from "@/features/income/data";
 import { createPersonalHousehold } from "@/features/households/data";
 
 const client = new PGlite("memory://");
@@ -315,5 +328,129 @@ describe("household writes and transaction context", () => {
         .where(eq(categories.id, categoryId)),
     );
     expect(rows).toEqual([expect.objectContaining({ name: "Testkategori" })]);
+  });
+});
+
+describe("personal monthly income", () => {
+  let incomeHouseholdId: number;
+  let initialIncome: number | null;
+  let omittedIncome: number | null;
+
+  beforeAll(async () => {
+    await database.insert(user).values(
+      ["income-owner", "income-peer", "income-outsider"].map((id) => ({
+        id,
+        name: "Synthetic income user",
+        email: `${id}@example.test`,
+        emailVerified: true,
+      })),
+    );
+    identity.userId = "income-owner";
+    const household = await createPersonalHousehold(
+      "Inkomsthushåll",
+      3_250_075,
+    );
+    incomeHouseholdId = household.id;
+    initialIncome = await getMonthlyNetIncome();
+    await withAuthenticatedDatabase(async (transaction) => {
+      await transaction
+        .insert(householdMembers)
+        .values({ householdId: incomeHouseholdId, userId: "income-peer" });
+    });
+    identity.userId = "income-outsider";
+    await createPersonalHousehold("Annat inkomsthushåll");
+    omittedIncome = await getMonthlyNetIncome();
+  });
+
+  beforeEach(async () => {
+    identity.userId = "income-owner";
+    await saveMonthlyNetIncome(3_250_075);
+  });
+
+  it("creates households with or without an initial income", () => {
+    expect(initialIncome).toBe(3_250_075);
+    expect(omittedIncome).toBeNull();
+  });
+
+  it("preserves öre, distinguishes zero from missing and does not overwrite income on repeated onboarding", async () => {
+    await createPersonalHousehold("Upprepad onboarding", 100);
+    expect(await getMonthlyNetIncome()).toBe(3_250_075);
+    await saveMonthlyNetIncome(3_400_029);
+    expect(await getMonthlyNetIncome()).toBe(3_400_029);
+    await saveMonthlyNetIncome(0);
+    expect(await getMonthlyNetIncome()).toBe(0);
+    await saveMonthlyNetIncome(null);
+    expect(await getMonthlyNetIncome()).toBeNull();
+  });
+
+  it("isolates income between households and rejects writing as another member", async () => {
+    identity.userId = "income-outsider";
+    expect(await getMonthlyNetIncome()).toBeNull();
+    await withAuthenticatedDatabase(async (transaction) => {
+      expect(
+        await transaction.select().from(householdMemberIncome),
+      ).toHaveLength(0);
+      expect(
+        await transaction
+          .update(householdMemberIncome)
+          .set({ monthlyNetIncome: "1.00" })
+          .where(eq(householdMemberIncome.householdId, incomeHouseholdId))
+          .returning(),
+      ).toHaveLength(0);
+      expect(
+        await transaction
+          .delete(householdMemberIncome)
+          .where(eq(householdMemberIncome.householdId, incomeHouseholdId))
+          .returning(),
+      ).toHaveLength(0);
+    });
+    identity.userId = "income-peer";
+    await withAuthenticatedDatabase(async (transaction) => {
+      expect(
+        await transaction
+          .select()
+          .from(householdMemberIncome)
+          .where(eq(householdMemberIncome.householdId, incomeHouseholdId)),
+      ).toHaveLength(1);
+      expect(
+        await transaction
+          .update(householdMemberIncome)
+          .set({ monthlyNetIncome: "1.00" })
+          .where(eq(householdMemberIncome.userId, "income-owner"))
+          .returning(),
+      ).toHaveLength(0);
+    });
+    await expect(
+      withAuthenticatedDatabase((transaction) =>
+        transaction
+          .insert(householdMemberIncome)
+          .values({
+            householdId: incomeHouseholdId,
+            userId: "income-owner",
+            monthlyNetIncome: "1.00",
+          })
+          .returning(),
+      ),
+    ).rejects.toMatchObject({ cause: { code: "42501" } });
+    identity.userId = "income-owner";
+    expect(await getMonthlyNetIncome()).toBe(3_250_075);
+  });
+
+  it("rejects negative amounts in the database and invalid integer amounts at the application boundary", async () => {
+    for (const amount of [-1, 0.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      await expect(saveMonthlyNetIncome(amount)).rejects.toMatchObject({
+        name: "ZodError",
+      });
+    }
+    await expect(
+      withAuthenticatedDatabase((transaction) =>
+        transaction
+          .update(householdMemberIncome)
+          .set({ monthlyNetIncome: "-0.01" })
+          .where(eq(householdMemberIncome.userId, "income-owner"))
+          .returning(),
+      ),
+    ).rejects.toMatchObject({ cause: { code: "23514" } });
+    expect(await getMonthlyNetIncome()).toBe(3_250_075);
   });
 });

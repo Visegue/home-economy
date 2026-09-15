@@ -40,6 +40,20 @@ GitHub Actions äger produktionsreleasen. Vercel bygger först en staged produkt
 
 ## Pengar och datum
 
+Personlig nettoinkomst per månad registreras valfritt vid hushållsskapande och
+ändras eller tas bort i Inställningar. `household_member_income` lagrar ett
+aktuellt belopp per hushållsmedlem i SEK som `numeric(14,2)`. Saknat belopp är
+`null`; noll är ett uttryckligen angivet belopp. Inställningen innehåller ingen
+inkomsthistorik och skapar inte automatiskt transaktioner eller budgetposter.
+
+Servervyer hämtar den inloggade användarens inkomst genom
+`getMonthlyNetIncome()` i `src/features/income/data.ts`, som returnerar heltalsöre
+eller `null`. Databasåtkomsten går genom `withAuthenticatedDatabase()`.
+Hushållsmedlemmar kan läsa hushållets inkomstuppgifter, men bara användaren själv
+kan skriva sin inkomst. Tvingande RLS, medlemskoppling och en kontroll av
+icke-negativa belopp finns i migrationen. Onboarding sparar hushåll, medlemskap
+och eventuell inkomst i samma transaktion.
+
 Klientens domänfunktioner använder heltals-öre för exakta beräkningar. Databasen använder `numeric(14,2)`. Månadsperioder sparas som första dagen i månaden och valideras i databasen. Datum utan tid lagras som `date`; auditfält använder `timestamptz`.
 
 ## Nästa vertikala flöde
