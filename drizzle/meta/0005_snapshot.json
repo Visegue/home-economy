@@ -1,6 +1,6 @@
 {
-  "id": "391b08fd-36b4-42a1-a8e9-24064f233c83",
-  "prevId": "ae5e3456-0865-41e1-bb6e-4fa92c72a37d",
+  "id": "ae5e3456-0865-41e1-bb6e-4fa92c72a37d",
+  "prevId": "7467e9d5-61ad-4641-b6fd-1be94624909b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -731,148 +731,6 @@
         "categories_color_hex": {
           "name": "categories_color_hex",
           "value": "\"categories\".\"color\" is null or \"categories\".\"color\" ~ '^#[0-9A-Fa-f]{6}$'"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.household_incomes": {
-      "name": "household_incomes",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "bigint",
-          "primaryKey": true,
-          "notNull": true,
-          "identity": {
-            "type": "always",
-            "name": "household_incomes_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "9223372036854775807",
-            "cache": "1",
-            "cycle": false
-          }
-        },
-        "household_id": {
-          "name": "household_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "amount": {
-          "name": "amount",
-          "type": "numeric(14, 2)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "starts_on": {
-          "name": "starts_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "ends_on": {
-          "name": "ends_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "household_incomes_household_period_idx": {
-          "name": "household_incomes_household_period_idx",
-          "columns": [
-            {
-              "expression": "household_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "starts_on",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "ends_on",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "household_incomes_household_id_households_id_fk": {
-          "name": "household_incomes_household_id_households_id_fk",
-          "tableFrom": "household_incomes",
-          "tableTo": "households",
-          "columnsFrom": ["household_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {
-        "household_incomes_access": {
-          "name": "household_incomes_access",
-          "as": "PERMISSIVE",
-          "for": "ALL",
-          "to": ["public"],
-          "using": "(select private.has_household_access(\"household_incomes\".\"household_id\"))",
-          "withCheck": "(select private.has_household_access(\"household_incomes\".\"household_id\"))"
-        }
-      },
-      "checkConstraints": {
-        "household_incomes_name_length": {
-          "name": "household_incomes_name_length",
-          "value": "char_length(\"household_incomes\".\"name\") between 1 and 160"
-        },
-        "household_incomes_amount_nonnegative": {
-          "name": "household_incomes_amount_nonnegative",
-          "value": "\"household_incomes\".\"amount\" >= 0"
-        },
-        "household_incomes_start_first_day": {
-          "name": "household_incomes_start_first_day",
-          "value": "extract(day from \"household_incomes\".\"starts_on\") = 1"
-        },
-        "household_incomes_end_first_day": {
-          "name": "household_incomes_end_first_day",
-          "value": "\"household_incomes\".\"ends_on\" is null or extract(day from \"household_incomes\".\"ends_on\") = 1"
-        },
-        "household_incomes_period_order": {
-          "name": "household_incomes_period_order",
-          "value": "\"household_incomes\".\"ends_on\" is null or \"household_incomes\".\"ends_on\" >= \"household_incomes\".\"starts_on\""
         }
       },
       "isRLSEnabled": false
@@ -2237,6 +2095,110 @@
         }
       },
       "isRLSEnabled": false
+    },
+    "public.household_member_income": {
+      "name": "household_member_income",
+      "schema": "",
+      "columns": {
+        "household_id": {
+          "name": "household_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "monthly_net_income": {
+          "name": "monthly_net_income",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "household_member_income_user_id_idx": {
+          "name": "household_member_income_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "household_member_income_household_id_user_id_household_members_household_id_user_id_fk": {
+          "name": "household_member_income_household_id_user_id_household_members_household_id_user_id_fk",
+          "tableFrom": "household_member_income",
+          "tableTo": "household_members",
+          "columnsFrom": ["household_id", "user_id"],
+          "columnsTo": ["household_id", "user_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "household_member_income_household_id_user_id_pk": {
+          "name": "household_member_income_household_id_user_id_pk",
+          "columns": ["household_id", "user_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "household_member_income_select": {
+          "name": "household_member_income_select",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": ["public"],
+          "using": "(select private.has_household_access(\"household_member_income\".\"household_id\"))"
+        },
+        "household_member_income_insert": {
+          "name": "household_member_income_insert",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": ["public"],
+          "withCheck": "\"household_member_income\".\"user_id\" = (select private.current_user_id()) and (select private.has_household_access(\"household_member_income\".\"household_id\"))"
+        },
+        "household_member_income_update": {
+          "name": "household_member_income_update",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": ["public"],
+          "using": "\"household_member_income\".\"user_id\" = (select private.current_user_id()) and (select private.has_household_access(\"household_member_income\".\"household_id\"))",
+          "withCheck": "\"household_member_income\".\"user_id\" = (select private.current_user_id()) and (select private.has_household_access(\"household_member_income\".\"household_id\"))"
+        },
+        "household_member_income_delete": {
+          "name": "household_member_income_delete",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": ["public"],
+          "using": "\"household_member_income\".\"user_id\" = (select private.current_user_id()) and (select private.has_household_access(\"household_member_income\".\"household_id\"))"
+        }
+      },
+      "checkConstraints": {
+        "household_member_income_nonnegative": {
+          "name": "household_member_income_nonnegative",
+          "value": "\"household_member_income\".\"monthly_net_income\" >= 0 and \"household_member_income\".\"monthly_net_income\" <= 999999999999.99"
+        }
+      },
+      "isRLSEnabled": true
     }
   },
   "enums": {

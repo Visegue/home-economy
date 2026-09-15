@@ -3,7 +3,9 @@ import "server-only";
 import { eq } from "drizzle-orm";
 
 import { withAuthenticatedDatabase } from "@/db/authorized";
-import { householdMembers, households } from "@/db/schema";
+import { householdIncomes, householdMembers, households } from "@/db/schema";
+import { monthlyIncomeInOreSchema } from "@/features/income/validation";
+import { currentPeriod } from "@/features/budget/model";
 
 export interface CurrentHousehold {
   id: number;
@@ -17,7 +19,8 @@ type HouseholdCreationStage =
   | "refetch_household"
   | "resolve_household"
   | "prepare_owner_membership"
-  | "insert_owner_membership";
+  | "insert_owner_membership"
+  | "insert_initial_income";
 
 class HouseholdCreationError extends Error {
   readonly stage: HouseholdCreationStage;
@@ -49,7 +52,9 @@ export async function getCurrentHousehold(): Promise<CurrentHousehold | null> {
 
 export async function createPersonalHousehold(
   name: string,
+  monthlyNetIncomeInOre: number | null = null,
 ): Promise<CurrentHousehold> {
+  monthlyIncomeInOreSchema.parse(monthlyNetIncomeInOre);
   return withAuthenticatedDatabase(async (transaction, user) => {
     let stage: HouseholdCreationStage = "find_existing_household";
 
@@ -61,6 +66,7 @@ export async function createPersonalHousehold(
         .limit(1);
 
       let household = existingHousehold;
+      let created = false;
 
       if (!household) {
         stage = "insert_household";
@@ -69,6 +75,7 @@ export async function createPersonalHousehold(
           .values({ name, ownerUserId: user.id })
           .onConflictDoNothing({ target: households.ownerUserId })
           .returning();
+        created = Boolean(household);
       }
 
       if (!household) {
@@ -98,6 +105,19 @@ export async function createPersonalHousehold(
           displayName,
         })
         .onConflictDoNothing();
+
+      if (created && monthlyNetIncomeInOre !== null) {
+        stage = "insert_initial_income";
+        await transaction
+          .insert(householdIncomes)
+          .values({
+            householdId: household.id,
+            name: "Månadsinkomst",
+            amount: monthlyNetIncomeInOre / 100,
+            startsOn: new Date(`${currentPeriod()}-01T00:00:00Z`),
+          })
+          .onConflictDoNothing();
+      }
 
       return household;
     } catch (error) {

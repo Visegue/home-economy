@@ -8,7 +8,7 @@ Dashboarden använder en varm sandfärgad grund med aubergine, dammigt blått, s
 
 - **Månaden** visar sparad månadsinkomst, direkta utgifter, avsättningar och kvarvarande belopp eller underskott. Årslistan jämför årets tolv månader.
 - Registrera namngivna inkomstkällor under **Inställningar → Hushållets inkomster**. Varje källa har ett månadsbelopp efter skatt, startmånad och valfri slutmånad. Båda gränsmånaderna ingår; utan slutmånad gäller inkomsten tills vidare. Alla aktiva källor summeras per månad.
-- Vid ändrat belopp: avsluta den gamla inkomsten och skapa en ny från nästa månad. Befintliga månadsregistreringar migreras till egna inkomstposter för sina ursprungliga månader.
+- Vid ändrat belopp: avsluta den gamla inkomsten och skapa en ny från nästa månad. Befintliga månadsregistreringar migreras till egna inkomstposter för sina ursprungliga månader. Äldre medlemsinkomster blir egna källor utan slutdatum, från månaden för senaste uppdateringen.
 - Lägg till direkta månadsutgifter eller avsatta utgifter med intervall på 2, 3, 6, 12 eller 24 månader och nästa betalningsdatum. Utgifterna gäller från vald månad och framåt.
 - Avsättningen är beloppet delat med antalet månader, avrundat till närmaste öre per utgift. Betalningen räknas inte en gång till i månadsbudgeten. Befintligt avsättningssaldo och eventuell upphämtning inför första betalningen ingår inte.
 - Skapa medlemmar under **Inställningar** och välj valfritt flera ägare per utgift. Namnen ger ingen inloggningsåtkomst och påverkar inte summeringen.
@@ -66,8 +66,9 @@ Dessa tester ansluter inte till Neon och skickar inga riktiga mail. De testar in
 Googles OAuth-flöde eller leverans av verifierings- och återställningsmail.
 `pnpm db:check` är en separat integrationskontroll mot den konfigurerade
 Neon-utvecklingsbranchen och förbrukar Neon-kvot trots att testdata rullas tillbaka.
-Kör den vid ändringar i databaskoppling, migrationer eller behörigheter; den ingår
-inte i de vanliga PR-testerna.
+Kör den lokalt vid ändringar i databaskoppling, migrationer eller behörigheter.
+Den ingår inte i `pnpm check` eller Playwright, men körs i CI:s deployjobb efter
+migrationerna för preview respektive produktion.
 
 CI sparar Playwright-rapporter och traces vid fel i sju dagar. Testkörningar och
 rapporter använder GitHub Actions-tid och lagring, men ingen Neon-kvot.
@@ -92,11 +93,41 @@ GitHub-miljön `production` måste innehålla följande secrets:
 - `VERCEL_PROJECT_ID`: Vercel-projektets ID
 
 Produktionsjobbet är serialiserat så att högst en migration och promotion körs
-åt gången. Vercels automatiska Git-deployment är avstängd enbart för `main` i
-`vercel.json`; automatiska PR-previews påverkas inte. Databasmigrationer ska vara
+åt gången. Vercels automatiska Git-deployments är avstängda för alla branches i
+`vercel.json`; GitHub Actions sköter både produktion och previews. Databasmigrationer ska vara
 bakåtkompatibla med föregående appversion. Destruktiva ändringar delas upp enligt
 expand/contract så att en misslyckad promotion kan lämna den gamla deploymenten
 körande mot det nya schemat.
+
+### PR-previews och migrationer
+
+Vid PR från en branch i samma repo kör GitHub Actions först kvalitetstester och
+Playwright. Jobbet `Deploy preview` använder därefter GitHub-miljön `staging`
+för att köra `pnpm db:migrate` och `pnpm db:check` mot Neons `development`-branch.
+Vercel-previewen skapas endast om båda databasstegen lyckas. Preview-länken visas
+på GitHub-deploymenten. Även draft-PR:er får previews; fork- och Dependabot-PR:er
+kör bara de isolerade testerna.
+
+Följande secrets krävs i GitHub-miljön `staging`:
+
+- `DATABASE_URL`: poolad runtime-anslutning till `development`
+- `DATABASE_MIGRATION_URL`: direkt ägaranslutning till samma branch
+- `VERCEL_TOKEN`: token med deploybehörighet till projektet
+- `VERCEL_ORG_ID`: Vercel-teamets ID
+- `VERCEL_PROJECT_ID`: Vercel-projektets ID
+
+Auth- och e-postinställningar hämtas från Vercels Preview-miljö. Runtime-anslutningen
+sparas från `staging` som en krypterad, branchspecifik Preview-variabel via Vercels API
+och används av både bygget och appen; migrationsanslutningen
+ska inte läggas i Vercel. Jobbet förbrukar Neon-kvot och är serialiserat eftersom
+alla previews delar databasen. Migrationer rullas inte tillbaka när en PR stängs.
+Samordna schemaändringar mellan PR:er och håll dem bakåtkompatibla; isolerade
+Neon-branches per PR behövs om parallella schemaändringar inte är kompatibla.
+
+Preview-jobbet använder Vercels projekt- och deployment-API direkt för att stödja
+projektbegränsade tokens utan CLI:ts användaruppslag. Det verifierar kopplingen
+till GitHub-repot och väntar på `READY` för rätt projekt och testad commit.
+Branchspecifika databasvariabler finns kvar i Vercel när en PR stängs.
 
 ## Databas
 

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { setSession } from "./session";
+import { setSession } from "./helpers/session";
 
 test("skapar hushåll och behåller det vid återbesök", async ({
   page,

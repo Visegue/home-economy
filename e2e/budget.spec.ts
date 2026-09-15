@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { setSession } from "./session";
+import { setSession } from "./helpers/session";
 
 test("registrerar medlemmar, inkomst och utgifter och jämför månader", async ({
   page,

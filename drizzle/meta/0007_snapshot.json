@@ -1,6 +1,6 @@
 {
-  "id": "7467e9d5-61ad-4641-b6fd-1be94624909b",
-  "prevId": "721a7937-b88f-4e54-8e86-a678f5100179",
+  "id": "5b49b81b-3160-40d1-8cdf-7659889b497a",
+  "prevId": "391b08fd-36b4-42a1-a8e9-24064f233c83",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -113,9 +113,9 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "account_user_id_idx": {
           "name": "account_user_id_idx",
@@ -128,20 +128,20 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "account_user_id_user_id_fk": {
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
-          "tableTo": "user",
           "columnsFrom": ["user_id"],
+          "tableTo": "user",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -216,28 +216,28 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "session_user_id_user_id_fk": {
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
-          "tableTo": "user",
           "columnsFrom": ["user_id"],
+          "tableTo": "user",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "session_token_unique": {
           "name": "session_token_unique",
-          "nullsNotDistinct": false,
-          "columns": ["token"]
+          "columns": ["token"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -300,8 +300,8 @@
       "uniqueConstraints": {
         "user_email_unique": {
           "name": "user_email_unique",
-          "nullsNotDistinct": false,
-          "columns": ["email"]
+          "columns": ["email"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -363,9 +363,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {},
@@ -385,15 +385,15 @@
           "primaryKey": true,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "accounts_id_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "household_id": {
@@ -460,28 +460,28 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "accounts_household_id_households_id_fk": {
           "name": "accounts_household_id_households_id_fk",
           "tableFrom": "accounts",
-          "tableTo": "households",
           "columnsFrom": ["household_id"],
+          "tableTo": "households",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "accounts_id_household_unique": {
           "name": "accounts_id_household_unique",
-          "nullsNotDistinct": false,
-          "columns": ["id", "household_id"]
+          "columns": ["id", "household_id"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -511,15 +511,15 @@
           "primaryKey": true,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "balance_snapshots_id_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "household_id": {
@@ -578,37 +578,37 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "balance_snapshots_household_id_households_id_fk": {
           "name": "balance_snapshots_household_id_households_id_fk",
           "tableFrom": "balance_snapshots",
-          "tableTo": "households",
           "columnsFrom": ["household_id"],
+          "tableTo": "households",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "balance_snapshots_account_household_fk": {
           "name": "balance_snapshots_account_household_fk",
           "tableFrom": "balance_snapshots",
-          "tableTo": "accounts",
           "columnsFrom": ["account_id", "household_id"],
+          "tableTo": "accounts",
           "columnsTo": ["id", "household_id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "balance_snapshots_account_date_unique": {
           "name": "balance_snapshots_account_date_unique",
-          "nullsNotDistinct": false,
-          "columns": ["account_id", "snapshot_date"]
+          "columns": ["account_id", "snapshot_date"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -630,15 +630,15 @@
           "primaryKey": true,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "categories_id_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "household_id": {
@@ -693,33 +693,33 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "categories_household_id_households_id_fk": {
           "name": "categories_household_id_households_id_fk",
           "tableFrom": "categories",
-          "tableTo": "households",
           "columnsFrom": ["household_id"],
+          "tableTo": "households",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "categories_household_name_kind_unique": {
           "name": "categories_household_name_kind_unique",
-          "nullsNotDistinct": false,
-          "columns": ["household_id", "name", "kind"]
+          "columns": ["household_id", "name", "kind"],
+          "nullsNotDistinct": false
         },
         "categories_id_household_unique": {
           "name": "categories_id_household_unique",
-          "nullsNotDistinct": false,
-          "columns": ["id", "household_id"]
+          "columns": ["id", "household_id"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -735,27 +735,63 @@
       },
       "isRLSEnabled": false
     },
-    "public.household_member_income": {
-      "name": "household_member_income",
+    "public.household_incomes": {
+      "name": "household_incomes",
       "schema": "",
       "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "household_incomes_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
+          }
+        },
         "household_id": {
           "name": "household_id",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
         },
-        "user_id": {
-          "name": "user_id",
+        "name": {
+          "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "monthly_net_income": {
-          "name": "monthly_net_income",
+        "amount": {
+          "name": "amount",
           "type": "numeric(14, 2)",
           "primaryKey": false,
+          "notNull": true
+        },
+        "starts_on": {
+          "name": "starts_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_on": {
+          "name": "ends_on",
+          "type": "date",
+          "primaryKey": false,
           "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
@@ -766,78 +802,80 @@
         }
       },
       "indexes": {
-        "household_member_income_user_id_idx": {
-          "name": "household_member_income_user_id_idx",
+        "household_incomes_household_period_idx": {
+          "name": "household_incomes_household_period_idx",
           "columns": [
             {
-              "expression": "user_id",
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "starts_on",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ends_on",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
-        "household_member_income_household_id_user_id_household_members_household_id_user_id_fk": {
-          "name": "household_member_income_household_id_user_id_household_members_household_id_user_id_fk",
-          "tableFrom": "household_member_income",
-          "tableTo": "household_members",
-          "columnsFrom": ["household_id", "user_id"],
-          "columnsTo": ["household_id", "user_id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+        "household_incomes_household_id_households_id_fk": {
+          "name": "household_incomes_household_id_households_id_fk",
+          "tableFrom": "household_incomes",
+          "columnsFrom": ["household_id"],
+          "tableTo": "households",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
-      "compositePrimaryKeys": {
-        "household_member_income_household_id_user_id_pk": {
-          "name": "household_member_income_household_id_user_id_pk",
-          "columns": ["household_id", "user_id"]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {
-        "household_member_income_select": {
-          "name": "household_member_income_select",
+        "household_incomes_access": {
+          "name": "household_incomes_access",
           "as": "PERMISSIVE",
-          "for": "SELECT",
+          "for": "ALL",
           "to": ["public"],
-          "using": "(select private.has_household_access(\"household_member_income\".\"household_id\"))"
-        },
-        "household_member_income_insert": {
-          "name": "household_member_income_insert",
-          "as": "PERMISSIVE",
-          "for": "INSERT",
-          "to": ["public"],
-          "withCheck": "\"household_member_income\".\"user_id\" = (select private.current_user_id()) and (select private.has_household_access(\"household_member_income\".\"household_id\"))"
-        },
-        "household_member_income_update": {
-          "name": "household_member_income_update",
-          "as": "PERMISSIVE",
-          "for": "UPDATE",
-          "to": ["public"],
-          "using": "\"household_member_income\".\"user_id\" = (select private.current_user_id()) and (select private.has_household_access(\"household_member_income\".\"household_id\"))",
-          "withCheck": "\"household_member_income\".\"user_id\" = (select private.current_user_id()) and (select private.has_household_access(\"household_member_income\".\"household_id\"))"
-        },
-        "household_member_income_delete": {
-          "name": "household_member_income_delete",
-          "as": "PERMISSIVE",
-          "for": "DELETE",
-          "to": ["public"],
-          "using": "\"household_member_income\".\"user_id\" = (select private.current_user_id()) and (select private.has_household_access(\"household_member_income\".\"household_id\"))"
+          "using": "(select private.has_household_access(\"household_incomes\".\"household_id\"))",
+          "withCheck": "(select private.has_household_access(\"household_incomes\".\"household_id\"))"
         }
       },
       "checkConstraints": {
-        "household_member_income_nonnegative": {
-          "name": "household_member_income_nonnegative",
-          "value": "\"household_member_income\".\"monthly_net_income\" >= 0 and \"household_member_income\".\"monthly_net_income\" <= 999999999999.99"
+        "household_incomes_name_length": {
+          "name": "household_incomes_name_length",
+          "value": "char_length(\"household_incomes\".\"name\") between 1 and 160"
+        },
+        "household_incomes_amount_nonnegative": {
+          "name": "household_incomes_amount_nonnegative",
+          "value": "\"household_incomes\".\"amount\" >= 0"
+        },
+        "household_incomes_start_first_day": {
+          "name": "household_incomes_start_first_day",
+          "value": "extract(day from \"household_incomes\".\"starts_on\") = 1"
+        },
+        "household_incomes_end_first_day": {
+          "name": "household_incomes_end_first_day",
+          "value": "\"household_incomes\".\"ends_on\" is null or extract(day from \"household_incomes\".\"ends_on\") = 1"
+        },
+        "household_incomes_period_order": {
+          "name": "household_incomes_period_order",
+          "value": "\"household_incomes\".\"ends_on\" is null or \"household_incomes\".\"ends_on\" >= \"household_incomes\".\"starts_on\""
         }
       },
-      "isRLSEnabled": true
+      "isRLSEnabled": false
     },
     "public.household_members": {
       "name": "household_members",
@@ -889,29 +927,29 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "household_members_household_id_households_id_fk": {
           "name": "household_members_household_id_households_id_fk",
           "tableFrom": "household_members",
-          "tableTo": "households",
           "columnsFrom": ["household_id"],
+          "tableTo": "households",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "household_members_user_id_user_id_fk": {
           "name": "household_members_user_id_user_id_fk",
           "tableFrom": "household_members",
-          "tableTo": "user",
           "columnsFrom": ["user_id"],
+          "tableTo": "user",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -930,6 +968,90 @@
       },
       "isRLSEnabled": false
     },
+    "public.household_people": {
+      "name": "household_people",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "household_people_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
+          }
+        },
+        "household_id": {
+          "name": "household_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "household_people_household_id_households_id_fk": {
+          "name": "household_people_household_id_households_id_fk",
+          "tableFrom": "household_people",
+          "columnsFrom": ["household_id"],
+          "tableTo": "households",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "household_people_id_household_unique": {
+          "name": "household_people_id_household_unique",
+          "columns": ["id", "household_id"],
+          "nullsNotDistinct": false
+        },
+        "household_people_household_name_unique": {
+          "name": "household_people_household_name_unique",
+          "columns": ["household_id", "name"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {
+        "household_people_access": {
+          "name": "household_people_access",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": ["public"],
+          "using": "(select private.has_household_access(\"household_people\".\"household_id\"))",
+          "withCheck": "(select private.has_household_access(\"household_people\".\"household_id\"))"
+        }
+      },
+      "checkConstraints": {
+        "household_people_name_length": {
+          "name": "household_people_name_length",
+          "value": "char_length(\"household_people\".\"name\") between 1 and 120"
+        }
+      },
+      "isRLSEnabled": false
+    },
     "public.households": {
       "name": "households",
       "schema": "",
@@ -940,15 +1062,15 @@
           "primaryKey": true,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "households_id_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "name": {
@@ -990,20 +1112,20 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "households_owner_user_id_user_id_fk": {
           "name": "households_owner_user_id_user_id_fk",
           "tableFrom": "households",
-          "tableTo": "user",
           "columnsFrom": ["owner_user_id"],
+          "tableTo": "user",
           "columnsTo": ["id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
@@ -1027,15 +1149,15 @@
           "primaryKey": true,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "monthly_liquidity_snapshots_id_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "household_id": {
@@ -1102,9 +1224,9 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "monthly_liquidity_household_period_idx": {
           "name": "monthly_liquidity_household_period_idx",
@@ -1123,20 +1245,20 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "monthly_liquidity_snapshots_household_id_households_id_fk": {
           "name": "monthly_liquidity_snapshots_household_id_households_id_fk",
           "tableFrom": "monthly_liquidity_snapshots",
-          "tableTo": "households",
           "columnsFrom": ["household_id"],
+          "tableTo": "households",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1172,15 +1294,15 @@
           "primaryKey": true,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "monthly_plan_items_id_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "household_id": {
@@ -1249,9 +1371,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "monthly_plan_items_household_idx": {
           "name": "monthly_plan_items_household_idx",
@@ -1264,9 +1386,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "monthly_plan_items_recurring_item_idx": {
           "name": "monthly_plan_items_recurring_item_idx",
@@ -1279,38 +1401,38 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "monthly_plan_items_household_id_households_id_fk": {
           "name": "monthly_plan_items_household_id_households_id_fk",
           "tableFrom": "monthly_plan_items",
-          "tableTo": "households",
           "columnsFrom": ["household_id"],
+          "tableTo": "households",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "monthly_plan_items_plan_household_fk": {
           "name": "monthly_plan_items_plan_household_fk",
           "tableFrom": "monthly_plan_items",
-          "tableTo": "monthly_plans",
           "columnsFrom": ["monthly_plan_id", "household_id"],
+          "tableTo": "monthly_plans",
           "columnsTo": ["id", "household_id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "monthly_plan_items_recurring_household_fk": {
           "name": "monthly_plan_items_recurring_household_fk",
           "tableFrom": "monthly_plan_items",
-          "tableTo": "recurring_items",
           "columnsFrom": ["recurring_item_id", "household_id"],
+          "tableTo": "recurring_items",
           "columnsTo": ["id", "household_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
@@ -1342,15 +1464,15 @@
           "primaryKey": true,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "monthly_plans_id_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "household_id": {
@@ -1418,33 +1540,33 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "monthly_plans_household_id_households_id_fk": {
           "name": "monthly_plans_household_id_households_id_fk",
           "tableFrom": "monthly_plans",
-          "tableTo": "households",
           "columnsFrom": ["household_id"],
+          "tableTo": "households",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "monthly_plans_household_period_unique": {
           "name": "monthly_plans_household_period_unique",
-          "nullsNotDistinct": false,
-          "columns": ["household_id", "period"]
+          "columns": ["household_id", "period"],
+          "nullsNotDistinct": false
         },
         "monthly_plans_id_household_unique": {
           "name": "monthly_plans_id_household_unique",
-          "nullsNotDistinct": false,
-          "columns": ["id", "household_id"]
+          "columns": ["id", "household_id"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -1468,6 +1590,101 @@
       },
       "isRLSEnabled": false
     },
+    "public.recurring_item_owners": {
+      "name": "recurring_item_owners",
+      "schema": "",
+      "columns": {
+        "household_id": {
+          "name": "household_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recurring_item_id": {
+          "name": "recurring_item_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "person_id": {
+          "name": "person_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "recurring_item_owners_household_idx": {
+          "name": "recurring_item_owners_household_idx",
+          "columns": [
+            {
+              "expression": "household_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "recurring_item_owners_person_idx": {
+          "name": "recurring_item_owners_person_idx",
+          "columns": [
+            {
+              "expression": "person_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "recurring_item_owners_item_household_fk": {
+          "name": "recurring_item_owners_item_household_fk",
+          "tableFrom": "recurring_item_owners",
+          "columnsFrom": ["recurring_item_id", "household_id"],
+          "tableTo": "recurring_items",
+          "columnsTo": ["id", "household_id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "recurring_item_owners_person_household_fk": {
+          "name": "recurring_item_owners_person_household_fk",
+          "tableFrom": "recurring_item_owners",
+          "columnsFrom": ["person_id", "household_id"],
+          "tableTo": "household_people",
+          "columnsTo": ["id", "household_id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "recurring_item_owners_recurring_item_id_person_id_pk": {
+          "name": "recurring_item_owners_recurring_item_id_person_id_pk",
+          "columns": ["recurring_item_id", "person_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "recurring_item_owners_access": {
+          "name": "recurring_item_owners_access",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": ["public"],
+          "using": "(select private.has_household_access(\"recurring_item_owners\".\"household_id\"))",
+          "withCheck": "(select private.has_household_access(\"recurring_item_owners\".\"household_id\"))"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.recurring_items": {
       "name": "recurring_items",
       "schema": "",
@@ -1478,15 +1695,15 @@
           "primaryKey": true,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "recurring_items_id_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "household_id": {
@@ -1606,9 +1823,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "recurring_items_category_id_idx": {
           "name": "recurring_items_category_id_idx",
@@ -1621,37 +1838,37 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "recurring_items_household_id_households_id_fk": {
           "name": "recurring_items_household_id_households_id_fk",
           "tableFrom": "recurring_items",
-          "tableTo": "households",
           "columnsFrom": ["household_id"],
+          "tableTo": "households",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "recurring_items_category_household_fk": {
           "name": "recurring_items_category_household_fk",
           "tableFrom": "recurring_items",
-          "tableTo": "categories",
           "columnsFrom": ["category_id", "household_id"],
+          "tableTo": "categories",
           "columnsTo": ["id", "household_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "recurring_items_id_household_unique": {
           "name": "recurring_items_id_household_unique",
-          "nullsNotDistinct": false,
-          "columns": ["id", "household_id"]
+          "columns": ["id", "household_id"],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -1685,15 +1902,15 @@
           "primaryKey": true,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "savings_goals_id_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "household_id": {
@@ -1772,9 +1989,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "savings_goals_account_id_idx": {
           "name": "savings_goals_account_id_idx",
@@ -1787,29 +2004,29 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "savings_goals_household_id_households_id_fk": {
           "name": "savings_goals_household_id_households_id_fk",
           "tableFrom": "savings_goals",
-          "tableTo": "households",
           "columnsFrom": ["household_id"],
+          "tableTo": "households",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "savings_goals_account_household_fk": {
           "name": "savings_goals_account_household_fk",
           "tableFrom": "savings_goals",
-          "tableTo": "accounts",
           "columnsFrom": ["account_id", "household_id"],
+          "tableTo": "accounts",
           "columnsTo": ["id", "household_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
@@ -1845,15 +2062,15 @@
           "primaryKey": true,
           "notNull": true,
           "identity": {
-            "type": "always",
             "name": "transactions_id_seq",
-            "schema": "public",
             "increment": "1",
-            "startWith": "1",
             "minValue": "1",
             "maxValue": "9223372036854775807",
+            "startWith": "1",
             "cache": "1",
-            "cycle": false
+            "cycle": false,
+            "schema": "public",
+            "type": "always"
           }
         },
         "household_id": {
@@ -1938,9 +2155,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "transactions_account_id_idx": {
           "name": "transactions_account_id_idx",
@@ -1953,9 +2170,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "transactions_category_id_idx": {
           "name": "transactions_category_id_idx",
@@ -1968,38 +2185,38 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "transactions_household_id_households_id_fk": {
           "name": "transactions_household_id_households_id_fk",
           "tableFrom": "transactions",
-          "tableTo": "households",
           "columnsFrom": ["household_id"],
+          "tableTo": "households",
           "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "transactions_account_household_fk": {
           "name": "transactions_account_household_fk",
           "tableFrom": "transactions",
-          "tableTo": "accounts",
           "columnsFrom": ["account_id", "household_id"],
+          "tableTo": "accounts",
           "columnsTo": ["id", "household_id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "transactions_category_household_fk": {
           "name": "transactions_category_household_fk",
           "tableFrom": "transactions",
-          "tableTo": "categories",
           "columnsFrom": ["category_id", "household_id"],
+          "tableTo": "categories",
           "columnsTo": ["id", "household_id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "restrict"
         }
       },
       "compositePrimaryKeys": {},
@@ -2020,6 +2237,110 @@
         }
       },
       "isRLSEnabled": false
+    },
+    "public.household_member_income": {
+      "name": "household_member_income",
+      "schema": "",
+      "columns": {
+        "household_id": {
+          "name": "household_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "monthly_net_income": {
+          "name": "monthly_net_income",
+          "type": "numeric(14, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "household_member_income_user_id_idx": {
+          "name": "household_member_income_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "household_member_income_household_id_user_id_household_members_household_id_user_id_fk": {
+          "name": "household_member_income_household_id_user_id_household_members_household_id_user_id_fk",
+          "tableFrom": "household_member_income",
+          "columnsFrom": ["household_id", "user_id"],
+          "tableTo": "household_members",
+          "columnsTo": ["household_id", "user_id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "household_member_income_household_id_user_id_pk": {
+          "name": "household_member_income_household_id_user_id_pk",
+          "columns": ["household_id", "user_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {
+        "household_member_income_select": {
+          "name": "household_member_income_select",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": ["public"],
+          "using": "(select private.has_household_access(\"household_member_income\".\"household_id\"))"
+        },
+        "household_member_income_insert": {
+          "name": "household_member_income_insert",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": ["public"],
+          "withCheck": "\"household_member_income\".\"user_id\" = (select private.current_user_id()) and (select private.has_household_access(\"household_member_income\".\"household_id\"))"
+        },
+        "household_member_income_update": {
+          "name": "household_member_income_update",
+          "as": "PERMISSIVE",
+          "for": "UPDATE",
+          "to": ["public"],
+          "using": "\"household_member_income\".\"user_id\" = (select private.current_user_id()) and (select private.has_household_access(\"household_member_income\".\"household_id\"))",
+          "withCheck": "\"household_member_income\".\"user_id\" = (select private.current_user_id()) and (select private.has_household_access(\"household_member_income\".\"household_id\"))"
+        },
+        "household_member_income_delete": {
+          "name": "household_member_income_delete",
+          "as": "PERMISSIVE",
+          "for": "DELETE",
+          "to": ["public"],
+          "using": "\"household_member_income\".\"user_id\" = (select private.current_user_id()) and (select private.has_household_access(\"household_member_income\".\"household_id\"))"
+        }
+      },
+      "checkConstraints": {
+        "household_member_income_nonnegative": {
+          "name": "household_member_income_nonnegative",
+          "value": "\"household_member_income\".\"monthly_net_income\" >= 0 and \"household_member_income\".\"monthly_net_income\" <= 999999999999.99"
+        }
+      },
+      "isRLSEnabled": true
     }
   },
   "enums": {
@@ -2072,10 +2393,10 @@
     }
   },
   "schemas": {},
+  "views": {},
   "sequences": {},
   "roles": {},
   "policies": {},
-  "views": {},
   "_meta": {
     "columns": {},
     "schemas": {},

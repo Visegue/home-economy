@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 
-it("preserves legacy income months including zero, without duplicating on rerun", async () => {
+it("upgrades main, preserving monthly and member incomes including zero without duplicating on rerun", async () => {
   const folder = await mkdtemp(join(tmpdir(), "income-migration-"));
   const client = new PGlite("memory://");
   try {
@@ -42,13 +42,19 @@ it("preserves legacy income months including zero, without duplicating on rerun"
     await client.exec(`
       insert into public."user" (id, name, email, email_verified) values ('migration-test', 'Testperson', 'migration@example.test', true);
       insert into households (name, owner_user_id) values ('Testhushåll', 'migration-test');
+      insert into public."user" (id, name, email, email_verified) values ('zero', 'Zero', 'zero@example.test', true), ('missing', 'Missing', 'missing@example.test', true);
+      insert into household_members (household_id, user_id, display_name) select id, 'migration-test', 'Testperson' from households;
+      insert into household_members (household_id, user_id) select id, person from households cross join (values ('zero'), ('missing')) as people(person);
+      insert into household_member_income (household_id, user_id, monthly_net_income, updated_at) select id, 'migration-test', 12345.67, '2026-08-31 22:30:00+00' from households;
+      insert into household_member_income (household_id, user_id, monthly_net_income, updated_at) select id, 'zero', 0, '2026-09-01 00:00:00+00' from households;
+      insert into household_member_income (household_id, user_id, monthly_net_income) select id, 'missing', null from households;
       insert into monthly_plans (household_id, period, planned_income) select id, '2026-09-01', 30000.50 from households;
       insert into monthly_plans (household_id, period, planned_income) select id, '2026-10-01', 0 from households;
     `);
     await migrate(db, { migrationsFolder: "drizzle" });
     await migrate(db, { migrationsFolder: "drizzle" });
     const result = await client.query(
-      "select name, amount::text, starts_on::text, ends_on::text from household_incomes order by starts_on",
+      "select name, amount::text, starts_on::text, ends_on::text from household_incomes where ends_on is not null order by starts_on",
     );
     expect(result.rows).toEqual([
       {
@@ -62,6 +68,23 @@ it("preserves legacy income months including zero, without duplicating on rerun"
         amount: "0.00",
         starts_on: "2026-10-01",
         ends_on: "2026-10-01",
+      },
+    ]);
+    const ongoing = await client.query(
+      "select name, amount::text, starts_on::text, ends_on from household_incomes where ends_on is null order by amount desc",
+    );
+    expect(ongoing.rows).toEqual([
+      {
+        name: "Månadsinkomst – Testperson",
+        amount: "12345.67",
+        starts_on: "2026-09-01",
+        ends_on: null,
+      },
+      {
+        name: "Månadsinkomst",
+        amount: "0.00",
+        starts_on: "2026-09-01",
+        ends_on: null,
       },
     ]);
     await expect(

@@ -47,7 +47,7 @@ import {
   removeIncome,
   removeExpense,
 } from "@/features/budget/data";
-import { monthlySummary } from "@/features/budget/model";
+import { currentPeriod, monthlySummary } from "@/features/budget/model";
 
 const client = new PGlite("memory://");
 const database = drizzle(client, { schema });
@@ -562,5 +562,48 @@ describe("budget persistence and isolation", () => {
         .where(eq(recurringItems.id, expenseId)),
     );
     expect(stored.active).toBe(false);
+  });
+});
+
+describe("initial household income", () => {
+  it("creates an ongoing source once and preserves zero and omitted income", async () => {
+    for (const [id, amount] of [
+      ["initial-paid", 3_250_075],
+      ["initial-zero", 0],
+      ["initial-missing", null],
+    ] as const) {
+      await database.insert(user).values({
+        id,
+        name: "Testperson",
+        email: `${id}@example.test`,
+        emailVerified: true,
+      });
+      identity.userId = id;
+      await createPersonalHousehold("Nytt hushåll", amount);
+      await createPersonalHousehold("Upprepning", 100);
+      const data = await getBudgetData();
+      const expected =
+        amount === null
+          ? []
+          : [
+              {
+                name: "Månadsinkomst",
+                amountInOre: amount,
+                startsOn: currentPeriod(),
+                endsOn: null,
+              },
+            ];
+      expect(
+        data.incomes.map(({ name, amountInOre, startsOn, endsOn }) => ({
+          name,
+          amountInOre,
+          startsOn,
+          endsOn,
+        })),
+      ).toEqual(expected);
+      expect(
+        monthlySummary(currentPeriod(), [], data.incomes).incomeInOre,
+      ).toBe(amount);
+    }
   });
 });

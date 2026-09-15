@@ -22,6 +22,9 @@ try {
       "budget-outsider",
       "budget-preview",
       "expired",
+      "income-0",
+      "income-1",
+      "income-2",
     ]) {
       await database.query(
         `insert into public."user" (id, name, email, email_verified)
