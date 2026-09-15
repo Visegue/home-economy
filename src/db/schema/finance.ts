@@ -513,9 +513,14 @@ export const savingsGoals = pgTable(
       .references(() => households.id, { onDelete: "cascade" }),
     accountId: bigint("account_id", { mode: "number" }),
     name: text("name").notNull(),
-    targetAmount: money("target_amount").notNull(),
+    targetAmount: money("target_amount"),
     targetDate: date("target_date", { mode: "date" }),
-    monthlyContribution: money("monthly_contribution").default(0).notNull(),
+    monthlyContribution: numeric("monthly_contribution", {
+      precision: 14,
+      scale: 2,
+    })
+      .default("0")
+      .notNull(),
     notes: text("notes"),
     active: boolean().default(true).notNull(),
     createdAt: createdAt(),
