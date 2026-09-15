@@ -3,12 +3,9 @@ import "server-only";
 import { eq } from "drizzle-orm";
 
 import { withAuthenticatedDatabase } from "@/db/authorized";
-import {
-  householdMemberIncome,
-  householdMembers,
-  households,
-} from "@/db/schema";
-import { incomeToDatabase } from "@/features/income/validation";
+import { householdIncomes, householdMembers, households } from "@/db/schema";
+import { monthlyIncomeInOreSchema } from "@/features/income/validation";
+import { currentPeriod } from "@/features/budget/model";
 
 export interface CurrentHousehold {
   id: number;
@@ -57,7 +54,7 @@ export async function createPersonalHousehold(
   name: string,
   monthlyNetIncomeInOre: number | null = null,
 ): Promise<CurrentHousehold> {
-  const monthlyNetIncome = incomeToDatabase(monthlyNetIncomeInOre);
+  monthlyIncomeInOreSchema.parse(monthlyNetIncomeInOre);
   return withAuthenticatedDatabase(async (transaction, user) => {
     let stage: HouseholdCreationStage = "find_existing_household";
 
@@ -69,6 +66,7 @@ export async function createPersonalHousehold(
         .limit(1);
 
       let household = existingHousehold;
+      let created = false;
 
       if (!household) {
         stage = "insert_household";
@@ -77,6 +75,7 @@ export async function createPersonalHousehold(
           .values({ name, ownerUserId: user.id })
           .onConflictDoNothing({ target: households.ownerUserId })
           .returning();
+        created = Boolean(household);
       }
 
       if (!household) {
@@ -107,14 +106,15 @@ export async function createPersonalHousehold(
         })
         .onConflictDoNothing();
 
-      if (monthlyNetIncome !== null) {
+      if (created && monthlyNetIncomeInOre !== null) {
         stage = "insert_initial_income";
         await transaction
-          .insert(householdMemberIncome)
+          .insert(householdIncomes)
           .values({
             householdId: household.id,
-            userId: user.id,
-            monthlyNetIncome,
+            name: "Månadsinkomst",
+            amount: monthlyNetIncomeInOre / 100,
+            startsOn: new Date(`${currentPeriod()}-01T00:00:00Z`),
           })
           .onConflictDoNothing();
       }
