@@ -59,22 +59,20 @@ Branchspecifika databasvariabler finns kvar i Vercel när en PR stängs.
 
 ## Pengar och datum
 
-Personlig nettoinkomst per månad registreras valfritt vid hushållsskapande och
-ändras eller tas bort i Inställningar. `household_member_income` lagrar ett
-aktuellt belopp per hushållsmedlem i SEK som `numeric(14,2)`. Saknat belopp är
-`null`; noll är ett uttryckligen angivet belopp. Inställningen innehåller ingen
-inkomsthistorik och skapar inte automatiskt transaktioner eller budgetposter.
+Hushållets namngivna inkomstkällor lagras i `household_incomes` med månadsbelopp,
+startmånad och valfri inkluderande slutmånad. Inställningarna hanterar flera källor,
+och månadsöversikten summerar alla aktiva inkomster. Valfri inkomst vid
+hushållsskapande blir en källa från aktuell svensk kalendermånad utan slutdatum.
+Upprepad onboarding skapar inga nya inkomstkällor.
 
-Servervyer hämtar den inloggade användarens inkomst genom
-`getMonthlyNetIncome()` i `src/features/income/data.ts`, som returnerar heltalsöre
-eller `null`. Databasåtkomsten går genom `withAuthenticatedDatabase()`.
-Hushållsmedlemmar kan läsa hushållets inkomstuppgifter, men bara användaren själv
-kan skriva sin inkomst. Tvingande RLS, medlemskoppling och en kontroll av
-icke-negativa belopp finns i migrationen. Onboarding sparar hushåll, medlemskap
-och eventuell inkomst i samma transaktion.
+Äldre `monthly_plans` bevaras som inkomster för respektive månad. Tidigare
+`household_member_income` kopieras till öppna inkomstperioder från månaden för
+senaste uppdateringen (Europe/Stockholm); äldre giltighet kan inte härledas.
+Den gamla tabellen behålls med RLS men används inte för nya inkomster.
+All åtkomst sker inom `withAuthenticatedDatabase()` och hushållets tvingande RLS.
 
 Klientens domänfunktioner använder heltals-öre för exakta beräkningar. Databasen använder `numeric(14,2)`. Månadsperioder sparas som första dagen i månaden och valideras i databasen. Datum utan tid lagras som `date`; auditfält använder `timestamptz`.
 
 ## Nästa vertikala flöde
 
-Nästa persistenta funktion bör vara “skapa månadsplan”: registrera inkomster och återkommande poster, generera månadens rader och visa kvar efter plan. Inloggning och skapandet av användarens privata hushåll utgör nu den första vertikala grunden. Därefter kan historisk import och kontosnapshots läggas på utan att ändra kärnmodellen.
+Månadsöversikten visar nu inkomster, direkta utgifter och månadsavsättningar. Historisk import och kontosnapshots kan läggas på utan att ändra kärnmodellen.

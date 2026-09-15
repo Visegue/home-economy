@@ -27,34 +27,27 @@ test("sparar valfri nettoinkomst vid onboarding och i inställningarna", async (
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
   await expect(page).toHaveURL("http://127.0.0.1:3000/");
   await page.goto("/settings");
-  await expect(income).toHaveValue("32500,75");
-
-  await income.fill("34000,29");
-  await page.getByRole("button", { name: "Spara inkomst" }).click();
-  await expect(page.getByRole("status")).toHaveText("Inkomsten är sparad.");
-  await page.reload();
-  await expect(income).toHaveValue("34000,29");
-
-  await income.fill("-100");
-  await page.getByRole("button", { name: "Spara inkomst" }).click();
+  await page
+    .getByRole("button", { name: "Ändra Månadsinkomst", exact: true })
+    .click();
+  const amount = page.getByLabel("Belopp per månad efter skatt (kr)");
+  await expect(amount).toHaveValue("32500,75");
   await expect(
-    page
-      .getByRole("alert")
-      .filter({ hasText: "Ange ett positivt belopp eller 0" }),
-  ).toContainText("Ange ett positivt belopp eller 0");
-  await expect(income).toHaveValue("-100");
+    page.getByRole("checkbox", { name: "Gäller tills vidare" }),
+  ).toBeChecked();
+  await amount.fill("34000,29");
+  await page
+    .getByRole("button", { name: "Spara inkomst", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.reload();
-  await expect(income).toHaveValue("34000,29");
-
-  await income.fill("0");
-  await page.getByRole("button", { name: "Spara inkomst" }).click();
-  await expect(page.getByRole("status")).toHaveText("Inkomsten är sparad.");
-  await page.reload();
-  await expect(income).toHaveValue("0,00");
-
-  await income.fill("");
-  await page.getByRole("button", { name: "Spara inkomst" }).click();
-  await expect(page.getByRole("status")).toHaveText("Inkomsten är borttagen.");
-  await page.reload();
-  await expect(income).toHaveValue("");
+  await page
+    .getByRole("button", { name: "Ändra Månadsinkomst", exact: true })
+    .click();
+  await expect(amount).toHaveValue("34000,29");
+  await page.getByRole("button", { name: "Stäng", exact: true }).click();
+  await page.goto("/");
+  await expect(
+    page.getByRole("region", { name: "Månadens nyckeltal" }),
+  ).toContainText("34 000");
 });

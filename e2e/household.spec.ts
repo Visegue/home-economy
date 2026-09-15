@@ -21,12 +21,6 @@ test("skapar hushåll och behåller det vid återbesök", async ({
   await expect(page.getByText("Testfamiljen", { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByText("Testfamiljen", { exact: true })).toBeVisible();
-  await page.goto("/settings");
-  await expect(
-    page.getByRole("textbox", {
-      name: "Din månadsinkomst efter skatt (valfritt)",
-    }),
-  ).toHaveValue("");
 
   const returningContext = await browser.newContext();
   try {

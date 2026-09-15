@@ -25,10 +25,11 @@ try {
     where relnamespace = 'public'::regnamespace and relname in (
       'households', 'household_members', 'household_member_income', 'categories', 'accounts',
       'recurring_items', 'monthly_plans', 'monthly_plan_items', 'transactions',
-      'balance_snapshots', 'savings_goals', 'monthly_liquidity_snapshots'
+      'balance_snapshots', 'savings_goals', 'monthly_liquidity_snapshots',
+      'household_people', 'recurring_item_owners', 'household_incomes'
     )
   `;
-  assert.equal(tables.length, 12);
+  assert.equal(tables.length, 15);
   for (const table of tables) {
     assert.ok(table.relrowsecurity && table.relforcerowsecurity, table.relname);
   }

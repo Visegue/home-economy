@@ -1,0 +1,118 @@
+"use server";
+
+import { randomUUID } from "node:crypto";
+import { revalidatePath } from "next/cache";
+import { unstable_rethrow } from "next/navigation";
+import { z } from "zod";
+import { logServerError } from "@/lib/server-error-log";
+import {
+  addExpense,
+  addPerson,
+  removeExpense,
+  removeIncome,
+  saveIncome,
+} from "./data";
+import { expenseSchema, incomeSchema } from "./model";
+
+export interface FormState {
+  error?: string;
+  success?: string;
+}
+async function mutate(
+  operation: () => Promise<FormState | void>,
+): Promise<FormState> {
+  try {
+    const result = await operation();
+    revalidatePath("/");
+    revalidatePath("/salary");
+    revalidatePath("/settings");
+    return result ?? { success: "Sparat." };
+  } catch (error) {
+    unstable_rethrow(error);
+    logServerError({
+      error,
+      event: "budget.write.failed",
+      reference: randomUUID(),
+    });
+    return { error: "Det gick inte att spara. Försök igen." };
+  }
+}
+export async function addExpenseAction(
+  _state: FormState,
+  data: FormData,
+): Promise<FormState> {
+  const parsed = expenseSchema.safeParse({
+    name: data.get("name"),
+    amount: data.get("amount"),
+    period: data.get("period"),
+    type: data.get("type"),
+    months: data.get("months"),
+    nextDueOn: data.get("nextDueOn") ?? "",
+    ownerIds: data.getAll("ownerIds"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+  return mutate(async () => {
+    await addExpense(parsed.data);
+    return { success: "Utgiften har lagts till." };
+  });
+}
+export async function saveIncomeAction(
+  _state: FormState,
+  data: FormData,
+): Promise<FormState> {
+  const parsed = incomeSchema.safeParse({
+    id: data.get("id") || undefined,
+    name: data.get("name"),
+    amount: data.get("amount"),
+    startsOn: data.get("startsOn"),
+    endsOn: data.get("endsOn") ?? "",
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+  return mutate(async () => {
+    await saveIncome(parsed.data);
+    return { success: "Inkomsten har sparats." };
+  });
+}
+export async function removeIncomeAction(
+  _state: FormState,
+  data: FormData,
+): Promise<FormState> {
+  const parsed = z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(Number.MAX_SAFE_INTEGER)
+    .safeParse(data.get("id"));
+  if (!parsed.success) return { error: "Inkomsten kunde inte hittas." };
+  return mutate(() => removeIncome(parsed.data));
+}
+export async function addPersonAction(
+  _state: FormState,
+  data: FormData,
+): Promise<FormState> {
+  const parsed = z
+    .string()
+    .trim()
+    .min(1, "Ange medlemmens namn.")
+    .max(120, "Namnet får vara högst 120 tecken.")
+    .safeParse(data.get("name"));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+  return mutate(async () =>
+    (await addPerson(parsed.data))
+      ? { success: "Medlemmen har lagts till." }
+      : { error: "Det finns redan en medlem med det namnet." },
+  );
+}
+export async function removeExpenseAction(
+  _state: FormState,
+  data: FormData,
+): Promise<FormState> {
+  const parsed = z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(Number.MAX_SAFE_INTEGER)
+    .safeParse(data.get("id"));
+  if (!parsed.success) return { error: "Utgiften kunde inte hittas." };
+  return mutate(() => removeExpense(parsed.data));
+}
