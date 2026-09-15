@@ -4,6 +4,18 @@ En svensk webbapp för att planera hushållets ekonomi utan kalkylbladskänslan.
 
 Dashboarden använder en varm sandfärgad grund med aubergine, dammigt blått, senap och salvia. All incheckad demodata är syntetisk.
 
+## Månadsbudget
+
+- **Månaden** visar sparad månadsinkomst, direkta utgifter, avsättningar och kvarvarande belopp eller underskott. Årslistan jämför årets tolv månader.
+- Registrera namngivna inkomstkällor under **Inställningar → Hushållets inkomster**. Varje källa har ett månadsbelopp efter skatt, startmånad och valfri slutmånad. Båda gränsmånaderna ingår; utan slutmånad gäller inkomsten tills vidare. Alla aktiva källor summeras per månad.
+- Vid ändrat belopp: avsluta den gamla inkomsten och skapa en ny från nästa månad. Befintliga månadsregistreringar migreras till egna inkomstposter för sina ursprungliga månader.
+- Lägg till direkta månadsutgifter eller avsatta utgifter med intervall på 2, 3, 6, 12 eller 24 månader och nästa betalningsdatum. Utgifterna gäller från vald månad och framåt.
+- Avsättningen är beloppet delat med antalet månader, avrundat till närmaste öre per utgift. Betalningen räknas inte en gång till i månadsbudgeten. Befintligt avsättningssaldo och eventuell upphämtning inför första betalningen ingår inte.
+- Skapa medlemmar under **Inställningar** och välj valfritt flera ägare per utgift. Namnen ger ingen inloggningsåtkomst och påverkar inte summeringen.
+- **Ta bort** tar bort utgiften ur hela budgeten, även tidigare månader. Den lagrade posten behålls för eventuella kopplingar till månadsplaner.
+
+Den första vyn använder hushållets sparade data. Kör `pnpm db:migrate` innan den nya versionen startas mot en befintlig databas.
+
 ## Teknik
 
 - Next.js 16, React 19 och TypeScript

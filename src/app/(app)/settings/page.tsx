@@ -1,16 +1,99 @@
-import { Settings } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { getBudgetData } from "@/features/budget/data";
+import { PersonForm } from "@/features/budget/forms";
+import {
+  IncomeDialog,
+  RemoveIncomeButton,
+} from "@/features/budget/income-form";
+import { currentPeriod, monthLabel } from "@/features/budget/model";
+import { formatBudgetSek } from "@/lib/money";
 
-import { FeaturePlaceholder } from "@/components/feature-placeholder";
+export const metadata = { title: "Hushållsinställningar" };
 
-export const metadata = { title: "Inställningar" };
-
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const { people, household, incomes } = await getBudgetData();
+  const current = currentPeriod();
   return (
-    <FeaturePlaceholder
-      title="Anpassa Hemekonomi"
-      description="Här kommer du att kunna administrera ekonomiska konton, hushållets uppgifter och ditt användarkonto."
-      icon={Settings}
-      sections={["Ekonomiska konton", "Hushåll", "Användarkonto"]}
-    />
+    <div className="max-w-4xl space-y-6">
+      <Card id="incomes">
+        <CardHeader>
+          <CardTitle>Hushållets inkomster</CardTitle>
+          <CardDescription>
+            Lägg till hushållets olika inkomstkällor och när de gäller. Aktiva
+            inkomster summeras automatiskt i månadsöversikten.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <IncomeDialog defaultStart={current} />
+          {incomes.length ? (
+            <ul aria-label="Hushållets inkomster" className="divide-y">
+              {incomes.map((income) => (
+                <li
+                  key={income.id}
+                  className="flex flex-wrap justify-between gap-4 py-4"
+                >
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-medium break-words">{income.name}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {monthLabel(income.startsOn)} –{" "}
+                      {income.endsOn
+                        ? monthLabel(income.endsOn)
+                        : "tills vidare"}
+                    </p>
+                    <p className="mt-1 font-semibold tabular-nums">
+                      {formatBudgetSek(income.amountInOre)}
+                      <span className="font-normal text-muted-foreground">
+                        {" "}
+                        / månad
+                      </span>
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-start gap-2">
+                    <IncomeDialog income={income} defaultStart={current} />
+                    <RemoveIncomeButton income={income} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Inga inkomster tillagda ännu. Börja med till exempel lön eller ett
+              bidrag.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Medlemmar i {household.name}</CardTitle>
+          <CardDescription>
+            Lägg till dem som ingår i hushållet. Du kan sedan välja en eller
+            flera ägare på varje utgift. Medlemmarna behöver inget eget konto.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {people.length ? (
+            <ul aria-label="Hushållets medlemmar" className="divide-y">
+              {people.map((person) => (
+                <li key={person.id} className="py-3 font-medium">
+                  {person.name}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Inga medlemmar tillagda ännu.
+            </p>
+          )}
+          <PersonForm />
+        </CardContent>
+      </Card>
+    </div>
   );
 }

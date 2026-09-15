@@ -16,6 +16,11 @@ try {
       "onboarding-0",
       "onboarding-1",
       "onboarding-2",
+      "budget-0",
+      "budget-1",
+      "budget-2",
+      "budget-outsider",
+      "budget-preview",
       "expired",
     ]) {
       await database.query(

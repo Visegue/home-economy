@@ -47,7 +47,7 @@ const settingsNavigation = {
   label: "Inställningar",
   href: "/settings",
   icon: Settings,
-  description: "Hantera ekonomiska konton och användarkonto",
+  description: "Hantera hushållets medlemmar och inkomster",
 } as const;
 
 const allNavigation = [...mainNavigation, settingsNavigation];
