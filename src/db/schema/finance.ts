@@ -9,6 +9,7 @@ import {
   index,
   numeric,
   pgEnum,
+  pgPolicy,
   pgTable,
   primaryKey,
   smallint,
@@ -112,6 +113,48 @@ export const householdMembers = pgTable(
     index("household_members_user_id_idx").on(table.userId),
   ],
 );
+
+export const householdMemberIncome = pgTable(
+  "household_member_income",
+  {
+    householdId: bigint("household_id", { mode: "number" }).notNull(),
+    userId: text("user_id").notNull(),
+    monthlyNetIncome: numeric("monthly_net_income", {
+      precision: 14,
+      scale: 2,
+    }),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.householdId, table.userId] }),
+    foreignKey({
+      columns: [table.householdId, table.userId],
+      foreignColumns: [householdMembers.householdId, householdMembers.userId],
+    }).onDelete("cascade"),
+    index("household_member_income_user_id_idx").on(table.userId),
+    check(
+      "household_member_income_nonnegative",
+      sql`${table.monthlyNetIncome} >= 0 and ${table.monthlyNetIncome} <= 999999999999.99`,
+    ),
+    pgPolicy("household_member_income_select", {
+      for: "select",
+      using: sql`(select private.has_household_access(${table.householdId}))`,
+    }),
+    pgPolicy("household_member_income_insert", {
+      for: "insert",
+      withCheck: sql`${table.userId} = (select private.current_user_id()) and (select private.has_household_access(${table.householdId}))`,
+    }),
+    pgPolicy("household_member_income_update", {
+      for: "update",
+      using: sql`${table.userId} = (select private.current_user_id()) and (select private.has_household_access(${table.householdId}))`,
+      withCheck: sql`${table.userId} = (select private.current_user_id()) and (select private.has_household_access(${table.householdId}))`,
+    }),
+    pgPolicy("household_member_income_delete", {
+      for: "delete",
+      using: sql`${table.userId} = (select private.current_user_id()) and (select private.has_household_access(${table.householdId}))`,
+    }),
+  ],
+).enableRLS();
 
 export const categories = pgTable(
   "categories",

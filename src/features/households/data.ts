@@ -3,7 +3,12 @@ import "server-only";
 import { eq } from "drizzle-orm";
 
 import { withAuthenticatedDatabase } from "@/db/authorized";
-import { householdMembers, households } from "@/db/schema";
+import {
+  householdMemberIncome,
+  householdMembers,
+  households,
+} from "@/db/schema";
+import { incomeToDatabase } from "@/features/income/validation";
 
 export interface CurrentHousehold {
   id: number;
@@ -17,7 +22,8 @@ type HouseholdCreationStage =
   | "refetch_household"
   | "resolve_household"
   | "prepare_owner_membership"
-  | "insert_owner_membership";
+  | "insert_owner_membership"
+  | "insert_initial_income";
 
 class HouseholdCreationError extends Error {
   readonly stage: HouseholdCreationStage;
@@ -49,7 +55,9 @@ export async function getCurrentHousehold(): Promise<CurrentHousehold | null> {
 
 export async function createPersonalHousehold(
   name: string,
+  monthlyNetIncomeInOre: number | null = null,
 ): Promise<CurrentHousehold> {
+  const monthlyNetIncome = incomeToDatabase(monthlyNetIncomeInOre);
   return withAuthenticatedDatabase(async (transaction, user) => {
     let stage: HouseholdCreationStage = "find_existing_household";
 
@@ -98,6 +106,18 @@ export async function createPersonalHousehold(
           displayName,
         })
         .onConflictDoNothing();
+
+      if (monthlyNetIncome !== null) {
+        stage = "insert_initial_income";
+        await transaction
+          .insert(householdMemberIncome)
+          .values({
+            householdId: household.id,
+            userId: user.id,
+            monthlyNetIncome,
+          })
+          .onConflictDoNothing();
+      }
 
       return household;
     } catch (error) {

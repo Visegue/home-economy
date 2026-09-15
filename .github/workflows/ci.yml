@@ -65,6 +65,72 @@ jobs:
             test-results/
           retention-days: 7
 
+  deploy-preview:
+    name: Deploy preview
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    needs: [quality, end-to-end]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+    # All previews currently share the development database.
+    concurrency:
+      group: staging-database-deployment
+      cancel-in-progress: false
+    steps:
+      # Use the same PR merge commit that quality and end-to-end tested.
+      - uses: actions/checkout@v7
+      - name: Validate preview configuration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          missing=0
+          for variable in DATABASE_URL DATABASE_MIGRATION_URL VERCEL_ORG_ID VERCEL_PROJECT_ID VERCEL_TOKEN; do
+            if [ -z "${!variable:-}" ]; then
+              echo "::error::$variable saknas i GitHub-miljön staging."
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply preview migrations
+        env:
+          DATABASE_PROVIDER: postgres
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          NODE_ENV: production
+        run: pnpm db:migrate
+      - name: Verify preview database
+        env:
+          DATABASE_PROVIDER: postgres
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: production
+        run: pnpm db:check
+      - name: Deploy preview
+        id: deploy
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PR_BRANCH: ${{ github.head_ref }}
+        run: node scripts/deploy-preview.mjs
+
   deploy-production:
     name: Deploy production
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

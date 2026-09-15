@@ -1,16 +1,29 @@
-import { Settings } from "lucide-react";
-
-import { FeaturePlaceholder } from "@/components/feature-placeholder";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import { getMonthlyNetIncome } from "@/features/income/data";
+import { incomeToInput } from "@/features/income/validation";
+import { IncomeForm } from "./income-form";
 
 export const metadata = { title: "Inställningar" };
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const monthlyNetIncomeInOre = await getMonthlyNetIncome();
   return (
-    <FeaturePlaceholder
-      title="Anpassa Hemekonomi"
-      description="Här kommer du att kunna administrera ekonomiska konton, hushållets uppgifter och ditt användarkonto."
-      icon={Settings}
-      sections={["Ekonomiska konton", "Hushåll", "Användarkonto"]}
-    />
+    <Card className="max-w-xl">
+      <CardHeader>
+        <CardTitle>Din inkomst</CardTitle>
+        <CardDescription>
+          Din vanliga månadsinkomst efter skatt, till exempel lön eller pension.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <IncomeForm initialValue={incomeToInput(monthlyNetIncomeInOre)} />
+      </CardContent>
+    </Card>
   );
 }
