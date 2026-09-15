@@ -105,11 +105,17 @@ Följande secrets krävs i GitHub-miljön `staging`:
 - `VERCEL_PROJECT_ID`: Vercel-projektets ID
 
 Auth- och e-postinställningar hämtas från Vercels Preview-miljö. Runtime-anslutningen
-skickas från `staging` till både Vercel-bygget och appen; migrationsanslutningen
+sparas från `staging` som en krypterad, branchspecifik Preview-variabel via Vercels API
+och används av både bygget och appen; migrationsanslutningen
 ska inte läggas i Vercel. Jobbet förbrukar Neon-kvot och är serialiserat eftersom
 alla previews delar databasen. Migrationer rullas inte tillbaka när en PR stängs.
 Samordna schemaändringar mellan PR:er och håll dem bakåtkompatibla; isolerade
 Neon-branches per PR behövs om parallella schemaändringar inte är kompatibla.
+
+Preview-jobbet använder Vercels projekt- och deployment-API direkt för att stödja
+projektbegränsade tokens utan CLI:ts användaruppslag. Det verifierar kopplingen
+till GitHub-repot och väntar på `READY` för rätt projekt och testad commit.
+Branchspecifika databasvariabler finns kvar i Vercel när en PR stängs.
 
 ## Databas
 

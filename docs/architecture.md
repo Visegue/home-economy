@@ -43,14 +43,19 @@ applicerar `Deploy preview` väntande migrationer på Neons `development`-branch
 kör `pnpm db:check` och skapar först därefter deploymenten i Vercels Preview-miljö.
 Jobbet använder GitHub-miljön `staging`, är serialiserat över samtliga PR:er och
 avbryter inte en pågående migration när nya commits kommer. Samma PR-mergecommit
-används för tester och deployment. Runtime-anslutningen från `staging` skickas
-även till Vercel så att appen använder databasen som precis migrerats; ägaranslutningen
+används för tester och deployment. Runtime-anslutningen från `staging` sparas
+som krypterad, branchspecifik Preview-variabel via Vercels API så att appen använder databasen som precis migrerats; ägaranslutningen
 stannar i migrationssteget i GitHub Actions.
 
 Endast PR:er från samma repo och andra aktörer än Dependabot får detta jobb.
 Previews delar tills vidare databas och schema: migrationer måste vara bakåtkompatibla,
 och samtidiga PR:er med motstridiga migrationer kräver samordning eller egna Neon-branches.
 Att stänga en PR rullar inte tillbaka migrationer i den gemensamma databasen.
+
+Preview-jobbet använder Vercels projekt- och deployment-API direkt för att stödja
+projektbegränsade tokens utan CLI:ts användaruppslag. Det verifierar kopplingen
+till GitHub-repot och väntar på `READY` för rätt projekt och testad commit.
+Branchspecifika databasvariabler finns kvar i Vercel när en PR stängs.
 
 ## Pengar och datum
 

@@ -129,18 +129,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PR_BRANCH: ${{ github.head_ref }}
-        run: |
-          deployment_url="$(pnpm dlx vercel@59.16.0 deploy --target=preview --yes --no-color \
-            --token "$VERCEL_TOKEN" \
-            --scope "$VERCEL_ORG_ID" \
-            --meta githubDeployment=1 \
-            --meta "githubCommitRef=$PR_BRANCH" \
-            --meta "githubCommitSha=$GITHUB_SHA" \
-            --env DATABASE_PROVIDER=postgres \
-            --env "DATABASE_URL=$DATABASE_URL" \
-            --build-env DATABASE_PROVIDER=postgres \
-            --build-env "DATABASE_URL=$DATABASE_URL")"
-          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
+        run: node scripts/deploy-preview.mjs
 
   deploy-production:
     name: Deploy production
