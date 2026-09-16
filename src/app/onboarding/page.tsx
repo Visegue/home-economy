@@ -1,13 +1,7 @@
-import { CircleDollarSign, LockKeyhole } from "lucide-react";
+import { CircleDollarSign } from "lucide-react";
 import { redirect } from "next/navigation";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserMenu } from "@/components/user-menu";
 import { getCurrentHousehold } from "@/features/households/data";
 import { requireSession } from "@/lib/auth/session";
@@ -32,23 +26,9 @@ export default async function OnboardingPage() {
           <div className="mb-3 grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground">
             <CircleDollarSign aria-hidden="true" />
           </div>
-          <CardTitle className="text-xl">Skapa ditt ekonomihushåll</CardTitle>
-          <CardDescription className="leading-relaxed">
-            Hushållet är din privata yta för budget, konton, sparande och
-            historik.
-          </CardDescription>
+          <CardTitle className="text-xl">Skapa ditt hushåll</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex gap-3 rounded-xl bg-muted/60 p-4 text-sm leading-relaxed text-muted-foreground">
-            <LockKeyhole
-              className="mt-0.5 size-4 shrink-0 text-primary"
-              aria-hidden="true"
-            />
-            <p>
-              Åtkomsten isoleras i databasen med row-level security. Andra
-              användare kan inte läsa eller ändra ditt hushåll.
-            </p>
-          </div>
           <OnboardingForm />
         </CardContent>
       </Card>

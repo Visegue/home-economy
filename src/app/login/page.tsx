@@ -1,13 +1,7 @@
 import { CircleDollarSign } from "lucide-react";
 import { redirect } from "next/navigation";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   isEmailAuthConfigured,
   isGoogleAuthConfigured,
@@ -33,9 +27,6 @@ export default async function LoginPage() {
             <CircleDollarSign aria-hidden="true" />
           </div>
           <CardTitle className="text-xl">Välkommen tillbaka</CardTitle>
-          <CardDescription>
-            Logga in med e-post och lösenord eller fortsätt med Google.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <LoginForm

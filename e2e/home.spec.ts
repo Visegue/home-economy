@@ -1,8 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("skickar oinloggade användare till Google-inloggningen", async ({
-  page,
-}) => {
+test("skickar oinloggade användare till inloggningen", async ({ page }) => {
   await page.goto("/");
 
   await expect(page).toHaveURL(/\/login$/);
@@ -16,9 +14,6 @@ test("skickar oinloggade användare till Google-inloggningen", async ({
     page.getByRole("button", { name: "Logga in", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("tab", { name: "Skapa konto" })).toBeVisible();
-  await expect(
-    page.getByText(/Samma verifierade e-postadress ger samma konto/),
-  ).toBeVisible();
 });
 
 test("visar det publika återställningsflödet", async ({ page }) => {
