@@ -14,6 +14,7 @@ import {
   recurringItems,
   recurringItemOwners,
   households,
+  savingsGoals,
   schema,
   user,
 } from "./schema";
@@ -48,6 +49,7 @@ import {
   removeExpense,
 } from "@/features/budget/data";
 import { currentPeriod, monthlySummary } from "@/features/budget/model";
+import { getSavings, removeSaving, saveSaving } from "@/features/savings/data";
 
 const client = new PGlite("memory://");
 const database = drizzle(client, { schema });
@@ -605,5 +607,108 @@ describe("initial household income", () => {
         monthlySummary(currentPeriod(), [], data.incomes).incomeInOre,
       ).toBe(amount);
     }
+  });
+});
+
+describe("monthly savings persistence and household isolation", () => {
+  let savingHouseholdId: number;
+
+  beforeAll(async () => {
+    await database.insert(user).values(
+      ["saving-owner", "saving-outsider"].map((id) => ({
+        id,
+        name: "Synthetic saving user",
+        email: `${id}@example.test`,
+        emailVerified: true,
+      })),
+    );
+    identity.userId = "saving-owner";
+    savingHouseholdId = (await createPersonalHousehold("Sparhushåll")).id;
+    identity.userId = "saving-outsider";
+    await createPersonalHousehold("Annat sparhushåll");
+  });
+
+  it("creates savings without a target, preserves öre and updates and removes contributions", async () => {
+    identity.userId = "saving-owner";
+    expect(await getSavings()).toEqual([]);
+    await saveSaving({ name: "Buffert", amountInOre: 125075 });
+    await saveSaving({ name: "Semester", amountInOre: 50029 });
+    const [first, second] = await getSavings();
+    expect(first).toMatchObject({ name: "Buffert", amountInOre: 125075 });
+    expect(second).toMatchObject({ name: "Semester", amountInOre: 50029 });
+    await saveSaving({ name: "Ny buffert", amountInOre: 200099 }, first.id);
+    expect(await getSavings()).toEqual([
+      { ...first, name: "Ny buffert", amountInOre: 200099 },
+      second,
+    ]);
+    await removeSaving(first.id);
+    expect(await getSavings()).toEqual([second]);
+    await expect(
+      saveSaving({ name: "Återställd", amountInOre: 1 }, first.id),
+    ).rejects.toThrow("Sparandet finns inte längre.");
+  });
+
+  it("rejects cross-household reads and writes through both data helpers and RLS", async () => {
+    identity.userId = "saving-owner";
+    const [saving] = await getSavings();
+    identity.userId = "saving-outsider";
+    expect(await getSavings()).toEqual([]);
+    await expect(
+      saveSaving({ name: "Forbidden", amountInOre: 1 }, saving.id),
+    ).rejects.toThrow("Sparandet finns inte längre.");
+    await expect(removeSaving(saving.id)).rejects.toThrow(
+      "Sparandet finns inte längre.",
+    );
+    await withAuthenticatedDatabase(async (transaction) => {
+      expect(await transaction.select().from(savingsGoals)).toHaveLength(0);
+      expect(
+        await transaction
+          .update(savingsGoals)
+          .set({ monthlyContribution: "1.00" })
+          .where(eq(savingsGoals.id, saving.id))
+          .returning(),
+      ).toHaveLength(0);
+      expect(
+        await transaction
+          .delete(savingsGoals)
+          .where(eq(savingsGoals.id, saving.id))
+          .returning(),
+      ).toHaveLength(0);
+    });
+    await expect(
+      withAuthenticatedDatabase((transaction) =>
+        transaction
+          .insert(savingsGoals)
+          .values({
+            householdId: savingHouseholdId,
+            name: "Forbidden",
+            monthlyContribution: "1.00",
+          })
+          .returning(),
+      ),
+    ).rejects.toMatchObject({ cause: { code: "42501" } });
+    identity.userId = "saving-owner";
+    expect(await getSavings()).toEqual([saving]);
+  });
+
+  it("rejects invalid amounts at the application and database boundaries", async () => {
+    identity.userId = "saving-owner";
+    for (const amountInOre of [-1, 0.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+      await expect(
+        saveSaving({ name: "Invalid", amountInOre }),
+      ).rejects.toMatchObject({ name: "ZodError" });
+    }
+    await expect(
+      withAuthenticatedDatabase((transaction) =>
+        transaction
+          .insert(savingsGoals)
+          .values({
+            householdId: savingHouseholdId,
+            name: "Negative",
+            monthlyContribution: "-0.01",
+          })
+          .returning(),
+      ),
+    ).rejects.toMatchObject({ cause: { code: "23514" } });
   });
 });

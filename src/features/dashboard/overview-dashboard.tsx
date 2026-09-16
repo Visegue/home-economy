@@ -24,10 +24,17 @@ import { MonthNavigation } from "@/features/budget/month-navigation";
 import { cycles, monthLabel, monthlySummary } from "@/features/budget/model";
 import { formatBudgetSek } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { getSavings } from "@/features/savings/data";
+import { SavingsSection } from "@/features/savings/savings-section";
+import { totalMonthlySavings } from "@/features/savings/validation";
 
 export async function OverviewDashboard({ period }: { period: string }) {
-  const { people, expenses, incomes } = await getBudgetData();
-  const summary = monthlySummary(period, expenses, incomes);
+  const [{ people, expenses, incomes }, savings] = await Promise.all([
+    getBudgetData(),
+    getSavings(),
+  ]);
+  const savingsInOre = totalMonthlySavings(savings);
+  const summary = monthlySummary(period, expenses, incomes, savingsInOre);
   const year = period.slice(0, 4);
   const hasIncome = summary.incomeInOre !== null;
   const deficit = summary.remainingInOre !== null && summary.remainingInOre < 0;
@@ -79,6 +86,12 @@ export async function OverviewDashboard({ period }: { period: string }) {
                   {formatBudgetSek(summary.totalInOre)}
                 </dd>
               </div>
+              <div className="flex justify-between gap-4">
+                <dt>Sparande per månad</dt>
+                <dd className="tabular-nums">
+                  {formatBudgetSek(summary.savingsInOre)}
+                </dd>
+              </div>
             </dl>
             <div
               className={cn(
@@ -94,8 +107,12 @@ export async function OverviewDashboard({ period }: { period: string }) {
                 {!hasIncome
                   ? "Ingen aktiv inkomst"
                   : deficit
-                    ? "Saknas för att täcka utgifterna"
-                    : "Kvar efter utgifter"}
+                    ? savingsInOre > 0
+                      ? "Saknas för att täcka utgifter och sparande"
+                      : "Saknas för att täcka utgifterna"
+                    : savingsInOre > 0
+                      ? "Kvar efter utgifter och sparande"
+                      : "Kvar efter utgifter"}
               </p>
               {summary.remainingInOre !== null ? (
                 <p
@@ -161,6 +178,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
           </CardContent>
         </Card>
       </section>
+      <SavingsSection savings={savings} />
       <Card>
         <CardHeader>
           <CardTitle>Utgifter</CardTitle>
@@ -262,7 +280,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
           <CardTitle>Månad för månad · {year}</CardTitle>
           <CardDescription>
             Hushållets aktiva inkomster jämförda med direkta utgifter och
-            avsättningar.
+            avsättningar samt ditt återkommande månadssparande.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -274,13 +292,19 @@ export async function OverviewDashboard({ period }: { period: string }) {
                 <TableHead className="text-right">Direkta</TableHead>
                 <TableHead className="text-right">Avsatta</TableHead>
                 <TableHead className="text-right">Utgifter totalt</TableHead>
+                <TableHead className="text-right">Sparande</TableHead>
                 <TableHead className="text-right">Kvar / underskott</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {Array.from({ length: 12 }, (_, index) => {
                 const rowPeriod = `${year}-${String(index + 1).padStart(2, "0")}`;
-                const row = monthlySummary(rowPeriod, expenses, incomes);
+                const row = monthlySummary(
+                  rowPeriod,
+                  expenses,
+                  incomes,
+                  savingsInOre,
+                );
                 return (
                   <TableRow
                     key={rowPeriod}
@@ -308,6 +332,9 @@ export async function OverviewDashboard({ period }: { period: string }) {
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatBudgetSek(row.totalInOre)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatBudgetSek(row.savingsInOre)}
                     </TableCell>
                     <TableCell
                       className={cn(

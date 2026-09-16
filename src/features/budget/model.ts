@@ -130,6 +130,7 @@ export function monthlySummary(
   period: string,
   expenses: BudgetExpense[],
   incomes: BudgetIncome[],
+  savingsInOre = 0,
 ) {
   const activeExpenses = expenses.filter(
     (expense) => !expense.startsOn || expense.startsOn.slice(0, 7) <= period,
@@ -155,6 +156,8 @@ export function monthlySummary(
     directInOre,
     allocatedInOre,
     totalInOre,
-    remainingInOre: incomeInOre === null ? null : incomeInOre - totalInOre,
+    savingsInOre,
+    remainingInOre:
+      incomeInOre === null ? null : incomeInOre - totalInOre - savingsInOre,
   };
 }

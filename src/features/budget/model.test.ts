@@ -99,6 +99,30 @@ describe("monthly budget", () => {
       ).incomeInOre,
     ).toBeNull();
   });
+  it("subtracts savings once while keeping expenses and allocations separate", () => {
+    const incomes: BudgetIncome[] = [
+      {
+        id: 1,
+        name: "Lön",
+        startsOn: "2026-09",
+        endsOn: null,
+        amountInOre: 200_000,
+      },
+    ];
+    const summary = monthlySummary("2026-09", [expense], incomes, 25_075);
+    expect(summary).toMatchObject({
+      allocatedInOre: 10_000,
+      totalInOre: 10_000,
+      savingsInOre: 25_075,
+      remainingInOre: 164_925,
+    });
+    expect(
+      monthlySummary("2026-10", [expense], incomes, 200_001).remainingInOre,
+    ).toBe(-10_001);
+    expect(
+      monthlySummary("2026-08", [], incomes, 25_075).remainingInOre,
+    ).toBeNull();
+  });
   it("rounds each monthly transfer to öre so rows add up", () => {
     expect(
       monthlySummary(

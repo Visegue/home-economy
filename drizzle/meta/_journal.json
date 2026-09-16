@@ -57,6 +57,13 @@
       "when": 1789480067607,
       "tag": "0007_migrate_member_incomes",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789498023958,
+      "tag": "0008_monthly_savings",
+      "breakpoints": true
     }
   ]
 }
