@@ -13,8 +13,16 @@ updates:
           - "@better-auth/*"
       production-dependencies:
         dependency-type: production
+        exclude-patterns:
+          - "auth"
+          - "better-auth"
+          - "@better-auth/*"
       development-dependencies:
         dependency-type: development
+        exclude-patterns:
+          - "auth"
+          - "better-auth"
+          - "@better-auth/*"
   - package-ecosystem: github-actions
     directory: /
     schedule:
