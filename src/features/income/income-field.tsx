@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InfoButton } from "@/components/info-button";
 
 export function IncomeField({
   value,
@@ -14,9 +15,17 @@ export function IncomeField({
 }) {
   return (
     <div className="space-y-2">
-      <Label htmlFor="monthly-net-income">
-        Din månadsinkomst efter skatt (valfritt)
-      </Label>
+      <div className="flex items-center gap-1">
+        <Label htmlFor="monthly-net-income">
+          Din månadsinkomst efter skatt (valfritt)
+        </Label>
+        <InfoButton title="Din månadsinkomst">
+          <p>
+            Din vanliga inkomst efter skatt används i månadsbudgeten. Du kan
+            lämna fältet tomt och lägga till inkomster senare i inställningarna.
+          </p>
+        </InfoButton>
+      </div>
       <div className="relative">
         <Input
           id="monthly-net-income"
@@ -29,20 +38,13 @@ export function IncomeField({
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled}
           aria-invalid={Boolean(error)}
-          aria-describedby={`income-description${error ? " income-error" : ""}`}
+          aria-describedby={error ? "income-error" : undefined}
           className="pr-20"
         />
         <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
           kr/mån
         </span>
       </div>
-      <p
-        id="income-description"
-        className="text-xs leading-relaxed text-muted-foreground"
-      >
-        Ange din vanliga nettoinkomst i SEK. Lämna tomt om du vill ange den
-        senare. Du kan ändra eller ta bort beloppet i inställningarna.
-      </p>
       {error ? (
         <p id="income-error" role="alert" className="text-sm text-destructive">
           {error}
