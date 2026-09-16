@@ -64,6 +64,13 @@
       "when": 1789498023958,
       "tag": "0008_monthly_savings",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789542973862,
+      "tag": "0009_better_auth_provider_identity",
+      "breakpoints": true
     }
   ]
 }

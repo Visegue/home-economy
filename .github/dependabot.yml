@@ -5,6 +5,12 @@ updates:
     schedule:
       interval: weekly
     groups:
+      # The CLI and runtime share internal packages and must upgrade together.
+      better-auth:
+        patterns:
+          - "auth"
+          - "better-auth"
+          - "@better-auth/*"
       production-dependencies:
         dependency-type: production
       development-dependencies:
