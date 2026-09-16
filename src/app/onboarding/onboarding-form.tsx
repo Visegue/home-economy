@@ -35,10 +35,6 @@ export function OnboardingForm() {
           aria-invalid={Boolean(state.error)}
           disabled={pending}
         />
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          Du kan ändra namnet senare och bjuda in fler personer när den
-          funktionen finns på plats.
-        </p>
       </div>
 
       <IncomeField

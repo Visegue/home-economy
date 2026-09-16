@@ -7,10 +7,9 @@ export const metadata = { title: "Balans" };
 export default function BalancePage() {
   return (
     <FeaturePlaceholder
-      title="Se hela hushållets balans"
-      description="Här kommer konton, investeringar och andra tillgångar att vägas mot lån och skulder för att visa likviditet och nettoförmögenhet."
+      title="Balans"
+      description="Tillgångar, lån och skulder."
       icon={Landmark}
-      sections={["Tillgångar", "Lån och skulder", "Total likviditet"]}
     />
   );
 }

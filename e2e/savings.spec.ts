@@ -19,11 +19,11 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   const total = section.getByRole("status", { name: "Totalt månadssparande" });
   const summary = page.getByRole("region", { name: "Månadens nyckeltal" });
   await expect(total).toHaveText("0 kr");
-  await expect(section).toContainText("Du har inga sparmål ännu");
+  await expect(section).toContainText("Inga sparmål ännu");
 
   await section.getByRole("button", { name: "Lägg till sparande" }).click();
   const dialog = page.getByRole("dialog");
-  const name = dialog.getByRole("textbox", { name: "Typ av sparande (namn)" });
+  const name = dialog.getByRole("textbox", { name: "Namn på sparandet" });
   const amount = dialog.getByRole("textbox", { name: "Belopp per månad (kr)" });
   await name.fill("Buffert");
   await amount.fill("-100");
@@ -75,6 +75,6 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await expect(total).toHaveText("0 kr");
   await page.reload();
   await expect(summary).toContainText("5 000,00 kr");
-  await expect(section).toContainText("Du har inga sparmål ännu");
+  await expect(section).toContainText("Inga sparmål ännu");
   await expect(total).toHaveText("0 kr");
 });
