@@ -23,12 +23,13 @@ try {
   const tables = await client`
     select relname, relrowsecurity, relforcerowsecurity from pg_class
     where relnamespace = 'public'::regnamespace and relname in (
-      'households', 'household_members', 'categories', 'accounts',
+      'households', 'household_members', 'household_member_income', 'categories', 'accounts',
       'recurring_items', 'monthly_plans', 'monthly_plan_items', 'transactions',
-      'balance_snapshots', 'savings_goals', 'monthly_liquidity_snapshots'
+      'balance_snapshots', 'savings_goals', 'monthly_liquidity_snapshots',
+      'household_people', 'recurring_item_owners', 'household_incomes'
     )
   `;
-  assert.equal(tables.length, 11);
+  assert.equal(tables.length, 15);
   for (const table of tables) {
     assert.ok(table.relrowsecurity && table.relforcerowsecurity, table.relname);
   }
@@ -41,8 +42,8 @@ try {
       await sql`insert into public."user" (id, name, email, email_verified)
         values (${owner}, 'Synthetic owner', ${owner + "@example.test"}, true),
                (${outsider}, 'Synthetic outsider', ${outsider + "@example.test"}, true)`;
-      await sql`insert into public.account (id, issuer, account_id, provider_id, user_id)
-        values (${randomUUID()}, 'https://accounts.google.com', ${owner}, 'google', ${owner})`;
+      await sql`insert into public.account (id, account_id, provider_id, user_id)
+        values (${randomUUID()}, ${owner}, 'google', ${owner})`;
       await sql`insert into public.session (id, token, user_id, expires_at, updated_at)
         values (${sessionId}, ${randomUUID()}, ${owner}, now() + interval '1 hour', now())`;
       const sessions =
@@ -55,6 +56,22 @@ try {
       const [household] =
         await sql`insert into public.households (name, owner_user_id)
         values ('Synthetic integration household', ${owner}) returning id`;
+      await sql`insert into public.household_members (household_id, user_id, role) values (${household.id}, ${owner}, 'owner')`;
+      await sql`insert into public.household_member_income (household_id, user_id, monthly_net_income)
+        values (${household.id}, ${owner}, '32500.75')`;
+      assert.equal(
+        (
+          await sql`select monthly_net_income from public.household_member_income where household_id = ${household.id}`
+        )[0].monthly_net_income,
+        "32500.75",
+      );
+      await sql`update public.household_member_income set monthly_net_income = null where household_id = ${household.id} and user_id = ${owner}`;
+      assert.equal(
+        (
+          await sql`select monthly_net_income from public.household_member_income where household_id = ${household.id}`
+        )[0].monthly_net_income,
+        null,
+      );
       await sql`insert into public.categories (household_id, name, kind)
         values (${household.id}, 'Synthetic category', 'expense')`;
       assert.equal(
@@ -80,6 +97,12 @@ try {
         ).length,
         0,
       );
+      assert.equal(
+        (
+          await sql`select user_id from public.household_member_income where household_id = ${household.id}`
+        ).length,
+        0,
+      );
       await sql`select set_config('app.user_id', ${owner}, true)`;
       await sql`insert into public.household_members (household_id, user_id) values (${household.id}, ${outsider})`;
       await sql`select set_config('app.user_id', ${outsider}, true)`;
@@ -87,6 +110,12 @@ try {
         (await sql`select id from public.households where id = ${household.id}`)
           .length,
         1,
+      );
+      assert.equal(
+        (
+          await sql`update public.household_member_income set monthly_net_income = '1.00' where household_id = ${household.id} returning user_id`
+        ).length,
+        0,
       );
       throw rollback;
     });

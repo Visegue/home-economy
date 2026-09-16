@@ -20,9 +20,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm dev",
+    command: "node scripts/start-playwright-server.mjs",
     url: "http://127.0.0.1:3000",
     reuseExistingServer: false,
+    gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
     env: {
       DATABASE_PROVIDER: "pglite",
       PGLITE_DATA_DIR: "memory://",

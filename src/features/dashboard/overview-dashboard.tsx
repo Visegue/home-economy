@@ -1,36 +1,14 @@
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  BarChart3,
-  CalendarDays,
-  ChevronRight,
-  CircleDollarSign,
-  Landmark,
-  LayoutDashboard,
-  PiggyBank,
-  Plus,
-  ReceiptText,
-  Settings,
-  Sparkles,
-  Target,
-  TrendingUp,
-  Wallet,
-} from "lucide-react";
 import Link from "next/link";
-
-import { KpiCard } from "@/components/kpi-card";
+import { PiggyBank } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { UserMenu } from "@/components/user-menu";
 import {
   Table,
   TableBody,
@@ -39,424 +17,347 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { monthlyEquivalent } from "@/domain/budget";
+import { getBudgetData } from "@/features/budget/data";
+import { ExpenseDialog, RemoveExpenseButton } from "@/features/budget/forms";
+import { MonthNavigation } from "@/features/budget/month-navigation";
+import { cycles, monthLabel, monthlySummary } from "@/features/budget/model";
+import { formatBudgetSek } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import { formatSek } from "@/lib/money";
+import { getSavings } from "@/features/savings/data";
+import { SavingsSection } from "@/features/savings/savings-section";
+import { totalMonthlySavings } from "@/features/savings/validation";
 
-import { CashFlowChart } from "./cash-flow-chart";
-import {
-  accounts,
-  allocation,
-  overview,
-  planRows,
-  timeline,
-  upcoming,
-} from "./dashboard-data";
-
-const navigation = [
-  { label: "Översikt", href: "/", icon: LayoutDashboard, active: true },
-  { label: "Månadsplan", href: "/plan", icon: CalendarDays, active: false },
-  {
-    label: "Transaktioner",
-    href: "/transactions",
-    icon: ReceiptText,
-    active: false,
-  },
-  {
-    label: "Konton & lån",
-    href: "/accounts",
-    icon: Landmark,
-    active: false,
-  },
-  { label: "Sparmål", href: "/goals", icon: Target, active: false },
-  {
-    label: "Investeringar",
-    href: "/investments",
-    icon: TrendingUp,
-    active: false,
-  },
-] as const;
-
-function Sidebar() {
+export async function OverviewDashboard({ period }: { period: string }) {
+  const [{ people, expenses, incomes }, savings] = await Promise.all([
+    getBudgetData(),
+    getSavings(),
+  ]);
+  const savingsInOre = totalMonthlySavings(savings);
+  const summary = monthlySummary(period, expenses, incomes, savingsInOre);
+  const year = period.slice(0, 4);
+  const hasIncome = summary.incomeInOre !== null;
+  const deficit = summary.remainingInOre !== null && summary.remainingInOre < 0;
+  const reserved = summary.expenses.filter(
+    (expense) => expense.destination === "allocated",
+  );
   return (
-    <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 flex-col bg-sidebar px-4 py-6 text-sidebar-foreground lg:flex">
-      <div className="flex items-center gap-3 px-3">
-        <div className="grid size-10 place-items-center rounded-2xl bg-sidebar-primary text-sidebar-primary-foreground">
-          <CircleDollarSign className="size-5" aria-hidden="true" />
-        </div>
-        <div>
-          <p className="font-semibold tracking-tight">Hemekonomi</p>
-          <p className="text-xs text-sidebar-foreground/60">
-            Ett lugnare pengaflöde
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <MonthNavigation period={period} />
+        <ExpenseDialog key={period} period={period} people={people} />
       </div>
-
-      <nav aria-label="Huvudmeny" className="mt-10 space-y-1">
-        {navigation.map(({ label, href, icon: Icon, active }) => (
-          <Link
-            key={label}
-            href={href}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors",
-              active
-                ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-                : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-            )}
-          >
-            <Icon className="size-4" aria-hidden="true" />
-            {label}
-          </Link>
-        ))}
-      </nav>
-
-      <div className="mt-auto space-y-3">
-        <div className="rounded-2xl border border-sidebar-border bg-sidebar-accent/40 p-4">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Sparkles
-              className="size-4 text-sidebar-primary"
-              aria-hidden="true"
-            />
-            Augusti är 78 % planerad
-          </div>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-sidebar-border">
-            <div className="h-full w-[78%] rounded-full bg-sidebar-primary" />
-          </div>
-          <p className="mt-2 text-xs text-sidebar-foreground/60">
-            Tre återkommande poster saknar kategori.
-          </p>
-        </div>
-        <Link
-          href="/settings"
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground/65 hover:text-sidebar-foreground"
-        >
-          <Settings className="size-4" aria-hidden="true" />
-          Inställningar
-        </Link>
-      </div>
-    </aside>
-  );
-}
-
-function MobileNavigation() {
-  return (
-    <nav
-      aria-label="Mobilmeny"
-      className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t border-border/70 bg-card/95 px-2 py-2 backdrop-blur lg:hidden"
-    >
-      {navigation.slice(0, 5).map(({ label, href, icon: Icon, active }) => (
-        <Link
-          href={href}
-          key={label}
-          aria-current={active ? "page" : undefined}
-          className={cn(
-            "flex min-w-14 flex-col items-center gap-1 rounded-lg px-2 py-1 text-[10px]",
-            active ? "text-primary" : "text-muted-foreground",
-          )}
-        >
-          <Icon className="size-4" aria-hidden="true" />
-          <span>{label.split(" ")[0]}</span>
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
-function MonthTimeline() {
-  return (
-    <Card className="overflow-visible">
-      <CardContent>
-        <div className="flex items-center justify-between gap-2">
-          {timeline.map((item, index) => (
-            <div
-              key={item.label}
-              className="flex min-w-0 flex-1 items-center last:flex-none"
-            >
-              <div className="relative flex flex-col items-center">
-                <div
-                  className={cn(
-                    "grid size-9 place-items-center rounded-full border text-xs font-semibold tabular-nums",
-                    item.state === "done" &&
-                      "border-chart-4 bg-chart-4 text-primary-foreground",
-                    item.state === "current" &&
-                      "border-primary bg-primary text-primary-foreground ring-4 ring-primary/15",
-                    item.state === "upcoming" &&
-                      "border-border bg-card text-muted-foreground",
-                  )}
-                >
-                  {item.day}
-                </div>
-                <span className="absolute top-11 hidden text-[11px] whitespace-nowrap text-muted-foreground sm:block">
-                  {item.label}
-                </span>
-              </div>
-              {index < timeline.length - 1 ? (
-                <div
-                  className={cn(
-                    "mx-2 h-px flex-1",
-                    index === 0 ? "bg-chart-4" : "bg-border",
-                  )}
-                />
-              ) : null}
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-export function OverviewDashboard({
-  householdName,
-  userName,
-}: {
-  householdName: string;
-  userName: string;
-}) {
-  const netWorthInOre = accounts.reduce(
-    (total, account) => total + account.amountInOre,
-    0,
-  );
-
-  return (
-    <div className="min-h-screen pb-20 lg:pb-0 lg:pl-64">
-      <Sidebar />
-      <MobileNavigation />
-
-      <main className="mx-auto max-w-[1480px] px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
-        <header className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                Min ekonomi
-              </h1>
-              <Badge variant="secondary" className="rounded-full">
-                {householdName}
-              </Badge>
-              <Badge variant="outline" className="rounded-full">
-                Demodata
-              </Badge>
-            </div>
-            <p className="mt-1 text-muted-foreground">
-              {overview.month} · allt viktigt på samma plats
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <UserMenu name={userName} />
-            <Button className="rounded-xl shadow-sm">
-              <Plus className="size-4" aria-hidden="true" />
-              Planera månaden
-            </Button>
-          </div>
-        </header>
-
-        <section
-          aria-label="Månadens nyckeltal"
-          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-        >
-          <KpiCard
-            label="Kvar efter plan"
-            value={formatSek(overview.availableInOre)}
-            detail={`${overview.daysUntilSalary} dagar till nästa lön`}
-            icon={Wallet}
-          />
-          <KpiCard
-            label="Inkomster"
-            value={formatSek(overview.incomeInOre)}
-            detail="Månadens förväntade netto"
-            icon={ArrowDownRight}
-            tone="sage"
-          />
-          <KpiCard
-            label="Fasta kostnader"
-            value={formatSek(overview.fixedCostsInOre)}
-            detail="40,5 % av inkomsten"
-            icon={ArrowUpRight}
-            tone="mustard"
-          />
-          <KpiCard
-            label="Sparande"
-            value={formatSek(overview.savingsInOre)}
-            detail="19,9 % sparkvot"
-            icon={PiggyBank}
-            tone="blue"
-          />
-        </section>
-
-        <section aria-label="Månadens tidslinje" className="mt-4 pb-7 sm:pb-8">
-          <MonthTimeline />
-        </section>
-
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.75fr)]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Kassaflöde</CardTitle>
-              <CardDescription>
-                Inkomster och utgifter de senaste sex månaderna
-              </CardDescription>
-              <CardAction>
-                <Badge variant="outline" className="gap-1 rounded-full">
-                  <BarChart3 className="size-3" aria-hidden="true" />6 månader
-                </Badge>
-              </CardAction>
-            </CardHeader>
-            <CardContent>
-              <CashFlowChart />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Närmast i kalendern</CardTitle>
-              <CardDescription>
-                Planerade händelser före nästa lön
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              {upcoming.map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-muted/60"
-                >
-                  <div className="grid size-11 shrink-0 place-items-center rounded-xl bg-secondary text-center text-xs leading-tight font-medium text-secondary-foreground">
-                    {item.date.replace(" ", "\n")}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{item.label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.category}
-                    </p>
-                  </div>
-                  <span className="font-medium tabular-nums">
-                    −{formatSek(item.amountInOre)}
-                  </span>
-                </div>
-              ))}
-              <Button
-                variant="ghost"
-                className="mt-2 w-full justify-between text-primary"
-              >
-                Visa hela månaden
-                <ChevronRight className="size-4" aria-hidden="true" />
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Planens fördelning</CardTitle>
-              <CardDescription>
-                Utfall mot budget per huvudkategori
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              {allocation.map((item) => (
-                <div key={item.label}>
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="font-medium">{item.label}</span>
-                    <span className="text-sm text-muted-foreground tabular-nums">
-                      {formatSek(item.amountInOre)} · {item.percent} %
-                    </span>
-                  </div>
-                  <Progress
-                    value={item.percent}
-                    className={cn(
-                      "h-2 [&_[data-slot=progress-indicator]]:bg-current",
-                      item.color,
-                    )}
-                  />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Förmögenhetsbild</CardTitle>
-              <CardDescription>Senaste registrerade saldon</CardDescription>
-              <CardAction>
-                <span className="text-sm font-semibold tabular-nums">
-                  Netto {formatSek(netWorthInOre)}
-                </span>
-              </CardAction>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              {accounts.map((account) => (
-                <div
-                  key={account.label}
-                  className="flex items-center justify-between border-b border-border/70 py-3 last:border-0"
-                >
-                  <div>
-                    <p className="font-medium">{account.label}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {account.type}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      "font-medium tabular-nums",
-                      account.amountInOre < 0 && "text-destructive",
-                    )}
-                  >
-                    {formatSek(account.amountInOre)}
-                  </span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="mt-4">
+      <section
+        aria-label="Månadens nyckeltal"
+        className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
+      >
+        <Card>
           <CardHeader>
-            <CardTitle>Månadsplan</CardTitle>
+            <CardTitle>Räcker inkomsten?</CardTitle>
             <CardDescription>
-              En snabb avstämning utan kalkylbladskänslan
+              Din månadsbudget för {monthLabel(period)}
             </CardDescription>
-            <CardAction>
-              <Button variant="outline" size="sm">
-                Öppna planen
-                <ChevronRight className="size-4" aria-hidden="true" />
-              </Button>
-            </CardAction>
           </CardHeader>
           <CardContent>
+            <dl className="space-y-3 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt>Inkomster</dt>
+                <dd className="font-medium tabular-nums">
+                  {hasIncome
+                    ? formatBudgetSek(summary.incomeInOre!)
+                    : "Ingen aktiv inkomst"}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt>Direkta utgifter</dt>
+                <dd className="tabular-nums">
+                  {formatBudgetSek(summary.directInOre)}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt>Avsatta utgifter</dt>
+                <dd className="tabular-nums">
+                  {formatBudgetSek(summary.allocatedInOre)}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4 border-t pt-3 font-semibold">
+                <dt>Utgifter totalt per månad</dt>
+                <dd className="tabular-nums">
+                  {formatBudgetSek(summary.totalInOre)}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt>Sparande per månad</dt>
+                <dd className="tabular-nums">
+                  {formatBudgetSek(summary.savingsInOre)}
+                </dd>
+              </div>
+            </dl>
+            <div
+              className={cn(
+                "mt-5 rounded-xl p-4",
+                !hasIncome
+                  ? "bg-muted"
+                  : deficit
+                    ? "bg-destructive/10"
+                    : "bg-accent/60",
+              )}
+            >
+              <p className="text-sm font-medium">
+                {!hasIncome
+                  ? "Ingen aktiv inkomst"
+                  : deficit
+                    ? savingsInOre > 0
+                      ? "Saknas för att täcka utgifter och sparande"
+                      : "Saknas för att täcka utgifterna"
+                    : savingsInOre > 0
+                      ? "Kvar efter utgifter och sparande"
+                      : "Kvar efter utgifter"}
+              </p>
+              {summary.remainingInOre !== null ? (
+                <p
+                  className={cn(
+                    "mt-1 text-3xl font-semibold tracking-tight tabular-nums",
+                    deficit && "text-destructive",
+                  )}
+                >
+                  {formatBudgetSek(Math.abs(summary.remainingInOre))}
+                </p>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Inga av hushållets inkomster gäller den här månaden. Inkomster
+                  och deras giltighetsperioder hanteras i
+                  hushållsinställningarna.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="bg-secondary/35">
+          <CardHeader>
+            <PiggyBank
+              className="mb-1 size-6 text-secondary-foreground"
+              aria-hidden="true"
+            />
+            <CardTitle>Att föra över till avsättningskontot</CardTitle>
+            <CardDescription>
+              För utgifter som betalas mer sällan
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-semibold tracking-tight tabular-nums">
+              {formatBudgetSek(summary.allocatedInOre)}
+              <span className="ml-1 text-sm font-normal text-muted-foreground">
+                / månad
+              </span>
+            </p>
+            <p className="mt-3 max-w-prose text-sm text-muted-foreground">
+              Varje kostnad fördelas över sitt betalningsintervall. Avsättningen
+              ingår redan i månadens totala utgifter.
+            </p>
+            {reserved.length ? (
+              <ul className="mt-5 space-y-2 text-sm">
+                {reserved.map((expense) => (
+                  <li key={expense.id} className="flex justify-between gap-4">
+                    <span>{expense.name}</span>
+                    <span className="shrink-0 tabular-nums">
+                      {formatBudgetSek(monthlyEquivalent(expense))}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="mt-5 text-sm text-muted-foreground">
+                Inga avsatta utgifter ännu.
+              </p>
+            )}
+            <p className="mt-5 text-xs text-muted-foreground">
+              Beräkningen tar inte hänsyn till befintligt saldo på kontot eller
+              om första betalningen ligger nära.
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+      <SavingsSection savings={savings} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Utgifter</CardTitle>
+          <CardDescription>
+            Gäller vald månad och återkommer varje månad. Ägare visar vilka som
+            berörs; beloppet räknas en gång.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {summary.expenses.length ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Kategori</TableHead>
-                  <TableHead>Hantering</TableHead>
-                  <TableHead className="text-right">Planerat</TableHead>
-                  <TableHead className="text-right">Utfall</TableHead>
-                  <TableHead className="text-right">Kvar</TableHead>
+                  <TableHead>Utgift</TableHead>
+                  <TableHead className="text-right">Per månad</TableHead>
+                  <TableHead>Typ</TableHead>
+                  <TableHead>Ägare</TableHead>
+                  <TableHead>Nästa betalning</TableHead>
+                  <TableHead className="text-right">Per betalning</TableHead>
+                  <TableHead>
+                    <span className="sr-only">Åtgärder</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {planRows.map((row) => (
-                  <TableRow key={row.label}>
-                    <TableCell className="font-medium">{row.label}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-normal">
-                        {row.destination}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatSek(row.plannedInOre)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatSek(row.actualInOre)}
+                {summary.expenses.map((expense) => (
+                  <TableRow key={expense.id}>
+                    <TableCell className="font-medium">
+                      {expense.name}
+                      <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                        {expense.destination === "direct"
+                          ? "Varje månad"
+                          : (cycles.find(
+                              (cycle) =>
+                                cycle.months ===
+                                expense.every *
+                                  (expense.unit === "year" ? 12 : 1),
+                            )?.label ??
+                            `Var ${expense.every}:e ${expense.unit === "week" ? "vecka" : "månad"}`)}
+                      </span>
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {formatSek(row.plannedInOre - row.actualInOre)}
+                      {formatBudgetSek(monthlyEquivalent(expense))}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          expense.destination === "allocated"
+                            ? "secondary"
+                            : "outline"
+                        }
+                      >
+                        {expense.destination === "allocated"
+                          ? "Avsatt"
+                          : "Direkt"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-44 whitespace-normal">
+                      {expense.owners.map((owner) => owner.name).join(", ") || (
+                        <span className="text-muted-foreground">
+                          Ingen vald
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>{expense.nextDueOn ?? "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatBudgetSek(expense.amountInOre)}
+                    </TableCell>
+                    <TableCell>
+                      <RemoveExpenseButton
+                        id={expense.id}
+                        name={expense.name}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
+                <TableRow className="bg-muted/50 font-semibold">
+                  <TableCell>Totalt per månad</TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {formatBudgetSek(summary.totalInOre)}
+                  </TableCell>
+                  <TableCell colSpan={5} />
+                </TableRow>
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
-      </main>
+          ) : (
+            <div className="py-8 text-center">
+              <p className="font-medium">Inga utgifter för den här månaden</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Börja med till exempel hyran eller en försäkring. Använd ”Lägg
+                till utgift” ovan.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Månad för månad · {year}</CardTitle>
+          <CardDescription>
+            Hushållets aktiva inkomster jämförda med direkta utgifter och
+            avsättningar samt ditt återkommande månadssparande.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Månad</TableHead>
+                <TableHead className="text-right">Inkomster</TableHead>
+                <TableHead className="text-right">Direkta</TableHead>
+                <TableHead className="text-right">Avsatta</TableHead>
+                <TableHead className="text-right">Utgifter totalt</TableHead>
+                <TableHead className="text-right">Sparande</TableHead>
+                <TableHead className="text-right">Kvar / underskott</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 12 }, (_, index) => {
+                const rowPeriod = `${year}-${String(index + 1).padStart(2, "0")}`;
+                const row = monthlySummary(
+                  rowPeriod,
+                  expenses,
+                  incomes,
+                  savingsInOre,
+                );
+                return (
+                  <TableRow
+                    key={rowPeriod}
+                    className={cn(rowPeriod === period && "bg-primary/5")}
+                  >
+                    <TableCell>
+                      <Link
+                        href={`/?month=${rowPeriod}`}
+                        aria-current={rowPeriod === period ? "date" : undefined}
+                        className="font-medium text-primary capitalize underline-offset-4 hover:underline"
+                      >
+                        {monthLabel(rowPeriod).split(" ")[0]}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {row.incomeInOre === null
+                        ? "—"
+                        : formatBudgetSek(row.incomeInOre)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatBudgetSek(row.directInOre)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatBudgetSek(row.allocatedInOre)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatBudgetSek(row.totalInOre)}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatBudgetSek(row.savingsInOre)}
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        "text-right font-medium tabular-nums",
+                        row.remainingInOre !== null &&
+                          row.remainingInOre < 0 &&
+                          "text-destructive",
+                      )}
+                    >
+                      {row.remainingInOre === null
+                        ? "—"
+                        : formatBudgetSek(row.remainingInOre)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      <Button variant="link" asChild>
+        <Link href="/settings">Hushållets medlemmar och inkomster</Link>
+      </Button>
     </div>
   );
 }

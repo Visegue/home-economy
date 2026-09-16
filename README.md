@@ -4,6 +4,18 @@ En svensk webbapp för att planera hushållets ekonomi utan kalkylbladskänslan.
 
 Dashboarden använder en varm sandfärgad grund med aubergine, dammigt blått, senap och salvia. All incheckad demodata är syntetisk.
 
+## Månadsbudget
+
+- **Månaden** visar sparad månadsinkomst, direkta utgifter, avsättningar och kvarvarande belopp eller underskott. Årslistan jämför årets tolv månader.
+- Registrera namngivna inkomstkällor under **Inställningar → Hushållets inkomster**. Varje källa har ett månadsbelopp efter skatt, startmånad och valfri slutmånad. Båda gränsmånaderna ingår; utan slutmånad gäller inkomsten tills vidare. Alla aktiva källor summeras per månad.
+- Vid ändrat belopp: avsluta den gamla inkomsten och skapa en ny från nästa månad. Befintliga månadsregistreringar migreras till egna inkomstposter för sina ursprungliga månader. Äldre medlemsinkomster blir egna källor utan slutdatum, från månaden för senaste uppdateringen.
+- Lägg till direkta månadsutgifter eller avsatta utgifter med intervall på 2, 3, 6, 12 eller 24 månader och nästa betalningsdatum. Utgifterna gäller från vald månad och framåt.
+- Avsättningen är beloppet delat med antalet månader, avrundat till närmaste öre per utgift. Betalningen räknas inte en gång till i månadsbudgeten. Befintligt avsättningssaldo och eventuell upphämtning inför första betalningen ingår inte.
+- Skapa medlemmar under **Inställningar** och välj valfritt flera ägare per utgift. Namnen ger ingen inloggningsåtkomst och påverkar inte summeringen.
+- **Ta bort** tar bort utgiften ur hela budgeten, även tidigare månader. Den lagrade posten behålls för eventuella kopplingar till månadsplaner.
+
+Den första vyn använder hushållets sparade data. Kör `pnpm db:migrate` innan den nya versionen startas mot en befintlig databas.
+
 ## Teknik
 
 - Next.js 16, React 19 och TypeScript
@@ -40,6 +52,82 @@ pnpm test:e2e
 ```
 
 `pnpm check` kör alla kontroller utom Playwright. Oxlints vanliga React-, accessibility-, import-, promise-, Vitest- och Next.js-regler är aktiverade. Typmedvetet Oxlint-läge är medvetet avstängt tills projektet kan gå till TypeScript 7; `tsc --noEmit` är därför den auktoritativa typkontrollen.
+
+### Isolerade tester och resursanvändning
+
+Databastesterna kör migrationerna i PGlite och testar RLS med en begränsad roll.
+Playwright skapar en separat temporär PGlite-databas med syntetiska användare och
+sessioner innan appen startar. Testerna verifierar hushållsskapande, återbesök och
+nekad åtkomst med saknad eller utgången databassession. Appens vanliga
+sessionskontroll används; ingen testinloggningsroute finns i appen.
+Den temporära databasen tas bort när testservern stängs.
+
+Dessa tester ansluter inte till Neon och skickar inga riktiga mail. De testar inte
+Googles OAuth-flöde eller leverans av verifierings- och återställningsmail.
+`pnpm db:check` är en separat integrationskontroll mot den konfigurerade
+Neon-utvecklingsbranchen och förbrukar Neon-kvot trots att testdata rullas tillbaka.
+Kör den lokalt vid ändringar i databaskoppling, migrationer eller behörigheter.
+Den ingår inte i `pnpm check` eller Playwright, men körs i CI:s deployjobb efter
+migrationerna för preview respektive produktion.
+
+CI sparar Playwright-rapporter och traces vid fel i sju dagar. Testkörningar och
+rapporter använder GitHub Actions-tid och lagring, men ingen Neon-kvot.
+CI kör också `pnpm db:generate` och stoppar en PR om Drizzle genererar
+oincheckade migrationsfiler. En schemaändring kan därför inte mergas utan sin
+migration.
+
+### Produktionsrelease
+
+Efter en merge till `main` väntar produktionsjobbet på både kvalitetskontroller
+och Playwright. Därefter byggs en staged Vercel-deployment utan produktionsdomän,
+alla väntande Drizzle-migrationer appliceras mot Neon med den direkta
+ägaranslutningen och `pnpm db:check` verifierar runtime-roll och RLS. Först när
+samtliga steg lyckas promoveras deploymenten till produktionsdomänen.
+
+GitHub-miljön `production` måste innehålla följande secrets:
+
+- `DATABASE_URL`: poolad runtime-anslutning med rollen `home_economy_runtime`
+- `DATABASE_MIGRATION_URL`: direkt ägaranslutning utan pooler
+- `VERCEL_TOKEN`: token med deploybehörighet till Vercel-projektet
+- `VERCEL_ORG_ID`: Vercel-teamets ID
+- `VERCEL_PROJECT_ID`: Vercel-projektets ID
+
+Produktionsjobbet är serialiserat så att högst en migration och promotion körs
+åt gången. Vercels automatiska Git-deployments är avstängda för alla branches i
+`vercel.json`; GitHub Actions sköter både produktion och previews. Databasmigrationer ska vara
+bakåtkompatibla med föregående appversion. Destruktiva ändringar delas upp enligt
+expand/contract så att en misslyckad promotion kan lämna den gamla deploymenten
+körande mot det nya schemat.
+
+### PR-previews och migrationer
+
+Vid PR från en branch i samma repo kör GitHub Actions först kvalitetstester och
+Playwright. Jobbet `Deploy preview` använder därefter GitHub-miljön `staging`
+för att köra `pnpm db:migrate` och `pnpm db:check` mot Neons `development`-branch.
+Vercel-previewen skapas endast om båda databasstegen lyckas. Preview-länken visas
+på GitHub-deploymenten. Även draft-PR:er får previews; fork- och Dependabot-PR:er
+kör bara de isolerade testerna.
+
+Följande secrets krävs i GitHub-miljön `staging`:
+
+- `DATABASE_URL`: poolad runtime-anslutning till `development`
+- `DATABASE_MIGRATION_URL`: direkt ägaranslutning till samma branch
+- `VERCEL_TOKEN`: token med deploybehörighet till projektet
+- `VERCEL_ORG_ID`: Vercel-teamets ID
+- `VERCEL_PROJECT_ID`: Vercel-projektets ID
+
+Auth- och e-postinställningar hämtas från Vercels Preview-miljö. Runtime-anslutningen
+sparas från `staging` som en krypterad, branchspecifik Preview-variabel via Vercels API
+och används av både bygget och appen; migrationsanslutningen
+ska inte läggas i Vercel. Jobbet förbrukar Neon-kvot och är serialiserat eftersom
+alla previews delar databasen. Migrationer rullas inte tillbaka när en PR stängs.
+Samordna schemaändringar mellan PR:er och håll dem bakåtkompatibla; isolerade
+Neon-branches per PR behövs om parallella schemaändringar inte är kompatibla.
+
+Preview-jobbet använder Vercels projekt- och deployment-API direkt för att stödja
+projektbegränsade tokens utan CLI:ts användaruppslag. Det verifierar kopplingen
+till GitHub-repot och väntar på `READY` för rätt projekt och testad commit.
+Branchspecifika databasvariabler finns kvar i Vercel när en PR stängs.
 
 ## Databas
 

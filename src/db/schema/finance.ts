@@ -9,6 +9,7 @@ import {
   index,
   numeric,
   pgEnum,
+  pgPolicy,
   pgTable,
   primaryKey,
   smallint,
@@ -112,6 +113,48 @@ export const householdMembers = pgTable(
     index("household_members_user_id_idx").on(table.userId),
   ],
 );
+
+export const householdMemberIncome = pgTable(
+  "household_member_income",
+  {
+    householdId: bigint("household_id", { mode: "number" }).notNull(),
+    userId: text("user_id").notNull(),
+    monthlyNetIncome: numeric("monthly_net_income", {
+      precision: 14,
+      scale: 2,
+    }),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.householdId, table.userId] }),
+    foreignKey({
+      columns: [table.householdId, table.userId],
+      foreignColumns: [householdMembers.householdId, householdMembers.userId],
+    }).onDelete("cascade"),
+    index("household_member_income_user_id_idx").on(table.userId),
+    check(
+      "household_member_income_nonnegative",
+      sql`${table.monthlyNetIncome} >= 0 and ${table.monthlyNetIncome} <= 999999999999.99`,
+    ),
+    pgPolicy("household_member_income_select", {
+      for: "select",
+      using: sql`(select private.has_household_access(${table.householdId}))`,
+    }),
+    pgPolicy("household_member_income_insert", {
+      for: "insert",
+      withCheck: sql`${table.userId} = (select private.current_user_id()) and (select private.has_household_access(${table.householdId}))`,
+    }),
+    pgPolicy("household_member_income_update", {
+      for: "update",
+      using: sql`${table.userId} = (select private.current_user_id()) and (select private.has_household_access(${table.householdId}))`,
+      withCheck: sql`${table.userId} = (select private.current_user_id()) and (select private.has_household_access(${table.householdId}))`,
+    }),
+    pgPolicy("household_member_income_delete", {
+      for: "delete",
+      using: sql`${table.userId} = (select private.current_user_id()) and (select private.has_household_access(${table.householdId}))`,
+    }),
+  ],
+).enableRLS();
 
 export const categories = pgTable(
   "categories",
@@ -233,6 +276,67 @@ export const recurringItems = pgTable(
       table.nextDueOn,
     ),
     index("recurring_items_category_id_idx").on(table.categoryId),
+  ],
+);
+
+// Budget participants are names, independent of accounts with login access.
+export const householdPeople = pgTable(
+  "household_people",
+  {
+    id: id(),
+    householdId: bigint("household_id", { mode: "number" })
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    check(
+      "household_people_name_length",
+      sql`char_length(${table.name}) between 1 and 120`,
+    ),
+    unique("household_people_id_household_unique").on(
+      table.id,
+      table.householdId,
+    ),
+    unique("household_people_household_name_unique").on(
+      table.householdId,
+      table.name,
+    ),
+    pgPolicy("household_people_access", {
+      for: "all",
+      using: sql`(select private.has_household_access(${table.householdId}))`,
+      withCheck: sql`(select private.has_household_access(${table.householdId}))`,
+    }),
+  ],
+);
+
+export const recurringItemOwners = pgTable(
+  "recurring_item_owners",
+  {
+    householdId: bigint("household_id", { mode: "number" }).notNull(),
+    recurringItemId: bigint("recurring_item_id", { mode: "number" }).notNull(),
+    personId: bigint("person_id", { mode: "number" }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.recurringItemId, table.personId] }),
+    foreignKey({
+      columns: [table.recurringItemId, table.householdId],
+      foreignColumns: [recurringItems.id, recurringItems.householdId],
+      name: "recurring_item_owners_item_household_fk",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.personId, table.householdId],
+      foreignColumns: [householdPeople.id, householdPeople.householdId],
+      name: "recurring_item_owners_person_household_fk",
+    }).onDelete("cascade"),
+    index("recurring_item_owners_household_idx").on(table.householdId),
+    index("recurring_item_owners_person_idx").on(table.personId),
+    pgPolicy("recurring_item_owners_access", {
+      for: "all",
+      using: sql`(select private.has_household_access(${table.householdId}))`,
+      withCheck: sql`(select private.has_household_access(${table.householdId}))`,
+    }),
   ],
 );
 
@@ -409,9 +513,14 @@ export const savingsGoals = pgTable(
       .references(() => households.id, { onDelete: "cascade" }),
     accountId: bigint("account_id", { mode: "number" }),
     name: text("name").notNull(),
-    targetAmount: money("target_amount").notNull(),
+    targetAmount: money("target_amount"),
     targetDate: date("target_date", { mode: "date" }),
-    monthlyContribution: money("monthly_contribution").default(0).notNull(),
+    monthlyContribution: numeric("monthly_contribution", {
+      precision: 14,
+      scale: 2,
+    })
+      .default("0")
+      .notNull(),
     notes: text("notes"),
     active: boolean().default(true).notNull(),
     createdAt: createdAt(),
@@ -482,5 +591,50 @@ export const monthlyLiquiditySnapshots = pgTable(
       table.householdId,
       table.period.desc(),
     ),
+  ],
+);
+
+export const householdIncomes = pgTable(
+  "household_incomes",
+  {
+    id: id(),
+    householdId: bigint("household_id", { mode: "number" })
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    amount: money("amount").notNull(),
+    startsOn: date("starts_on", { mode: "date" }).notNull(),
+    endsOn: date("ends_on", { mode: "date" }),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (table) => [
+    check(
+      "household_incomes_name_length",
+      sql`char_length(${table.name}) between 1 and 160`,
+    ),
+    check("household_incomes_amount_nonnegative", sql`${table.amount} >= 0`),
+    check(
+      "household_incomes_start_first_day",
+      sql`extract(day from ${table.startsOn}) = 1`,
+    ),
+    check(
+      "household_incomes_end_first_day",
+      sql`${table.endsOn} is null or extract(day from ${table.endsOn}) = 1`,
+    ),
+    check(
+      "household_incomes_period_order",
+      sql`${table.endsOn} is null or ${table.endsOn} >= ${table.startsOn}`,
+    ),
+    index("household_incomes_household_period_idx").on(
+      table.householdId,
+      table.startsOn,
+      table.endsOn,
+    ),
+    pgPolicy("household_incomes_access", {
+      for: "all",
+      using: sql`(select private.has_household_access(${table.householdId}))`,
+      withCheck: sql`(select private.has_household_access(${table.householdId}))`,
+    }),
   ],
 );
