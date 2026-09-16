@@ -135,9 +135,7 @@ export function LoginForm({
     }
 
     setSuccess(true);
-    setMessage(
-      "Om adressen är ny har vi skickat en verifieringslänk. Använder du redan Google kan du välja Glömt lösenord för att lägga till ett lösenord.",
-    );
+    setMessage("Om adressen är ny får du ett mejl med en verifieringslänk.");
   }
 
   const pending = pendingAction !== null;
@@ -146,8 +144,12 @@ export function LoginForm({
     <div className="space-y-5">
       <Tabs defaultValue="sign-in">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="sign-in">Logga in</TabsTrigger>
-          <TabsTrigger value="sign-up">Skapa konto</TabsTrigger>
+          <TabsTrigger value="sign-in" className="text-muted-foreground">
+            Logga in
+          </TabsTrigger>
+          <TabsTrigger value="sign-up" className="text-muted-foreground">
+            Skapa konto
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="sign-in" className="pt-3">
@@ -244,10 +246,7 @@ export function LoginForm({
                 />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Minst 12 tecken. Du behöver verifiera e-postadressen innan första
-              inloggningen.
-            </p>
+            <p className="text-xs text-muted-foreground">Minst 12 tecken.</p>
             <Button
               type="submit"
               className="w-full"
@@ -292,7 +291,7 @@ export function LoginForm({
 
       {!emailConfigured ? (
         <p className="text-sm text-muted-foreground">
-          E-postinloggning aktiveras när e-postleveransen har konfigurerats.
+          E-postinloggning är inte tillgänglig just nu.
         </p>
       ) : null}
 
@@ -316,14 +315,9 @@ export function LoginForm({
 
       {!googleConfigured ? (
         <p className="text-sm text-muted-foreground">
-          Google-inloggning aktiveras när OAuth har konfigurerats.
+          Google-inloggning är inte tillgänglig just nu.
         </p>
       ) : null}
-
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Samma verifierade e-postadress ger samma konto oavsett om du använder
-        lösenord eller Google.
-      </p>
     </div>
   );
 }
