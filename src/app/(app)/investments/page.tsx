@@ -7,10 +7,9 @@ export const metadata = { title: "Investeringar" };
 export default function InvestmentsPage() {
   return (
     <FeaturePlaceholder
-      title="Samla hushållets investeringar"
-      description="Här kommer du att få en gemensam bild av investeringarnas värde, fördelning och utveckling över tid."
+      title="Investeringar"
+      description="Värde, fördelning och utveckling."
       icon={TrendingUp}
-      sections={["Totalt marknadsvärde", "Fördelning", "Värdeutveckling"]}
     />
   );
 }

@@ -21,25 +21,21 @@ const mainNavigation = [
     label: "Månaden",
     href: "/",
     icon: CalendarRange,
-    description: "Inkomster, utgifter och månadens plan",
   },
   {
     label: "Lönekoll",
     href: "/salary",
     icon: WalletCards,
-    description: "Hur saldot utvecklas fram till nästa lön",
   },
   {
     label: "Investeringar",
     href: "/investments",
     icon: TrendingUp,
-    description: "Samlad utveckling för hushållets investeringar",
   },
   {
     label: "Balans",
     href: "/balance",
     icon: Landmark,
-    description: "Tillgångar, lån och total likviditet",
   },
 ] as const;
 
@@ -47,7 +43,6 @@ const settingsNavigation = {
   label: "Inställningar",
   href: "/settings",
   icon: Settings,
-  description: "Hantera hushållets medlemmar och inkomster",
 } as const;
 
 const allNavigation = [...mainNavigation, settingsNavigation];
@@ -67,9 +62,6 @@ function DesktopNavigation({ pathname }: { pathname: string }) {
         </span>
         <span>
           <span className="block font-semibold tracking-tight">Hemekonomi</span>
-          <span className="block text-xs text-sidebar-foreground/60">
-            Ett lugnare pengaflöde
-          </span>
         </span>
       </Link>
 
@@ -175,9 +167,6 @@ export function AppShell({
                 {householdName}
               </Badge>
             </div>
-            <p className="mt-1 text-muted-foreground">
-              {currentPage.description}
-            </p>
           </div>
           <UserMenu name={userName} />
         </header>

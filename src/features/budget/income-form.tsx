@@ -1,11 +1,11 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { InfoButton } from "@/components/info-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -38,14 +38,14 @@ export function IncomeDialog({
           {income ? "Ändra" : "Lägg till inkomst"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+      <DialogContent
+        className="max-h-[90dvh] overflow-y-auto sm:max-w-lg"
+        aria-describedby={undefined}
+      >
         <DialogHeader>
           <DialogTitle>
             {income ? "Ändra inkomst" : "Lägg till inkomst"}
           </DialogTitle>
-          <DialogDescription>
-            Inkomsten räknas automatiskt varje månad under sin giltighetsperiod.
-          </DialogDescription>
         </DialogHeader>
         {open ? (
           <IncomeForm
@@ -100,9 +100,23 @@ function IncomeForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="income-amount">
-            Belopp per månad efter skatt (kr)
-          </Label>
+          <div className="flex items-center gap-1">
+            <Label htmlFor="income-amount">
+              Belopp per månad efter skatt (kr)
+            </Label>
+            <InfoButton title="Inkomster">
+              <p>
+                Beloppet läggs till hushållets inkomster varje månad under
+                perioden. Både start- och slutmånaden ingår. Välj tills vidare
+                om inkomsten saknar slutdatum.
+              </p>
+              <p>
+                Vid exempelvis en löneökning: avsluta den gamla inkomsten och
+                lägg till det nya beloppet från nästa månad. Då behålls tidigare
+                månaders belopp.
+              </p>
+            </InfoButton>
+          </div>
           <Input
             id="income-amount"
             name="amount"
@@ -119,7 +133,6 @@ function IncomeForm({
             checked={ongoing}
             onChange={(event) => setOngoing(event.target.checked)}
             className="size-4 accent-primary"
-            aria-describedby="income-period-help"
           />
           Gäller tills vidare
         </label>
@@ -150,22 +163,14 @@ function IncomeForm({
                 max="2199-12"
                 value={endsOn}
                 onChange={(event) => setEndsOn(event.target.value)}
-                aria-describedby="income-period-help"
                 required
               />
             </div>
           )}
         </div>
-        <p id="income-period-help" className="text-sm text-muted-foreground">
-          {ongoing
-            ? "Inkomsten gäller från startmånaden och framåt, utan slutdatum."
-            : "Både start- och slutmånaden ingår."}
-        </p>
         {income ? (
           <p className="text-sm text-muted-foreground">
-            När beloppet ändras över tid: sätt en slutmånad här och lägg till en
-            ny inkomst med det nya beloppet från nästa månad. Ändringar i denna
-            post gäller hela dess period.
+            Ändringar gäller hela perioden.
           </p>
         ) : null}
       </fieldset>

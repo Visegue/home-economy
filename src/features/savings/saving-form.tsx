@@ -2,11 +2,11 @@
 
 import { useActionState, useId, useState } from "react";
 import { Plus } from "lucide-react";
+import { InfoButton } from "@/components/info-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -45,7 +45,7 @@ function SavingForm({
   return (
     <form action={action} className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor={`${fieldId}-name`}>Typ av sparande (namn)</Label>
+        <Label htmlFor={`${fieldId}-name`}>Namn på sparandet</Label>
         <Input
           id={`${fieldId}-name`}
           name="name"
@@ -71,7 +71,19 @@ function SavingForm({
         ) : null}
       </div>
       <div className="space-y-2">
-        <Label htmlFor={`${fieldId}-amount`}>Belopp per månad (kr)</Label>
+        <div className="flex items-center gap-1">
+          <Label htmlFor={`${fieldId}-amount`}>Belopp per månad (kr)</Label>
+          <InfoButton title="Månadssparande">
+            <p>
+              Beloppet ingår i summan att föra över till sparande och dras från
+              det som är kvar efter utgifter.
+            </p>
+            <p>
+              Sparandet gäller alla månader tills du ändrar eller tar bort det.
+              En ändring påverkar även tidigare månaders översikter.
+            </p>
+          </InfoButton>
+        </div>
         <Input
           id={`${fieldId}-amount`}
           name="amount"
@@ -127,15 +139,11 @@ export function SavingDialog({ saving }: { saving?: Saving }) {
           )}
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>
             {saving ? "Ändra sparande" : "Lägg till sparande"}
           </DialogTitle>
-          <DialogDescription>
-            Beloppet ingår i överföringen till sparande varje månad tills du
-            ändrar eller tar bort sparandet.
-          </DialogDescription>
         </DialogHeader>
         <SavingForm saving={saving} onSaved={() => setOpen(false)} />
       </DialogContent>
