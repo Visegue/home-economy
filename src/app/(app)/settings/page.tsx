@@ -1,10 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getBudgetData } from "@/features/budget/data";
 import { PersonForm } from "@/features/budget/forms";
 import {
@@ -24,10 +18,6 @@ export default async function SettingsPage() {
       <Card id="incomes">
         <CardHeader>
           <CardTitle>Hushållets inkomster</CardTitle>
-          <CardDescription>
-            Lägg till hushållets olika inkomstkällor och när de gäller. Aktiva
-            inkomster summeras automatiskt i månadsöversikten.
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <IncomeDialog defaultStart={current} />
@@ -63,8 +53,7 @@ export default async function SettingsPage() {
             </ul>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Inga inkomster tillagda ännu. Börja med till exempel lön eller ett
-              bidrag.
+              Inga inkomster tillagda ännu.
             </p>
           )}
         </CardContent>
@@ -72,10 +61,6 @@ export default async function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Medlemmar i {household.name}</CardTitle>
-          <CardDescription>
-            Lägg till dem som ingår i hushållet. Du kan sedan välja en eller
-            flera ägare på varje utgift. Medlemmarna behöver inget eget konto.
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {people.length ? (

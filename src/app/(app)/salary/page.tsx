@@ -7,14 +7,9 @@ export const metadata = { title: "Lönekoll" };
 export default function SalaryPage() {
   return (
     <FeaturePlaceholder
-      title="Håll koll fram till nästa lön"
-      description="Här kommer du att kunna följa hur mycket som finns kvar på kontot dag för dag och jämföra månadens faktiska utgifter med tidigare löneperioder."
+      title="Lönekoll"
+      description="Saldot fram till nästa lön."
       icon={WalletCards}
-      sections={[
-        "Saldo före nästa lön",
-        "Daglig förbrukning",
-        "Jämförelse mellan löneperioder",
-      ]}
     />
   );
 }

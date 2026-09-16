@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { useActionState, useState } from "react";
+import { InfoButton } from "@/components/info-button";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -104,7 +105,22 @@ function ExpenseForm({
       <input type="hidden" name="period" value={period} />
       <fieldset disabled={pending} className="space-y-5">
         <fieldset className="grid grid-cols-2 gap-2">
-          <legend className="mb-2 text-sm font-medium">Typ av utgift</legend>
+          <legend className="mb-2 text-sm font-medium">
+            <span className="inline-flex items-center gap-1">
+              Typ av utgift
+              <InfoButton title="Utgiftstyper">
+                <p>
+                  Direkta utgifter, som hyra, betalas varje månad och dras från
+                  månadsbudgeten.
+                </p>
+                <p>
+                  För avsatta utgifter, som en årsförsäkring, läggs en del undan
+                  varje månad. Den delen ingår i budgetens utgifter och i
+                  beloppet att föra över till avsättningskontot.
+                </p>
+              </InfoButton>
+            </span>
+          </legend>
           {[
             {
               value: "direct",
@@ -114,7 +130,7 @@ function ExpenseForm({
             {
               value: "allocated",
               label: "Avsatt utgift",
-              description: "Sätt av lite varje månad",
+              description: "Betalas mer sällan",
             },
           ].map((option) => (
             <label
@@ -197,28 +213,47 @@ function ExpenseForm({
                 />
               </div>
             </div>
-            <p className="rounded-lg bg-secondary/60 p-3 text-sm">
-              Att avsätta:{" "}
-              <strong>
-                {formatBudgetSek(
-                  parsedAmount.success
-                    ? Math.round(parsedAmount.data / Number(months))
-                    : 0,
-                )}{" "}
-                per månad
-              </strong>
-            </p>
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-secondary/60 p-3 text-sm">
+              <p>
+                Att avsätta:{" "}
+                <strong>
+                  {formatBudgetSek(
+                    parsedAmount.success
+                      ? Math.round(parsedAmount.data / Number(months))
+                      : 0,
+                  )}{" "}
+                  per månad
+                </strong>
+              </p>
+              <InfoButton title="Månadsavsättningen">
+                <p>
+                  Beloppet per betalning delas med antalet månader mellan
+                  betalningarna. En årskostnad på 1 200 kr ger 100 kr per månad.
+                </p>
+                <p>
+                  Kontots saldo och tiden till första betalningen räknas inte
+                  in. Om betalningen ligger nära kan du behöva sätta in mer
+                  första gången.
+                </p>
+              </InfoButton>
+            </div>
           </>
         ) : null}
         <fieldset className="space-y-2">
           <legend className="mb-2 text-sm font-medium">
-            Ägare (frivilligt)
+            <span className="inline-flex items-center gap-1">
+              Ägare (frivilligt)
+              <InfoButton title="Utgiftens ägare">
+                <p>
+                  Välj vilka medlemmar utgiften gäller. Beloppet räknas en gång
+                  i hushållets budget, även med flera ägare. Du kan också lämna
+                  valet tomt.
+                </p>
+              </InfoButton>
+            </span>
           </legend>
           {people.length ? (
             <>
-              <p className="text-xs text-muted-foreground">
-                Välj en eller flera medlemmar som utgiften berör.
-              </p>
               <div className="flex flex-wrap gap-2">
                 {people.map((person) => (
                   <label
@@ -246,11 +281,9 @@ function ExpenseForm({
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Lägg till medlemmar i{" "}
               <Link href="/settings" className="text-primary underline">
-                hushållsinställningarna
-              </Link>{" "}
-              för att välja ägare. Du kan också spara utan ägare.
+                Lägg till medlemmar
+              </Link>
             </p>
           )}
         </fieldset>
@@ -275,7 +308,15 @@ export function PersonForm() {
   );
   return (
     <form action={action} className="space-y-3">
-      <Label htmlFor="person-name">Medlemmens namn</Label>
+      <div className="flex items-center gap-1">
+        <Label htmlFor="person-name">Medlemmens namn</Label>
+        <InfoButton title="Hushållets medlemmar">
+          <p>
+            Medlemmar kan väljas som ägare på utgifter. Att lägga till ett namn
+            skapar inget konto och ger inte personen tillgång till hushållet.
+          </p>
+        </InfoButton>
+      </div>
       <div className="flex flex-wrap gap-2">
         <Input
           id="person-name"

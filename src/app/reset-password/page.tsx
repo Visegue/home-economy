@@ -2,13 +2,7 @@ import { KeyRound } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import { ResetPasswordForm } from "./reset-password-form";
 
@@ -38,9 +32,6 @@ export default async function ResetPasswordPage({
             <KeyRound aria-hidden="true" />
           </div>
           <CardTitle className="text-xl">Välj nytt lösenord</CardTitle>
-          <CardDescription>
-            Lösenordet används för samma konto som dina övriga inloggningssätt.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           {invalid ? (

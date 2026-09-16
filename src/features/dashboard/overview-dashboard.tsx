@@ -2,13 +2,7 @@ import Link from "next/link";
 import { PiggyBank } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -54,9 +48,6 @@ export async function OverviewDashboard({ period }: { period: string }) {
         <Card>
           <CardHeader>
             <CardTitle>Räcker inkomsten?</CardTitle>
-            <CardDescription>
-              Din månadsbudget för {monthLabel(period)}
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="space-y-3 text-sm">
@@ -124,11 +115,12 @@ export async function OverviewDashboard({ period }: { period: string }) {
                   {formatBudgetSek(Math.abs(summary.remainingInOre))}
                 </p>
               ) : (
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Inga av hushållets inkomster gäller den här månaden. Inkomster
-                  och deras giltighetsperioder hanteras i
-                  hushållsinställningarna.
-                </p>
+                <Link
+                  href="/settings#incomes"
+                  className="mt-2 inline-block text-sm text-primary underline underline-offset-4"
+                >
+                  Hantera inkomster
+                </Link>
               )}
             </div>
           </CardContent>
@@ -140,9 +132,6 @@ export async function OverviewDashboard({ period }: { period: string }) {
               aria-hidden="true"
             />
             <CardTitle>Att föra över till avsättningskontot</CardTitle>
-            <CardDescription>
-              För utgifter som betalas mer sällan
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-semibold tracking-tight tabular-nums">
@@ -151,10 +140,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
                 / månad
               </span>
             </p>
-            <p className="mt-3 max-w-prose text-sm text-muted-foreground">
-              Varje kostnad fördelas över sitt betalningsintervall. Avsättningen
-              ingår redan i månadens totala utgifter.
-            </p>
+
             {reserved.length ? (
               <ul className="mt-5 space-y-2 text-sm">
                 {reserved.map((expense) => (
@@ -171,10 +157,6 @@ export async function OverviewDashboard({ period }: { period: string }) {
                 Inga avsatta utgifter ännu.
               </p>
             )}
-            <p className="mt-5 text-xs text-muted-foreground">
-              Beräkningen tar inte hänsyn till befintligt saldo på kontot eller
-              om första betalningen ligger nära.
-            </p>
           </CardContent>
         </Card>
       </section>
@@ -182,10 +164,6 @@ export async function OverviewDashboard({ period }: { period: string }) {
       <Card>
         <CardHeader>
           <CardTitle>Utgifter</CardTitle>
-          <CardDescription>
-            Gäller vald månad och återkommer varje månad. Ägare visar vilka som
-            berörs; beloppet räknas en gång.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           {summary.expenses.length ? (
@@ -267,10 +245,6 @@ export async function OverviewDashboard({ period }: { period: string }) {
           ) : (
             <div className="py-8 text-center">
               <p className="font-medium">Inga utgifter för den här månaden</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Börja med till exempel hyran eller en försäkring. Använd ”Lägg
-                till utgift” ovan.
-              </p>
             </div>
           )}
         </CardContent>
@@ -278,10 +252,6 @@ export async function OverviewDashboard({ period }: { period: string }) {
       <Card>
         <CardHeader>
           <CardTitle>Månad för månad · {year}</CardTitle>
-          <CardDescription>
-            Hushållets aktiva inkomster jämförda med direkta utgifter och
-            avsättningar samt ditt återkommande månadssparande.
-          </CardDescription>
         </CardHeader>
         <CardContent>
           <Table>

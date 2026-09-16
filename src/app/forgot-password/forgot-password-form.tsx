@@ -62,7 +62,7 @@ export function ForgotPasswordForm({ configured }: { configured: boolean }) {
       </Button>
       {!configured ? (
         <p className="text-sm text-muted-foreground">
-          E-postleveransen är inte konfigurerad ännu.
+          Återställning via e-post är inte tillgänglig just nu.
         </p>
       ) : null}
       <Button asChild variant="link" className="w-full">
