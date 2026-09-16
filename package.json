@@ -58,7 +58,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "6.1.1",
-    "auth": "1.7.4",
+    "auth": "1.7.3",
     "drizzle-kit": "0.31.10",
     "jsdom": "30.0.1",
     "oxlint": "1.82.0",
