@@ -1,16 +1,19 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { IncomeField } from "@/features/income/income-field";
 
 import { createHouseholdAction, type OnboardingState } from "./actions";
 
 const initialState: OnboardingState = {};
 
 export function OnboardingForm() {
+  const [name, setName] = useState("Mitt hushåll");
+  const [income, setIncome] = useState("");
   const [state, formAction, pending] = useActionState(
     createHouseholdAction,
     initialState,
@@ -23,7 +26,8 @@ export function OnboardingForm() {
         <Input
           id="household-name"
           name="name"
-          defaultValue="Mitt hushåll"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
           maxLength={120}
           autoComplete="organization"
           required
@@ -37,6 +41,13 @@ export function OnboardingForm() {
         </p>
       </div>
 
+      <IncomeField
+        value={income}
+        onChange={setIncome}
+        error={state.incomeError}
+        disabled={pending}
+      />
+
       {state.error ? (
         <p
           id="household-error"
@@ -44,6 +55,11 @@ export function OnboardingForm() {
           className="text-sm text-destructive"
         >
           {state.error}
+          {state.errorReference ? (
+            <span className="mt-1 block font-mono text-xs">
+              Referens: {state.errorReference}
+            </span>
+          ) : null}
         </p>
       ) : null}
 

@@ -22,6 +22,15 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Verify committed Drizzle migrations
+        run: |
+          pnpm db:generate
+          migration_changes="$(git status --porcelain --untracked-files=all -- drizzle)"
+          if [ -n "$migration_changes" ]; then
+            echo "::error::Databasschemat har ändrats utan motsvarande incheckad Drizzle-migration."
+            echo "$migration_changes"
+            exit 1
+          fi
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
@@ -47,3 +56,164 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-failure-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  deploy-preview:
+    name: Deploy preview
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    needs: [quality, end-to-end]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+    # All previews currently share the development database.
+    concurrency:
+      group: staging-database-deployment
+      cancel-in-progress: false
+    steps:
+      # Use the same PR merge commit that quality and end-to-end tested.
+      - uses: actions/checkout@v7
+      - name: Validate preview configuration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          missing=0
+          for variable in DATABASE_URL DATABASE_MIGRATION_URL VERCEL_ORG_ID VERCEL_PROJECT_ID VERCEL_TOKEN; do
+            if [ -z "${!variable:-}" ]; then
+              echo "::error::$variable saknas i GitHub-miljön staging."
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply preview migrations
+        env:
+          DATABASE_PROVIDER: postgres
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          NODE_ENV: production
+        run: pnpm db:migrate
+      - name: Verify preview database
+        env:
+          DATABASE_PROVIDER: postgres
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: production
+        run: pnpm db:check
+      - name: Deploy preview
+        id: deploy
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PR_BRANCH: ${{ github.head_ref }}
+        run: node scripts/deploy-preview.mjs
+
+  deploy-production:
+    name: Deploy production
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [quality, end-to-end]
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment:
+      name: production
+      url: ${{ steps.stage.outputs.url }}
+    concurrency:
+      group: production-deployment
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.24.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate production configuration
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          missing=0
+          for variable in DATABASE_URL DATABASE_MIGRATION_URL VERCEL_ORG_ID VERCEL_PROJECT_ID VERCEL_TOKEN; do
+            if [ -z "${!variable:-}" ]; then
+              echo "::error::$variable saknas i GitHub-miljön production."
+              missing=1
+            fi
+          done
+          exit "$missing"
+      - name: Stage production deployment
+        id: stage
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          deployment_url="$(pnpm dlx vercel@59.16.0 deploy --prod --skip-domain --yes --no-color --token "$VERCEL_TOKEN")"
+          echo "url=$deployment_url" >> "$GITHUB_OUTPUT"
+      - name: Apply production migrations
+        env:
+          DATABASE_PROVIDER: postgres
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_MIGRATION_URL: ${{ secrets.DATABASE_MIGRATION_URL }}
+          NODE_ENV: production
+        run: pnpm db:migrate
+      - name: Verify production database
+        env:
+          DATABASE_PROVIDER: postgres
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: production
+        run: pnpm db:check
+      - name: Promote production deployment
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DEPLOYMENT_URL: ${{ steps.stage.outputs.url }}
+        run: |
+          deployment_host="${DEPLOYMENT_URL#https://}"
+          deployment_json="$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v13/deployments/$deployment_host?teamId=$VERCEL_ORG_ID")"
+          deployment_id="$(jq --raw-output '.id // empty' <<< "$deployment_json")"
+          deployment_project_id="$(jq --raw-output '.projectId // empty' <<< "$deployment_json")"
+
+          if [ -z "$deployment_id" ] || [ "$deployment_project_id" != "$VERCEL_PROJECT_ID" ]; then
+            echo "::error::Den staged deploymenten kunde inte verifieras mot Vercel-projektet."
+            exit 1
+          fi
+
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer $VERCEL_TOKEN" \
+            --header "Content-Type: application/json" \
+            --data '{}' \
+            "https://api.vercel.com/v10/projects/$VERCEL_PROJECT_ID/promote/$deployment_id?teamId=$VERCEL_ORG_ID" \
+            >/dev/null
