@@ -82,7 +82,8 @@ Efter en merge till `main` väntar produktionsjobbet på både kvalitetskontroll
 och Playwright. Därefter byggs en staged Vercel-deployment utan produktionsdomän,
 alla väntande Drizzle-migrationer appliceras mot Neon med den direkta
 ägaranslutningen och `pnpm db:check` verifierar runtime-roll och RLS. Först när
-samtliga steg lyckas promoveras deploymenten till produktionsdomänen.
+samtliga steg lyckas, inklusive ett HTTP-smoketest av inloggningssidan på den
+staged deploymenten, promoveras den till produktionsdomänen.
 
 GitHub-miljön `production` måste innehålla följande secrets:
 
@@ -97,7 +98,8 @@ Produktionsjobbet är serialiserat så att högst en migration och promotion kö
 `vercel.json`; GitHub Actions sköter både produktion och previews. Databasmigrationer ska vara
 bakåtkompatibla med föregående appversion. Destruktiva ändringar delas upp enligt
 expand/contract så att en misslyckad promotion kan lämna den gamla deploymenten
-körande mot det nya schemat.
+körande mot det nya schemat. Se [release-runbooken](docs/release-runbook.md) för
+felhantering och återställning.
 
 ### PR-previews och migrationer
 
@@ -105,8 +107,11 @@ Vid PR från en branch i samma repo kör GitHub Actions först kvalitetstester o
 Playwright. Jobbet `Deploy preview` använder därefter GitHub-miljön `staging`
 för att köra `pnpm db:migrate` och `pnpm db:check` mot Neons `development`-branch.
 Vercel-previewen skapas endast om båda databasstegen lyckas. Preview-länken visas
-på GitHub-deploymenten. Även draft-PR:er får previews; fork- och Dependabot-PR:er
-kör bara de isolerade testerna.
+på GitHub-deploymenten när smoketestet också har lyckats. Även draft-PR:er får
+previews. Fork- och Dependabot-PR:er kör bara isolerade tester; en separat
+obligatorisk kontroll stoppar merge om de ändrar databas-, release- eller
+CI-filer utan stagingvalidering. Granskade sådana ändringar måste först tas in
+på en betrodd branch i repot och där köras genom preview-jobbet.
 
 Följande secrets krävs i GitHub-miljön `staging`:
 
@@ -121,8 +126,8 @@ sparas från `staging` som en krypterad, branchspecifik Preview-variabel via Ver
 och används av både bygget och appen; migrationsanslutningen
 ska inte läggas i Vercel. Jobbet förbrukar Neon-kvot och är serialiserat eftersom
 alla previews delar databasen. Migrationer rullas inte tillbaka när en PR stängs.
-Samordna schemaändringar mellan PR:er och håll dem bakåtkompatibla; isolerade
-Neon-branches per PR behövs om parallella schemaändringar inte är kompatibla.
+Samordna schemaändringar mellan PR:er och håll dem bakåtkompatibla. Nya
+Neon-branches per PR skapas inte automatiskt för att inte öka resursförbrukningen.
 
 Preview-jobbet använder Vercels projekt- och deployment-API direkt för att stödja
 projektbegränsade tokens utan CLI:ts användaruppslag. Det verifierar kopplingen
@@ -160,7 +165,8 @@ Miljöerna delar samma migrationer men inte samma databasanslutning:
 
 De hostade databaserna ligger i Neon-projektet [`home-economy`](https://console.neon.tech/app/projects/wandering-king-47243958) i AWS Frankfurt (`aws-eu-central-1`), den närmaste tillgängliga Neon-regionen till Sverige. GitHub environments `staging` och `production` innehåller branchspecifika `DATABASE_URL`- och `DATABASE_MIGRATION_URL`-secrets samt projekt- och branch-ID som variabler.
 
-Enskilda pull requests kan senare få kortlivade Neon-branches med namnet `preview/pr-*`. De ska tas bort när preview-miljön stängs.
+Enskilda pull requests får inte automatiskt egna Neon-branches. Om en framtida
+ändring kräver isolering behöver den resurskostnaden utvärderas separat.
 
 Better Auth lagrar konton och sessioner i respektive databas. Lokal Google-inloggning använder den befintliga localhost-klienten och lokal `BETTER_AUTH_SECRET`. Samma Google-identitet kan användas i alla miljöer, men appkonton och hushållsdata är separata. Konton från tidigare PGlite-utveckling migreras inte automatiskt. Verifiering och återställning via e-post kräver lokala Resend-inställningar även när databasen är Neon.
 
@@ -189,6 +195,9 @@ Google och lösenord länkas automatiskt till samma användare när de har samma
 - [Arbetsbokens produktkarta](docs/workbook-mapping.md)
 - [Arkitektur och säkerhetsgränser](docs/architecture.md)
 - [ADR 0001: data- och authplattform](docs/adr/0001-data-and-auth-platform.md)
+- [ADR 0002: databasmedvetna releaser](docs/adr/0002-database-aware-releases.md)
+- [Release och återställning](docs/release-runbook.md)
+- [Rapportera säkerhetsbrister](SECURITY.md)
 - Databasens schema: `src/db/schema/`
 - Körbara migrationer: `drizzle/`
 

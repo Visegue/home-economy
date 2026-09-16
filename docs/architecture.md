@@ -32,15 +32,16 @@ flowchart LR
 
 Applikationen återanvänder en liten pool och har prepared statements avstängda, vilket fungerar med Neons poolade transaktionsanslutning. `DATABASE_URL` använder en branchspecifik `home_economy_runtime`-roll utan admin- eller RLS-bypass. `DATABASE_MIGRATION_URL` kräver en direkt ägaranslutning och används endast för migrationer. App och migrationsverktyg läser samma lokala miljöfiler. Saknad `DATABASE_URL` ger ett fel; PGlite kräver `DATABASE_PROVIDER=pglite` och är förbjudet i drift.
 
-Ett Neon-projekt i AWS Frankfurt äger alla miljöer. Lokal apputveckling använder `dev/alexander`, skapad från den tomma stagingdatabasen; produktionsdatabasen ligger på rotbranchen `production` och den långlivade `development`-branchen används som staging/Preview. Framtida PR-preview kan få kortlivade `preview/pr-*`-branches. Konton och sessioner lagras separat per branch. Lokala anslutningar finns i Git-ignorerade `.env.local`, hostade runtime-anslutningar i Vercel och migrationsanslutningar i GitHub environments. Miljöbeslutet finns i [ADR 0001](adr/0001-data-and-auth-platform.md).
+Ett Neon-projekt i AWS Frankfurt äger alla miljöer. Lokal apputveckling använder `dev/alexander`, skapad från den tomma stagingdatabasen; produktionsdatabasen ligger på rotbranchen `production` och den långlivade `development`-branchen används som staging/Preview. PR:er får inte automatiskt egna databasbranches av kostnadsskäl. Konton och sessioner lagras separat per branch. Lokala anslutningar finns i Git-ignorerade `.env.local`, hostade runtime-anslutningar i Vercel och migrationsanslutningar i GitHub environments. Plattformen beskrivs i [ADR 0001](adr/0001-data-and-auth-platform.md), och releasebeslutet i [ADR 0002](adr/0002-database-aware-releases.md).
 
 `pnpm db:check` verifierar auth-lagring, runtime-roll, tvingande RLS och transaktionsisolering på en riktig Neon-anslutning. Testposter rullas tillbaka. PGlite-testerna kompletterar detta med snabba lokala kontroller. Inloggning genom Google och Vercels OAuth-proxy behöver även verifieras i webbläsaren.
 
-GitHub Actions äger produktionsreleasen. Vercel bygger först en staged produktionsdeployment utan att flytta produktionsdomänen. Därefter applicerar GitHub Actions väntande Drizzle-migrationer med den direkta ägaranslutningen och kör databaskontrollen med den begränsade runtime-rollen. Deploymenten promoveras endast om båda databasstegen lyckas. Jobbet är serialiserat och automatiska Vercel-deployments via Git-integrationen är avstängda för alla branches. Migrationer måste följa expand/contract så att det föregående appbygget förblir kompatibelt om promotionen inte genomförs.
+GitHub Actions äger produktionsreleasen. Vercel bygger först en staged produktionsdeployment utan att flytta produktionsdomänen. Därefter applicerar GitHub Actions väntande Drizzle-migrationer med den direkta ägaranslutningen, kör databaskontrollen med den begränsade runtime-rollen och smoketestar inloggningssidan på den staged deploymenten. Deploymenten promoveras endast om alla tre kontroller lyckas. Jobbet är serialiserat och automatiska Vercel-deployments via Git-integrationen är avstängda för alla branches. Migrationer måste följa expand/contract så att det föregående appbygget förblir kompatibelt om promotionen inte genomförs. Felhantering beskrivs i [release-runbooken](release-runbook.md).
 
 PR-previews ägs också av GitHub Actions. Efter godkända kvalitets- och webbläsartester
 applicerar `Deploy preview` väntande migrationer på Neons `development`-branch,
-kör `pnpm db:check` och skapar först därefter deploymenten i Vercels Preview-miljö.
+kör `pnpm db:check`, skapar deploymenten i Vercels Preview-miljö och smoketestar
+inloggningssidan innan jobbet markeras som lyckat.
 Jobbet använder GitHub-miljön `staging`, är serialiserat över samtliga PR:er och
 avbryter inte en pågående migration när nya commits kommer. Samma PR-mergecommit
 används för tester och deployment. Runtime-anslutningen från `staging` sparas
@@ -48,8 +49,10 @@ som krypterad, branchspecifik Preview-variabel via Vercels API så att appen anv
 stannar i migrationssteget i GitHub Actions.
 
 Endast PR:er från samma repo och andra aktörer än Dependabot får detta jobb.
-Previews delar tills vidare databas och schema: migrationer måste vara bakåtkompatibla,
-och samtidiga PR:er med motstridiga migrationer kräver samordning eller egna Neon-branches.
+En separat obligatorisk kontroll stoppar externa PR:er som ändrar databas-, release-
+eller CI-filer utan stagingvalidering. Previews delar databas och schema:
+migrationer måste vara bakåtkompatibla och samtidiga PR:er med motstridiga
+migrationer kräver samordning.
 Att stänga en PR rullar inte tillbaka migrationer i den gemensamma databasen.
 
 Preview-jobbet använder Vercels projekt- och deployment-API direkt för att stödja
