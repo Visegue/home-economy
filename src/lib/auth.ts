@@ -58,7 +58,6 @@ export const auth = betterAuth({
       }),
   },
   account: {
-    identityStrategy: "provider-id",
     encryptOAuthTokens: true,
     storeStateStrategy: "database",
     accountLinking: {

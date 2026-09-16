@@ -42,8 +42,8 @@ try {
       await sql`insert into public."user" (id, name, email, email_verified)
         values (${owner}, 'Synthetic owner', ${owner + "@example.test"}, true),
                (${outsider}, 'Synthetic outsider', ${outsider + "@example.test"}, true)`;
-      await sql`insert into public.account (id, issuer, account_id, provider_id, user_id)
-        values (${randomUUID()}, 'https://accounts.google.com', ${owner}, 'google', ${owner})`;
+      await sql`insert into public.account (id, account_id, provider_id, user_id)
+        values (${randomUUID()}, ${owner}, 'google', ${owner})`;
       await sql`insert into public.session (id, token, user_id, expires_at, updated_at)
         values (${sessionId}, ${randomUUID()}, ${owner}, now() + interval '1 hour', now())`;
       const sessions =
