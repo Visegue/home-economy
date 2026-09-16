@@ -5,6 +5,9 @@ date: 2026-08-29
 
 # Use Neon, Better Auth, and PGlite
 
+The per-PR preview branch policy below is superseded by
+[ADR 0002](0002-database-aware-releases.md); the other platform decisions remain.
+
 The application will use PostgreSQL through Drizzle in every environment. Local
 development uses an isolated Neon branch, `dev/alexander`, to exercise the same
 driver, runtime role, pooling, and TLS as hosted environments. PGlite remains an
