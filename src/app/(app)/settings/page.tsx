@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DeploymentInfo } from "@/components/deployment-info";
 import { getBudgetData } from "@/features/budget/data";
 import { PersonForm } from "@/features/budget/forms";
 import {
@@ -82,36 +83,7 @@ export default async function SettingsPage() {
           <PersonForm />
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Om appen</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          {deployment.kind === "production" ? (
-            <p>Version {deployment.version}</p>
-          ) : deployment.kind === "preview" ? (
-            <>
-              <p>Förhandsversion {deployment.commit?.slice(0, 7) ?? "okänd"}</p>
-              {deployment.branch && (
-                <p className="break-all">Gren: {deployment.branch}</p>
-              )}
-            </>
-          ) : (
-            <p>Lokal utveckling</p>
-          )}
-          {deployment.kind !== "local" && (
-            <p className="break-all">
-              Revision: {deployment.commit ?? "okänd"}
-            </p>
-          )}
-          <a
-            className="text-primary underline-offset-4 hover:underline"
-            href="https://github.com/Visegue/home-economy/releases"
-          >
-            Se publicerade releaser på GitHub
-          </a>
-        </CardContent>
-      </Card>
+      <DeploymentInfo deployment={deployment} />
     </div>
   );
 }

@@ -23,6 +23,7 @@ test("skapar hushåll och behåller det vid återbesök", async ({
   await expect(page.getByText("Testfamiljen", { exact: true })).toBeVisible();
   await page.goto("/settings");
   await expect(page.getByText("Förhandsversion aaaaaaa")).toBeVisible();
+  await page.getByText("Förhandsversion aaaaaaa").click();
   await expect(page.getByText("Gren: codex/test-preview")).toBeVisible();
   await expect(page.getByText(`Revision: ${"a".repeat(40)}`)).toBeVisible();
   await expect(page.getByText(/^Version /)).toHaveCount(0);
