@@ -61,6 +61,9 @@ export async function deployPreview(
     [
       { key: "DATABASE_URL", value: env.DATABASE_URL },
       { key: "DATABASE_PROVIDER", value: "postgres" },
+      { key: "APP_DEPLOY_ENV", value: "preview" },
+      { key: "APP_DEPLOY_SHA", value: env.GITHUB_SHA },
+      { key: "APP_DEPLOY_BRANCH", value: env.PR_BRANCH },
     ].map((variable) => ({
       ...variable,
       type: "encrypted",

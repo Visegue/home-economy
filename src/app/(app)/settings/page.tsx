@@ -6,6 +6,7 @@ import {
   RemoveIncomeButton,
 } from "@/features/budget/income-form";
 import { currentPeriod, monthLabel } from "@/features/budget/model";
+import { getDeploymentVersion } from "@/lib/deployment-version";
 import { formatBudgetSek } from "@/lib/money";
 import packageJson from "../../../../package.json";
 
@@ -14,6 +15,7 @@ export const metadata = { title: "Hushållsinställningar" };
 export default async function SettingsPage() {
   const { people, household, incomes } = await getBudgetData();
   const current = currentPeriod();
+  const deployment = getDeploymentVersion(packageJson.version, process.env);
   return (
     <div className="max-w-4xl space-y-6">
       <Card id="incomes">
@@ -85,12 +87,28 @@ export default async function SettingsPage() {
           <CardTitle>Om appen</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>Version {packageJson.version}</p>
+          {deployment.kind === "production" ? (
+            <p>Version {deployment.version}</p>
+          ) : deployment.kind === "preview" ? (
+            <>
+              <p>Förhandsversion {deployment.commit?.slice(0, 7) ?? "okänd"}</p>
+              {deployment.branch && (
+                <p className="break-all">Gren: {deployment.branch}</p>
+              )}
+            </>
+          ) : (
+            <p>Lokal utveckling</p>
+          )}
+          {deployment.kind !== "local" && (
+            <p className="break-all">
+              Revision: {deployment.commit ?? "okänd"}
+            </p>
+          )}
           <a
             className="text-primary underline-offset-4 hover:underline"
             href="https://github.com/Visegue/home-economy/releases"
           >
-            Se releaser på GitHub
+            Se publicerade releaser på GitHub
           </a>
         </CardContent>
       </Card>

@@ -9,8 +9,12 @@ smoketest i staging innan de får mergas.
 
 ## Versionsnummer och GitHub Releases
 
-`package.json` är källan till appens version; den visas under **Inställningar →
-Om appen**. Alla giltiga SemVer 2.0.0-versioner tillåts: `MAJOR.MINOR.PATCH`,
+`package.json` är källan till appens releaseversion; i produktion visas den under
+**Inställningar → Om appen** tillsammans med den deployade committen. Preview
+visar i stället branch och exakt byggcommit som förhandsversion, inte det
+planerade releaseversionsnumret eller versionen på `main`. Dessa uppgifter
+skickas med av deployment-jobben; om commit-ID saknas visas `okänd` i stället
+för en gissning. Alla giltiga SemVer 2.0.0-versioner tillåts: `MAJOR.MINOR.PATCH`,
 prerelease som `0.3.0-beta.1` och byggmetadata som `0.3.0+build.2`. Fram till
 `1.0.0` är API och datamodell ännu inte stabila, men välj ändå versionshöjning
 avsiktligt: patch för rättningar, minor för nya funktioner och major för

@@ -85,8 +85,10 @@ alla väntande Drizzle-migrationer appliceras mot Neon med den direkta
 samtliga steg lyckas, inklusive ett HTTP-smoketest av inloggningssidan på den
 staged deploymenten, promoveras den till produktionsdomänen.
 
-Appens version är `version` i `package.json` och visas under **Inställningar →
-Om appen**. Full SemVer 2.0.0 stöds (`MAJOR.MINOR.PATCH`, valfri prerelease och
+Appens releaseversion är `version` i `package.json` och visas i produktion under
+**Inställningar → Om appen**. Preview visar i stället branch och den faktiskt
+deployade committen, så att en planerad releaseversion inte misstas för en
+publicerad. Full SemVer 2.0.0 stöds (`MAJOR.MINOR.PATCH`, valfri prerelease och
 byggmetadata), med GitHub-taggar som börjar på `v`. Ändringar i app, beroenden,
 migrationer eller releaseskript kräver en högre version än på `main`; den
 obligatoriska `quality`-kontrollen stoppar annars merge och en botkommentar
