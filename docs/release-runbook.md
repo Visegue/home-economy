@@ -23,14 +23,23 @@ rena dokumentations- och CI-ändringar. Den obligatoriska `quality`-kontrollen
 stoppar merge annars. En botkommentar på PR:en förklarar spärren och uppdateras
 när den lösts. `pnpm check` validerar versionsformatet lokalt. Enbart ändrad
 byggmetadata räcker inte: SemVer ignorerar `+...` vid jämförelse av versioner.
+Motivera versionsvalet i PR-beskrivningen. Om en annan PR hinner mergas med
+samma version, uppdatera grenen mot `main` och välj en ny, högre version innan
+merge. Ändras appens filstruktur måste även sökvägarna i
+`scripts/check-pr-version.mjs` och dess tester uppdateras.
 
 Efter lyckad promotion skapar det separat behörighetsbegränsade jobbet
 **Publish GitHub release** en tagg `v<version>` på exakt den deployade committen
 och en publicerad GitHub Release med automatiska ändringsnoteringar. En version
 med prerelease-suffix publiceras som GitHub-prerelease. Observera att merge till
 `main` fortfarande deployar den till produktion; prerelease är en etikett, inte
-en separat stagingmiljö. Inga
-personliga åtkomsttokens, externa release-tjänster eller nya betalkonton behövs.
+en separat stagingmiljö. Inga personliga åtkomsttokens, externa
+release-tjänster eller nya betalkonton behövs.
+Den första releasen kräver ingen manuell initiering: när första lyckade
+produktionskörningen med release-jobbet avslutas skapas både tagg och GitHub
+Release automatiskt. Kontrollera ändå det nya release-jobbet efter första merge;
+om det misslyckas kan appen redan vara i produktion utan motsvarande GitHub
+Release. Följ felhanteringen nedan i stället för att flytta en tagg manuellt.
 Produktionskörningar serialiseras så att en deploy och dess release inte kan
 överlappa nästa produktionskörning.
 En senare merge med oförändrat versionsnummer är bara tillåten för filer utan

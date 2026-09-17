@@ -211,6 +211,7 @@ Google och lösenord länkas automatiskt till samma användare när de har samma
 - [Arkitektur och säkerhetsgränser](docs/architecture.md)
 - [ADR 0001: data- och authplattform](docs/adr/0001-data-and-auth-platform.md)
 - [ADR 0002: databasmedvetna releaser](docs/adr/0002-database-aware-releases.md)
+- [ADR 0003: appversionering och GitHub Releases](docs/adr/0003-app-versioning-and-github-releases.md)
 - [Release och återställning](docs/release-runbook.md)
 - [Rapportera säkerhetsbrister](SECURITY.md)
 - Databasens schema: `src/db/schema/`
