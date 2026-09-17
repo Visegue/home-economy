@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# Keep every main deployment and its corresponding release in order. PR runs
+# remain independent, and pending main runs are queued rather than replaced.
+concurrency:
+  group: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && 'production-release' || github.run_id }}
+  queue: max
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -22,6 +28,19 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Validate app version
+        run: pnpm check:version
+      - name: Enforce PR version bump
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          CHANGED_FILE_COUNT: ${{ github.event.pull_request.changed_files }}
+        run: node scripts/check-pr-version.mjs
       - name: Verify committed Drizzle migrations
         run: |
           pnpm db:generate
@@ -225,3 +244,47 @@ jobs:
             --data '{}' \
             "https://api.vercel.com/v10/projects/$VERCEL_PROJECT_ID/promote/$deployment_id?teamId=$VERCEL_ORG_ID" \
             >/dev/null
+
+  publish-release:
+    name: Publish GitHub release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Publish release for a new version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version="$(jq -er '.version' package.json)"
+          tag="v$version"
+          core_version="${version%%+*}"
+          release_flags=()
+          if [[ "$core_version" == *-* ]]; then
+            release_flags+=(--prerelease)
+          fi
+
+          if release_is_draft="$(gh release view "$tag" --json isDraft --jq .isDraft 2>/dev/null)"; then
+            if [ "$release_is_draft" = true ]; then
+              echo "::error::$tag finns redan som utkast. Publicera eller ta bort utkastet manuellt efter granskning."
+              exit 1
+            fi
+            echo "$tag finns redan som publicerad release. Ingen ny release behövs."
+            exit 0
+          fi
+
+          if tag_target="$(gh api "repos/$GH_REPO/git/ref/tags/$tag" --jq '.object.sha' 2>/dev/null)"; then
+            if [ "$tag_target" != "$GITHUB_SHA" ]; then
+              echo "::error::$tag pekar inte på den deployade committen. Ingen release skapades."
+              exit 1
+            fi
+            gh release create "$tag" --verify-tag --title "$tag" --generate-notes "${release_flags[@]}"
+          else
+            gh release create "$tag" --target "$GITHUB_SHA" --title "$tag" --generate-notes "${release_flags[@]}"
+          fi

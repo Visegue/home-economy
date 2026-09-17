@@ -21,6 +21,15 @@ test("skapar hushåll och behåller det vid återbesök", async ({
   await expect(page.getByText("Testfamiljen", { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByText("Testfamiljen", { exact: true })).toBeVisible();
+  await page.goto("/settings");
+  await expect(
+    page.getByText(
+      /^Version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Se releaser på GitHub" }),
+  ).toHaveAttribute("href", "https://github.com/Visegue/home-economy/releases");
 
   const returningContext = await browser.newContext();
   try {

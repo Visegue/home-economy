@@ -7,6 +7,7 @@ import {
 } from "@/features/budget/income-form";
 import { currentPeriod, monthLabel } from "@/features/budget/model";
 import { formatBudgetSek } from "@/lib/money";
+import packageJson from "../../../../package.json";
 
 export const metadata = { title: "Hushållsinställningar" };
 
@@ -77,6 +78,20 @@ export default async function SettingsPage() {
             </p>
           )}
           <PersonForm />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Om appen</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <p>Version {packageJson.version}</p>
+          <a
+            className="text-primary underline-offset-4 hover:underline"
+            href="https://github.com/Visegue/home-economy/releases"
+          >
+            Se releaser på GitHub
+          </a>
         </CardContent>
       </Card>
     </div>
