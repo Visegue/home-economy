@@ -2,80 +2,91 @@
 
 ## Översikt
 
-Next.js App Router ansvarar för UI, serverrendering och små server actions. Better Auth hanterar verifierad e-post/lösenord och Google OAuth samt lagrar sessioner i samma Postgres-schema som ekonomidatan. Drizzle är databasgränsen. Lokal apputveckling och drift använder isolerade Neon-branches via poolade Postgres-anslutningar. PGlite används endast för snabba tester och uttryckligt offline-läge. Dashboardens nuvarande fixtures är en avgränsad prototyp och byts stegvis mot repository-funktioner som läser per hushåll.
+Next.js App Router hanterar UI, serverrendering och server actions. Better Auth sköter verifierad e-post/lösenord, Google OAuth och databassessioner. Drizzle ansluter till Postgres, som lagrar både auth- och ekonomidata.
+
+Utveckling och drift använder isolerade Neon-branches med poolade anslutningar. PGlite används för tester och uttryckligt offline-läge. Månadsöversikten läser hushållsdata; kvarvarande fixtures är syntetiska prototyper.
 
 ```mermaid
 flowchart LR
   Browser["Webbläsare"] --> Next["Next.js Server Components och actions"]
   Next --> Auth["Better Auth och Google OAuth"]
   Auth --> Session["Databasvaliderad session"]
-  Session --> Context["Transaktionslokal användarkontext"]
+  Session --> Context["Användarkontext för transaktionen"]
   Context --> RLS["Tvingande RLS per hushåll"]
-  RLS --> DB["Miljöns isolerade Neon-branch"]
+  RLS --> DB["Miljöns Neon-branch"]
 ```
 
 ## Säkerhetsgränser
 
-- OAuth-hemligheter, auth-hemlighet och databasanslutningar finns endast på servern.
-- Proxy-lagret gör bara en snabb cookie-kontroll. Skyddade sidor och mutationer validerar alltid sessionen mot Better Auths databas.
-- Alla Google-konton kan registrera sig. Efter den första inloggningen skapas ett eget ägarhushåll genom en autentiserad server action.
-- Lösenordskonton kräver e-postverifiering. Google länkas automatiskt till ett befintligt konto endast när samma lokalt verifierade e-postadress matchar.
-- OAuth-token krypteras med Better Auth-hemligheten och OAuth-state förbrukas från databasen.
-- Vercels dynamiska previews använder Better Auths OAuth Proxy via den stabila produktionsdomänen. Endast en separat, kortlivad proxyhemlighet delas mellan Preview och Production; deras vanliga auth-hemligheter och databaser förblir separata.
-- Verifierings- och återställningsmail skickas server-side via Resend; API-nyckeln exponeras aldrig för klienten.
-- Alla hushållstabeller har tvingande RLS och separata policyer för select, insert, update och delete.
-- Medlemskontroll ligger i ett `private`-schema. Hushållsdata nås genom `withAuthenticatedDatabase()`, som validerar sessionen och sätter `app.user_id` transaktionslokalt.
+- OAuth- och auth-hemligheter samt databasanslutningar finns bara på servern.
+- Proxy-lagret kontrollerar cookien. Skyddade sidor och ändringar validerar alltid sessionen i Better Auths databas.
+- Alla Google-konton kan registrera sig. En autentiserad server action skapar användarens eget ägarhushåll efter första inloggningen.
+- Lösenordskonton kräver verifierad e-post. Google länkas bara till ett befintligt konto med samma lokalt verifierade adress.
+- OAuth-token krypteras med auth-hemligheten. OAuth-state är engångsposter i databasen.
+- Previews använder OAuth Proxy via produktionsdomänen. En separat proxyhemlighet delas med Production för kortlivade profiler; auth-hemligheter och databaser är separata.
+- Resend skickar verifierings- och återställningsmejl från servern. API-nyckeln lämnar aldrig servern.
+- Alla hushållstabeller har tvingande RLS för läsning, tillägg, ändring och borttagning.
+- Medlemskontroll ligger i schemat `private`. All hushållsdata nås via `withAuthenticatedDatabase()`, som validerar sessionen och sätter `app.user_id` för transaktionen.
 - Främmande nycklar och vanliga hushålls-/datumfrågor har index.
-- Inga hemligheter eller verkliga ekonomidata ska checkas in.
+- Hemligheter och verkliga ekonomidata får inte checkas in.
 
-## Anslutningar och migrationer
+## Databas och miljöer
 
-Applikationen återanvänder en liten pool och har prepared statements avstängda, vilket fungerar med Neons poolade transaktionsanslutning. `DATABASE_URL` använder en branchspecifik `home_economy_runtime`-roll utan admin- eller RLS-bypass. `DATABASE_MIGRATION_URL` kräver en direkt ägaranslutning och används endast för migrationer. App och migrationsverktyg läser samma lokala miljöfiler. Saknad `DATABASE_URL` ger ett fel; PGlite kräver `DATABASE_PROVIDER=pglite` och är förbjudet i drift.
+Appen återanvänder en liten pool med prepared statements avstängda för Neons transaktionspoolning.
 
-Ett Neon-projekt i AWS Frankfurt äger alla miljöer. Lokal apputveckling använder `dev/alexander`, skapad från den tomma stagingdatabasen; produktionsdatabasen ligger på rotbranchen `production` och den långlivade `development`-branchen används som staging/Preview. PR:er får inte automatiskt egna databasbranches av kostnadsskäl. Konton och sessioner lagras separat per branch. Lokala anslutningar finns i Git-ignorerade `.env.local`, hostade runtime-anslutningar i Vercel och migrationsanslutningar i GitHub environments. Plattformen beskrivs i [ADR 0001](adr/0001-data-and-auth-platform.md), databasreleaser i [ADR 0002](adr/0002-database-aware-releases.md) och appversionering i [ADR 0003](adr/0003-app-versioning-and-github-releases.md).
+| Anslutning               | Roll och användning                                                        |
+| ------------------------ | -------------------------------------------------------------------------- |
+| `DATABASE_URL`           | Poolad, branchspecifik `home_economy_runtime` utan admin- eller RLS-bypass |
+| `DATABASE_MIGRATION_URL` | Direkt ägaranslutning, endast för migrationer                              |
 
-`pnpm db:check` verifierar auth-lagring, runtime-roll, tvingande RLS och transaktionsisolering på en riktig Neon-anslutning. Testposter rullas tillbaka. PGlite-testerna kompletterar detta med snabba lokala kontroller. Inloggning genom Google och Vercels OAuth-proxy behöver även verifieras i webbläsaren.
+App och migrationsverktyg läser samma lokala miljöfiler. Saknad `DATABASE_URL` ger fel. PGlite kräver `DATABASE_PROVIDER=pglite` och är förbjudet i drift.
 
-GitHub Actions äger produktionsreleasen. Vercel bygger först en staged produktionsdeployment utan att flytta produktionsdomänen. Därefter applicerar GitHub Actions väntande Drizzle-migrationer med den direkta ägaranslutningen, kör databaskontrollen med den begränsade runtime-rollen och smoketestar inloggningssidan på den staged deploymenten. Deploymenten promoveras endast om alla tre kontroller lyckas. Ett separat jobb skapar därefter en GitHub Release för en ny SemVer-version från `package.json`. Produktionskörningarna köas och automatiska Vercel-deployments via Git-integrationen är avstängda för alla branches. Migrationer måste följa expand/contract så att det föregående appbygget förblir kompatibelt om promotionen inte genomförs. Felhantering beskrivs i [release-runbooken](release-runbook.md).
+Ett Neon-projekt i AWS Frankfurt innehåller tre miljöer:
 
-PR-previews ägs också av GitHub Actions. Efter godkända kvalitets- och webbläsartester
-applicerar `Deploy preview` väntande migrationer på Neons `development`-branch,
-kör `pnpm db:check`, skapar deploymenten i Vercels Preview-miljö och smoketestar
-inloggningssidan innan jobbet markeras som lyckat.
-Jobbet använder GitHub-miljön `staging`, är serialiserat över samtliga PR:er och
-avbryter inte en pågående migration när nya commits kommer. Samma PR-mergecommit
-används för tester och deployment. Runtime-anslutningen från `staging` sparas
-som krypterad, branchspecifik Preview-variabel via Vercels API så att appen använder databasen som precis migrerats; ägaranslutningen
-stannar i migrationssteget i GitHub Actions.
+- `production`: rotbranch för produktion.
+- `development`: långlivad branch för staging och previews.
+- `dev/alexander`: lokal utveckling, skapad från tom stagingdatabas.
 
-Endast PR:er från samma repo och andra aktörer än Dependabot får detta jobb.
-En separat obligatorisk kontroll stoppar externa PR:er som ändrar databas-, release-
-eller CI-filer utan stagingvalidering. Previews delar databas och schema:
-migrationer måste vara bakåtkompatibla och samtidiga PR:er med motstridiga
-migrationer kräver samordning.
-Att stänga en PR rullar inte tillbaka migrationer i den gemensamma databasen.
+Konton och sessioner är separata per branch. PR:er får inga egna databasbranches av kostnadsskäl. Lokala anslutningar finns i Git-ignorerade `.env.local`, hostade runtime-anslutningar i Vercel och migrationsanslutningar i GitHub environments.
 
-Preview-jobbet använder Vercels projekt- och deployment-API direkt för att stödja
-projektbegränsade tokens utan CLI:ts användaruppslag. Det verifierar kopplingen
-till GitHub-repot och väntar på `READY` för rätt projekt och testad commit.
-Branchspecifika databasvariabler finns kvar i Vercel när en PR stängs.
+`pnpm db:check` testar auth-lagring, runtime-roll, tvingande RLS och transaktionsisolering i Neon; testdata rullas tillbaka. PGlite ger snabba lokala tester. Google-inloggning och Vercels OAuth-proxy behöver även testas i webbläsaren.
+
+Bakgrund: [plattform](adr/0001-data-and-auth-platform.md), [databasreleaser](adr/0002-database-aware-releases.md) och [appversionering](adr/0003-app-versioning-and-github-releases.md).
+
+## Deploy
+
+GitHub Actions sköter produktion och previews efter godkända kvalitets- och webbläsartester. Vercels automatiska Git-deploys är avstängda för alla branches.
+
+**Produktion:** bygg i Vercel utan att flytta domänen, migrera med ägaranslutningen, kör `db:check` med runtime-rollen och smoketesta inloggningssidan. Först därefter flyttas domänen till nya bygget (promotion). Ett separat jobb publicerar GitHub Release för en ny SemVer-version i `package.json`. Hela produktionskörningar köas.
+
+**Preview:** `Deploy preview` migrerar `development`, kör `db:check`, deployar i Vercel och smoketestar inloggningssidan. Test och deploy använder samma PR-mergecommit. Jobbet använder GitHub-miljön `staging`, köas över alla PR:er och avbryts inte av nya commits under migration.
+
+Preview-jobbet sparar runtime-anslutningen som krypterad, branchspecifik variabel i Vercel. Ägaranslutningen stannar i GitHub Actions migrationssteg. Vercels API används direkt för projektbegränsade tokens utan CLI:ts användaruppslag. Jobbet verifierar GitHub-kopplingen och väntar på `READY` för rätt projekt och testad commit.
+
+Bara PR:er från samma repo, utom Dependabot, får preview-jobbet. En obligatorisk kontroll stoppar externa ändringar av databas-, release- och CI-filer utan stagingvalidering. Previews delar schema och data. Motstridiga migrationer måste samordnas. Migrationer och branchspecifika Vercel-variabler finns kvar efter stängd PR.
+
+Använd expand/contract för att hålla föregående appversion kompatibel om promotion uteblir. Se [release-runbooken](release-runbook.md) för felhantering och begränsningar vid återgång.
 
 ## Pengar och datum
 
-Hushållets namngivna inkomstkällor lagras i `household_incomes` med månadsbelopp,
-startmånad och valfri inkluderande slutmånad. Inställningarna hanterar flera källor,
-och månadsöversikten summerar alla aktiva inkomster. Valfri inkomst vid
-hushållsskapande blir en källa från aktuell svensk kalendermånad utan slutdatum.
-Upprepad onboarding skapar inga nya inkomstkällor.
+Beräkningar använder heltals-öre; Postgres använder `numeric(14,2)`. Månadsperioder lagras som månadens första dag och valideras i databasen. Datum utan tid använder `date`, auditfält `timestamptz`.
 
-Äldre `monthly_plans` bevaras som inkomster för respektive månad. Tidigare
-`household_member_income` kopieras till öppna inkomstperioder från månaden för
-senaste uppdateringen (Europe/Stockholm); äldre giltighet kan inte härledas.
-Den gamla tabellen behålls med RLS men används inte för nya inkomster.
-All åtkomst sker inom `withAuthenticatedDatabase()` och hushållets tvingande RLS.
+### Inkomster
 
-Klientens domänfunktioner använder heltals-öre för exakta beräkningar. Databasen använder `numeric(14,2)`. Månadsperioder sparas som första dagen i månaden och valideras i databasen. Datum utan tid lagras som `date`; auditfält använder `timestamptz`.
+`household_incomes` lagrar namn, månadsbelopp, startmånad och valfri slutmånad. Båda gränsmånaderna ingår. Inställningarna hanterar flera källor; översikten summerar månadens aktiva inkomster.
 
-## Nästa vertikala flöde
+Valfri inkomst vid hushållsskapande gäller från aktuell månad i Sverige, utan slutdatum. Upprepad onboarding skapar inga nya inkomster.
 
-Månadsöversikten visar nu inkomster, direkta utgifter och månadsavsättningar. Historisk import och kontosnapshots kan läggas på utan att ändra kärnmodellen.
+Äldre `monthly_plans` bevaras som inkomster för respektive månad. `household_member_income` kopieras till inkomster utan slutdatum från månaden för senaste uppdateringen (`Europe/Stockholm`); tidigare giltighet är okänd. Den gamla tabellen behåller RLS men används inte för nya inkomster. All åtkomst går via `withAuthenticatedDatabase()` och tvingande RLS.
+
+### Utgifter och sparande
+
+Poster har startmånad och valfri slutmånad som ingår i perioden. Vid ändring från en senare månad avslutas gamla raden månaden före och en ny skapas i samma autentiserade transaktion. Raden låses för att undvika överlapp vid samtidiga anrop.
+
+Ändring i en avslutad period påverkar bara den perioden, inte senare versioner. Avslut från startmånaden döljer hela perioden; annars behålls tidigare månader. Länkad planhistorik och tidigare utgiftsägare bevaras. Månads- och årsöversikten summerar bara månadens giltiga poster.
+
+Migration 0010 lägger till nullable datumfält och constraints. Äldre sparande utan startmånad gäller även tidigare månader fram till en ändring; okänd historik gissas inte. Borttagna poster förblir dolda. Nytt sparande får vald startmånad.
+
+## Nästa steg
+
+Månadsöversikten visar inkomster, direkta utgifter och avsättningar. Historisk import och kontosnapshots kan läggas till utan att ändra kärnmodellen.

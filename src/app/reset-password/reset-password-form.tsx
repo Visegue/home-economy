@@ -24,29 +24,41 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
     if (password !== passwordConfirmation) {
       setPending(false);
-      setMessage("Lösenorden stämmer inte överens.");
+      setMessage("Lösenorden matchar inte.");
       return;
     }
 
-    const { error } = await authClient.resetPassword({
-      newPassword: password,
-      token,
-    });
+    try {
+      const { error } = await authClient.resetPassword({
+        newPassword: password,
+        token,
+      });
 
-    setPending(false);
+      if (error) {
+        setMessage(
+          error.status === 429
+            ? "För många försök. Vänta en stund och försök igen."
+            : error.status >= 500
+              ? "Kunde inte ändra lösenordet. Försök snart igen."
+              : "Länken är ogiltig eller har gått ut. Begär en ny länk.",
+        );
+        return;
+      }
 
-    if (error) {
-      setMessage("Länken är ogiltig eller har gått ut. Begär en ny länk.");
-      return;
+      setComplete(true);
+    } catch {
+      setMessage(
+        "Kunde inte ändra lösenordet. Kontrollera anslutningen och försök igen.",
+      );
+    } finally {
+      setPending(false);
     }
-
-    setComplete(true);
   }
 
   if (complete) {
     return (
       <div className="space-y-4 text-sm">
-        <p>Lösenordet är uppdaterat. Du kan nu logga in.</p>
+        <p>Lösenordet är uppdaterat. Du kan logga in.</p>
         <Button asChild className="w-full">
           <Link href="/login">Logga in</Link>
         </Button>

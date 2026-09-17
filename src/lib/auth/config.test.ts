@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   getAuthEnvironment,
@@ -6,11 +6,45 @@ import {
   isGoogleAuthConfigured,
 } from "./config";
 
+beforeEach(() => {
+  vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("VERCEL", "");
+  vi.stubEnv("VERCEL_ENV", "");
+  vi.stubEnv("BETTER_AUTH_SECRET", "synthetic-auth-config-test-secret-only");
+});
+
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
 describe("auth configuration", () => {
+  it.each([
+    ["NODE_ENV", "production"],
+    ["VERCEL_ENV", "production"],
+    ["VERCEL_ENV", "preview"],
+    ["VERCEL", "1"],
+  ])("rejects missing or insecure secrets with %s=%s", (key, value) => {
+    vi.stubEnv(key, value);
+    for (const secret of [
+      "",
+      "   ",
+      "short",
+      "development-only-secret-change-before-deployment",
+    ]) {
+      vi.stubEnv("BETTER_AUTH_SECRET", secret);
+      expect(() => getAuthEnvironment()).toThrow("BETTER_AUTH_SECRET");
+    }
+    vi.stubEnv("BETTER_AUTH_SECRET", "synthetic-valid-hosted-test-secret-only");
+    expect(getAuthEnvironment().secret).toBe(
+      "synthetic-valid-hosted-test-secret-only",
+    );
+  });
+
+  it("permits the fallback only in local development and tests", () => {
+    vi.stubEnv("BETTER_AUTH_SECRET", "");
+    expect(getAuthEnvironment().secret).toMatch(/^development-only-/);
+  });
+
   it("keeps Google disabled until every private OAuth setting is present", () => {
     vi.stubEnv("BETTER_AUTH_SECRET", "");
     vi.stubEnv("GOOGLE_CLIENT_ID", "");

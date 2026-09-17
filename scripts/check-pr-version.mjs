@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import { compareVersions, isSemVerVersion } from "./check-app-version.mjs";
 
 const releasePaths =
-  /^(?:src\/|public\/|drizzle\/|scripts\/|package\.json$|pnpm-lock\.yaml$|next\.config\.[cm]?[jt]s$|vercel\.json$|drizzle\.config\.[cm]?[jt]s$)/;
+  /^(?:src\/|public\/|drizzle\/|scripts\/|package\.json$|pnpm-(?:lock|workspace)\.yaml$|(?:next|drizzle|postcss|tailwind)\.config\.[cm]?[jt]s$|vercel\.json$|(?:proxy|middleware|instrumentation(?:-client)?)\.[cm]?[jt]sx?$|tsconfig(?:\.[^/]+)?\.json$|\.(?:npmrc|node-version|nvmrc)$)/;
 const testFile = /(?:^|\/)[^/]+\.(?:test|spec)\.[cm]?[jt]sx?$/;
 
 export function needsVersionBump(path) {

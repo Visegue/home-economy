@@ -62,9 +62,9 @@ jobs:
           if [ "$BLOCKED" = true ]; then
             comment_body="$(printf '%s\n' \
               '<!-- home-economy-version-gate -->' \
-              '⛔ **Versionsspärr:** Den här PR:en stoppas av versionskontrollen. Kontrollera att `version` i `package.json` är en giltig SemVer-version. App- och releaseändringar kräver dessutom en version som är högre än på `main`; rena dokumentations-, testfil- och CI-ändringar kan behålla versionen.' \
+              '⛔ **Versionsspärr:** `package.json.version` måste vara giltig SemVer. App- och releaseändringar kräver högre version än `main`. Rena dokumentations-, testfil- och CI-ändringar får behålla versionen.' \
               '' \
-              'MAJOR, MINOR, PATCH, prerelease (`-beta.1`) och byggmetadata (`+build.1`) tillåts. Enbart ändrad byggmetadata räknas inte som en högre version. PR:er med fler än 3000 ändrade filer måste delas upp för att kunna kontrolleras. Se [release-runbooken](https://github.com/Visegue/home-economy/blob/main/docs/release-runbook.md).')"
+              'Format: `MAJOR.MINOR.PATCH`, med valfri prerelease (`-beta.1`) och byggmetadata (`+build.1`). Enbart byggmetadata höjer inte versionen. Dela PR:er med fler än 3000 ändrade filer så kontrollen kan köras. Se [release-runbooken](https://github.com/Visegue/home-economy/blob/main/docs/release-runbook.md).')"
             if [ -n "$comment_id" ]; then
               gh api -X PATCH "repos/$GH_REPO/issues/comments/$comment_id" -f body="$comment_body" >/dev/null
             else
@@ -73,6 +73,6 @@ jobs:
           elif [ -n "$comment_id" ]; then
             comment_body="$(printf '%s\n' \
               '<!-- home-economy-version-gate -->' \
-              '✅ Versionsspärren är löst. Övriga obligatoriska PR-kontroller gäller fortfarande.')"
+              '✅ Versionsspärren är löst. Övriga obligatoriska kontroller gäller.')"
             gh api -X PATCH "repos/$GH_REPO/issues/comments/$comment_id" -f body="$comment_body" >/dev/null
           fi
