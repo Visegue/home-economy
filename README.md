@@ -85,6 +85,20 @@ alla väntande Drizzle-migrationer appliceras mot Neon med den direkta
 samtliga steg lyckas, inklusive ett HTTP-smoketest av inloggningssidan på den
 staged deploymenten, promoveras den till produktionsdomänen.
 
+Appens version är `version` i `package.json` och visas under **Inställningar →
+Om appen**. Full SemVer 2.0.0 stöds (`MAJOR.MINOR.PATCH`, valfri prerelease och
+byggmetadata), med GitHub-taggar som börjar på `v`. Ändringar i app, beroenden,
+migrationer eller releaseskript kräver en högre version än på `main`; den
+obligatoriska `quality`-kontrollen stoppar annars merge och en botkommentar
+förklarar spärren. Dokumentations-, testfil- och CI-ändringar kan behålla
+versionen. Byggmetadata (`+...`) ensam räknas inte som höjning.
+
+När en ny version har promoverats till produktion skapar CI taggen och en
+GitHub Release med automatiskt genererade ändringsnoteringar. En prerelease på
+`main` deployas också till produktion, men markeras som prerelease på GitHub.
+En merge utan versionshöjning deployas fortfarande, men skapar ingen ny release. Se
+[release-runbooken](docs/release-runbook.md) för versionsval och felhantering.
+
 GitHub-miljön `production` måste innehålla följande secrets:
 
 - `DATABASE_URL`: poolad runtime-anslutning med rollen `home_economy_runtime`
@@ -93,9 +107,10 @@ GitHub-miljön `production` måste innehålla följande secrets:
 - `VERCEL_ORG_ID`: Vercel-teamets ID
 - `VERCEL_PROJECT_ID`: Vercel-projektets ID
 
-Produktionsjobbet är serialiserat så att högst en migration och promotion körs
-åt gången. Vercels automatiska Git-deployments är avstängda för alla branches i
-`vercel.json`; GitHub Actions sköter både produktion och previews. Databasmigrationer ska vara
+Produktionskörningar serialiseras så att migration, promotion och GitHub Release
+för en commit avslutas innan nästa produktionskörning börjar. Vercels automatiska
+Git-deployments är avstängda för alla branches i `vercel.json`; GitHub Actions
+sköter både produktion och previews. Databasmigrationer ska vara
 bakåtkompatibla med föregående appversion. Destruktiva ändringar delas upp enligt
 expand/contract så att en misslyckad promotion kan lämna den gamla deploymenten
 körande mot det nya schemat. Se [release-runbooken](docs/release-runbook.md) för
@@ -196,6 +211,7 @@ Google och lösenord länkas automatiskt till samma användare när de har samma
 - [Arkitektur och säkerhetsgränser](docs/architecture.md)
 - [ADR 0001: data- och authplattform](docs/adr/0001-data-and-auth-platform.md)
 - [ADR 0002: databasmedvetna releaser](docs/adr/0002-database-aware-releases.md)
+- [ADR 0003: appversionering och GitHub Releases](docs/adr/0003-app-versioning-and-github-releases.md)
 - [Release och återställning](docs/release-runbook.md)
 - [Rapportera säkerhetsbrister](SECURITY.md)
 - Databasens schema: `src/db/schema/`
