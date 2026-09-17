@@ -9,10 +9,11 @@ smoketest i staging innan de får mergas.
 
 ## Versionsnummer och GitHub Releases
 
-`package.json` är källan till appens releaseversion; i produktion visas den under
-**Inställningar → Om appen** tillsammans med den deployade committen. Preview
-visar i stället branch och exakt byggcommit som förhandsversion, inte det
-planerade releaseversionsnumret eller versionen på `main`. Dessa uppgifter
+`package.json` är källan till appens releaseversion; i produktion visas den som
+en liten rad längst ned under **Inställningar**. Den deployade committen och
+länken till GitHub-releaser visas först när raden öppnas. Preview använder
+samma kompakta layout och visar gren och exakt byggcommit när raden öppnas,
+inte det planerade releaseversionsnumret eller versionen på `main`. Dessa uppgifter
 skickas med av deployment-jobben; om commit-ID saknas visas `okänd` i stället
 för en gissning. Alla giltiga SemVer 2.0.0-versioner tillåts: `MAJOR.MINOR.PATCH`,
 prerelease som `0.3.0-beta.1` och byggmetadata som `0.3.0+build.2`. Fram till
