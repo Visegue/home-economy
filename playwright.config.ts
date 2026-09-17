@@ -35,6 +35,9 @@ export default defineConfig({
       GOOGLE_CLIENT_SECRET: "synthetic-google-secret",
       RESEND_API_KEY: "synthetic-resend-key",
       AUTH_EMAIL_FROM: "test@example.test",
+      APP_DEPLOY_ENV: "preview",
+      APP_DEPLOY_SHA: "a".repeat(40),
+      APP_DEPLOY_BRANCH: "codex/test-preview",
     },
   },
 });

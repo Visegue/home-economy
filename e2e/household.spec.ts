@@ -22,13 +22,12 @@ test("skapar hushåll och behåller det vid återbesök", async ({
   await page.reload();
   await expect(page.getByText("Testfamiljen", { exact: true })).toBeVisible();
   await page.goto("/settings");
+  await expect(page.getByText("Förhandsversion aaaaaaa")).toBeVisible();
+  await expect(page.getByText("Gren: codex/test-preview")).toBeVisible();
+  await expect(page.getByText(`Revision: ${"a".repeat(40)}`)).toBeVisible();
+  await expect(page.getByText(/^Version /)).toHaveCount(0);
   await expect(
-    page.getByText(
-      /^Version \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/,
-    ),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Se releaser på GitHub" }),
+    page.getByRole("link", { name: "Se publicerade releaser på GitHub" }),
   ).toHaveAttribute("href", "https://github.com/Visegue/home-economy/releases");
 
   const returningContext = await browser.newContext();
