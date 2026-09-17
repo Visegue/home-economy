@@ -1,11 +1,11 @@
 ## Vad ändras?
 
-Beskriv användarnyttan och den tekniska lösningen.
+Beskriv nyttan och lösningen.
 
 ## Kontroll
 
 - [ ] `pnpm check` är grön
-- [ ] `package.json` har en högre SemVer-version för app-/releaseändringar, eller PR:en ändrar bara dokumentation, testfiler eller CI (ange vilket i beskrivningen)
+- [ ] Högre SemVer än `main` för app-/releaseändringar; annars bara dokumentation, testfiler eller CI. Motivera versionsval eller undantag.
 - [ ] Relevant användarflöde är testat
 - [ ] Ingen personlig ekonomidata eller hemlighet ingår
 - [ ] Databasändringar har RLS, grants och index

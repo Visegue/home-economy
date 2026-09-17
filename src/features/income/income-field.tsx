@@ -21,8 +21,8 @@ export function IncomeField({
         </Label>
         <InfoButton title="Din månadsinkomst">
           <p>
-            Din vanliga inkomst efter skatt används i månadsbudgeten. Du kan
-            lämna fältet tomt och lägga till inkomster senare i inställningarna.
+            Ange din vanliga inkomst efter skatt till månadsbudgeten. Du kan
+            lämna tomt och lägga till inkomster senare i inställningarna.
           </p>
         </InfoButton>
       </div>

@@ -1,5 +1,5 @@
 name: Felrapport
-description: Rapportera något som inte fungerar som förväntat
+description: Rapportera ett fel
 title: "fix: "
 labels: [bug]
 body:
@@ -7,7 +7,7 @@ body:
     id: problem
     attributes:
       label: Vad hände?
-      description: Beskriv beteendet utan att klistra in personlig ekonomidata.
+      description: Beskriv felet utan personlig ekonomidata.
     validations:
       required: true
   - type: textarea

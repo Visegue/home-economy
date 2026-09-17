@@ -8,6 +8,11 @@ import {
   incomeToDatabase,
 } from "@/features/income/validation";
 import { savingIdSchema, savingSchema, type Saving } from "./validation";
+import { currentPeriod, periodSchema } from "@/features/budget/model";
+import {
+  periodDate,
+  validateEffectivePeriod,
+} from "@/features/budget/validity";
 
 export async function getSavings(): Promise<Saving[]> {
   return withAuthenticatedDatabase(async (transaction, user) => {
@@ -16,6 +21,8 @@ export async function getSavings(): Promise<Saving[]> {
         id: savingsGoals.id,
         name: savingsGoals.name,
         amount: savingsGoals.monthlyContribution,
+        startsOn: savingsGoals.startsOn,
+        endsOn: savingsGoals.endsOn,
       })
       .from(savingsGoals)
       .innerJoin(households, eq(households.id, savingsGoals.householdId))
@@ -27,17 +34,21 @@ export async function getSavings(): Promise<Saving[]> {
       id: row.id,
       name: row.name,
       amountInOre: incomeFromDatabase(row.amount)!,
+      startsOn: row.startsOn?.toISOString().slice(0, 7) ?? null,
+      endsOn: row.endsOn?.toISOString().slice(0, 7) ?? null,
     }));
   });
 }
 
 export async function saveSaving(
-  input: Omit<Saving, "id">,
+  input: Pick<Saving, "name" | "amountInOre">,
   id?: number,
-): Promise<void> {
+  period = currentPeriod(),
+): Promise<number> {
   const saving = savingSchema.parse(input);
+  periodSchema.parse(period);
   if (id !== undefined) savingIdSchema.parse(id);
-  await withAuthenticatedDatabase(async (transaction, user) => {
+  return withAuthenticatedDatabase(async (transaction, user) => {
     const [household] = await transaction
       .select({ id: households.id })
       .from(households)
@@ -48,15 +59,18 @@ export async function saveSaving(
     const values = {
       name: saving.name,
       monthlyContribution: incomeToDatabase(saving.amountInOre)!,
+      startsOn: periodDate(period),
     };
     if (id === undefined) {
-      await transaction
+      const [created] = await transaction
         .insert(savingsGoals)
-        .values({ ...values, householdId: household.id });
+        .values({ ...values, householdId: household.id })
+        .returning();
+      return created.id;
     } else {
-      const updated = await transaction
-        .update(savingsGoals)
-        .set(values)
+      const [existing] = await transaction
+        .select()
+        .from(savingsGoals)
         .where(
           and(
             eq(savingsGoals.id, id),
@@ -64,22 +78,51 @@ export async function saveSaving(
             eq(savingsGoals.active, true),
           ),
         )
+        .for("update");
+      if (!existing) throw new Error("Sparandet finns inte längre.");
+      const validity = validateEffectivePeriod(period, existing);
+      if (validity.replacesWholePeriod) {
+        await transaction
+          .update(savingsGoals)
+          .set(values)
+          .where(eq(savingsGoals.id, id));
+        return id;
+      }
+      await transaction
+        .update(savingsGoals)
+        .set({ endsOn: validity.previousEndsOn })
+        .where(eq(savingsGoals.id, id));
+      const [created] = await transaction
+        .insert(savingsGoals)
+        .values({
+          ...values,
+          householdId: household.id,
+          endsOn: existing.endsOn,
+          accountId: existing.accountId,
+          targetAmount: existing.targetAmount,
+          targetDate: existing.targetDate,
+          notes: existing.notes,
+        })
         .returning();
-      if (!updated.length) throw new Error("Sparandet finns inte längre.");
+      return created.id;
     }
   });
 }
 
-export async function removeSaving(id: number): Promise<void> {
+export async function removeSaving(
+  id: number,
+  period = currentPeriod(),
+): Promise<void> {
   savingIdSchema.parse(id);
+  periodSchema.parse(period);
   await withAuthenticatedDatabase(async (transaction, user) => {
     const ownedHouseholds = transaction
       .select({ id: households.id })
       .from(households)
       .where(eq(households.ownerUserId, user.id));
-    const removed = await transaction
-      .update(savingsGoals)
-      .set({ active: false })
+    const [existing] = await transaction
+      .select()
+      .from(savingsGoals)
       .where(
         and(
           eq(savingsGoals.id, id),
@@ -87,7 +130,16 @@ export async function removeSaving(id: number): Promise<void> {
           eq(savingsGoals.active, true),
         ),
       )
-      .returning();
-    if (!removed.length) throw new Error("Sparandet finns inte längre.");
+      .for("update");
+    if (!existing) throw new Error("Sparandet finns inte längre.");
+    const validity = validateEffectivePeriod(period, existing);
+    await transaction
+      .update(savingsGoals)
+      .set(
+        validity.replacesWholePeriod
+          ? { active: false }
+          : { endsOn: validity.previousEndsOn },
+      )
+      .where(eq(savingsGoals.id, id));
   });
 }

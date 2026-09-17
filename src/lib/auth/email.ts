@@ -49,7 +49,7 @@ export async function sendAuthEmail({
       from,
       to: [to],
       subject,
-      text: `${intro}\n\n${actionLabel}: ${actionUrl}\n\nOm du inte begärde detta kan du bortse från meddelandet.`,
+      text: `${intro}\n\n${actionLabel}: ${actionUrl}\n\nIgnorera mejlet om du inte begärde det.`,
       html: `
         <div style="font-family:Inter,Arial,sans-serif;line-height:1.6;color:#342b32;max-width:560px;margin:0 auto;padding:32px 20px">
           <h1 style="font-size:24px;margin:0 0 16px">Hemekonomi</h1>
@@ -57,7 +57,7 @@ export async function sendAuthEmail({
           <p style="margin:28px 0">
             <a href="${safeActionUrl}" style="display:inline-block;background:#6d315f;color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:600">${safeActionLabel}</a>
           </p>
-          <p style="font-size:13px;color:#746a70">Om du inte begärde detta kan du bortse från meddelandet.</p>
+          <p style="font-size:13px;color:#746a70">Ignorera mejlet om du inte begärde det.</p>
         </div>
       `,
     }),

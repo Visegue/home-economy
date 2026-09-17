@@ -85,9 +85,7 @@ describe("LoginForm", () => {
     await user.click(screen.getByRole("button", { name: "Skapa konto" }));
 
     expect(authMocks.signUpEmail).not.toHaveBeenCalled();
-    expect(
-      screen.getByText("Lösenorden stämmer inte överens."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Lösenorden matchar inte.")).toBeInTheDocument();
   });
 
   it("recovers when Google sign-in rejects", async () => {
@@ -106,7 +104,7 @@ describe("LoginForm", () => {
     });
     expect(
       await screen.findByText(
-        "Inloggningen kunde inte startas. Kontrollera anslutningen och försök igen.",
+        "Kunde inte starta inloggningen. Kontrollera anslutningen och försök igen.",
       ),
     ).toBeInTheDocument();
     expect(

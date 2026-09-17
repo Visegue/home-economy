@@ -3,32 +3,23 @@ status: accepted
 date: 2026-09-17
 ---
 
-# Version the app from package.json and release after deployment
+# Appversion i package.json, release efter deploy
 
-The repository currently deploys one web app, although it may later contain
-native apps and shared packages. We use `package.json.version` as the app's
-single SemVer 2.0.0 source of truth. A required PR check demands a higher
-version than `main` for app- or release-affecting changes and comments on a
-blocked PR; documentation-only, test-file-only, and CI-only changes are
-exempt. After a successful production promotion, CI creates `v<version>` on
-the deployed commit and publishes the corresponding GitHub Release. Tags are not created
-or moved manually.
+## Beslut
 
-## Considered options
+Repot innehåller en webbapp men kan senare få native-appar och delade paket. `package.json.version` är appens enda SemVer 2.0.0-källa.
 
-- **Changesets or another release manager:** useful once several packages need
-  independent versions, but adds tooling and workflow overhead for one app.
-  Reconsider when the repository actually becomes a multi-product monorepo.
-- **Manual versioning and tags:** simpler automation, but makes it easy to
-  forget a version bump or publish a tag before the deployment succeeds.
+En obligatorisk PR-kontroll kräver högre version än `main` för app- och releaseändringar och kommenterar blockerade PR:er. Rena dokumentations-, testfil- och CI-ändringar undantas.
 
-## Consequences
+Efter lyckad produktionspromotion skapar CI `v<version>` på deployad commit och publicerar GitHub Release. Taggar får inte skapas eller flyttas manuellt.
 
-- Agents and contributors must choose patch, minor, or major deliberately and
-  explain the choice in the PR. Concurrent PRs may need a second bump after
-  `main` advances. Build metadata alone does not increase SemVer precedence.
-- A prerelease merged to `main` still deploys to production; it only changes
-  the GitHub Release label.
-- If GitHub Release publication fails after promotion, production may already
-  run the new version. Follow the [release runbook](../release-runbook.md) to
-  recover without moving an existing tag.
+## Alternativ
+
+- **Changesets eller annan releasehanterare:** användbart för paket med egna versioner, men onödig administration för en app. Ompröva om repot blir ett monorepo med flera produkter.
+- **Manuella versioner och taggar:** enklare automation, men lätt att missa en höjning eller tagga innan deploy lyckats.
+
+## Följder
+
+- Agenter och bidragsgivare väljer patch, minor eller major medvetet och motiverar i PR:en. Höj igen om `main` hinner ikapp. Enbart byggmetadata höjer inte SemVer-ordningen.
+- Prerelease på `main` deployas också till produktion; bara GitHub-etiketten skiljer sig.
+- Misslyckad GitHub Release kan lämna nya versionen i produktion. Följ [release-runbooken](../release-runbook.md) utan att flytta befintliga taggar.

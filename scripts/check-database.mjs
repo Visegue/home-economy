@@ -74,12 +74,42 @@ try {
       );
       await sql`insert into public.categories (household_id, name, kind)
         values (${household.id}, 'Synthetic category', 'expense')`;
+      const [expense] = await sql`insert into public.recurring_items
+        (household_id, name, kind, amount, cadence_unit, starts_on, ends_on)
+        values (${household.id}, 'Synthetic period expense', 'expense', '100.25', 'month', '2026-09-01', '2026-12-01') returning id`;
+      const [saving] = await sql`insert into public.savings_goals
+        (household_id, name, monthly_contribution, starts_on, ends_on)
+        values (${household.id}, 'Synthetic period saving', '50.75', '2026-09-01', '2026-12-01') returning id`;
+      assert.equal(
+        (
+          await sql`select ends_on::text from public.recurring_items where id = ${expense.id}`
+        )[0].ends_on,
+        "2026-12-01",
+      );
+      assert.equal(
+        (
+          await sql`select starts_on::text from public.savings_goals where id = ${saving.id}`
+        )[0].starts_on,
+        "2026-09-01",
+      );
       assert.equal(
         (await sql`select id from public.households where id = ${household.id}`)
           .length,
         1,
       );
       await sql`select set_config('app.user_id', ${outsider}, true)`;
+      assert.equal(
+        (
+          await sql`select id from public.recurring_items where id = ${expense.id}`
+        ).length,
+        0,
+      );
+      assert.equal(
+        (
+          await sql`update public.savings_goals set ends_on = '2026-10-01' where id = ${saving.id} returning id`
+        ).length,
+        0,
+      );
       assert.equal(
         (await sql`select id from public.households where id = ${household.id}`)
           .length,

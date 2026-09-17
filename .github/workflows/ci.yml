@@ -59,6 +59,8 @@ jobs:
         env:
           # Build imports auth/database configuration but does not query Postgres.
           DATABASE_URL: postgresql://build:unused@127.0.0.1:5432/build_only
+          # Synthetic build-only key; this artifact is never deployed.
+          BETTER_AUTH_SECRET: synthetic-ci-build-secret-not-for-deployment
 
   end-to-end:
     runs-on: ubuntu-latest

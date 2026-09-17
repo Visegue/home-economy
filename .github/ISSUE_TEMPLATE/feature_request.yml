@@ -1,5 +1,5 @@
 name: Förbättring
-description: Föreslå ett bättre ekonomiflöde eller en ny funktion
+description: Föreslå ett bättre flöde eller en ny funktion
 title: "feat: "
 labels: [enhancement]
 body:
@@ -14,6 +14,6 @@ body:
     id: outcome
     attributes:
       label: Önskat resultat
-      description: Beskriv resultatet hellre än en teknisk lösning.
+      description: Beskriv önskat resultat, hellre än teknisk lösning.
     validations:
       required: true

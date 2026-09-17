@@ -50,6 +50,7 @@ import {
 } from "@/features/budget/data";
 import { currentPeriod, monthlySummary } from "@/features/budget/model";
 import { getSavings, removeSaving, saveSaving } from "@/features/savings/data";
+import { totalMonthlySavings } from "@/features/savings/validation";
 
 const client = new PGlite("memory://");
 const database = drizzle(client, { schema });
@@ -498,7 +499,7 @@ describe("budget persistence and isolation", () => {
           .returning(),
       ),
     ).rejects.toMatchObject({ cause: { code: "42501" } });
-    await removeExpense(expenseId);
+    await removeExpense(expenseId, "2026-09");
     identity.userId = "owner";
     expect(
       (await getBudgetData()).expenses.some(
@@ -551,7 +552,7 @@ describe("budget persistence and isolation", () => {
   });
   it("removes an expense from the budget while preserving its stored record", async () => {
     identity.userId = "owner";
-    await removeExpense(expenseId);
+    await removeExpense(expenseId, "2026-09");
     expect(
       (await getBudgetData()).expenses.some(
         (expense) => expense.id === expenseId,
@@ -710,5 +711,106 @@ describe("monthly savings persistence and household isolation", () => {
           .returning(),
       ),
     ).rejects.toMatchObject({ cause: { code: "23514" } });
+  });
+});
+
+describe("expense and saving validity", () => {
+  beforeAll(async () => {
+    await database.insert(user).values({
+      id: "history-owner",
+      name: "Testperson",
+      email: "history@example.test",
+      emailVerified: true,
+    });
+    identity.userId = "history-owner";
+    await createPersonalHousehold("Historiktest");
+  });
+
+  it("splits expenses atomically, retains owners and ends without changing earlier months", async () => {
+    identity.userId = "history-owner";
+    await addPerson("Kim");
+    const person = (await getBudgetData()).people[0];
+    const input = {
+      name: "Hyra",
+      amount: 100001,
+      period: "2026-09",
+      type: "direct" as const,
+      months: 1,
+      nextDueOn: "",
+      ownerIds: [person.id],
+    };
+    const first = await addExpense(input);
+    const next = await addExpense(
+      { ...input, amount: 120075, period: "2026-10" },
+      first,
+    );
+    expect(next).not.toBe(first);
+    let expenses = (await getBudgetData()).expenses;
+    expect(monthlySummary("2026-08", expenses, []).totalInOre).toBe(0);
+    expect(monthlySummary("2026-09", expenses, []).totalInOre).toBe(100001);
+    expect(monthlySummary("2026-10", expenses, []).totalInOre).toBe(120075);
+    expect(expenses.find((item) => item.id === first)?.owners).toEqual([
+      person,
+    ]);
+    expect(expenses.find((item) => item.id === next)?.owners).toEqual([person]);
+    await expect(
+      addExpense({ ...input, period: "2026-10" }, first),
+    ).rejects.toThrow("giltighetsperiod");
+    await expect(
+      addExpense({ ...input, period: "2026-08" }, first),
+    ).rejects.toThrow("giltighetsperiod");
+    await removeExpense(next, "2026-11");
+    expenses = (await getBudgetData()).expenses;
+    expect(monthlySummary("2026-09", expenses, []).totalInOre).toBe(100001);
+    expect(monthlySummary("2026-10", expenses, []).totalInOre).toBe(120075);
+    expect(monthlySummary("2026-11", expenses, []).totalInOre).toBe(0);
+    identity.userId = "saving-outsider";
+    await expect(addExpense({ ...input, ownerIds: [] }, first)).rejects.toThrow(
+      "Utgiften finns inte längre",
+    );
+    identity.userId = "history-owner";
+  });
+
+  it("keeps saving amounts before edits and closure, including existing undated savings", async () => {
+    identity.userId = "history-owner";
+    const first = await saveSaving(
+      { name: "Buffert", amountInOre: 10001 },
+      undefined,
+      "2026-09",
+    );
+    const next = await saveSaving(
+      { name: "Buffert", amountInOre: 20075 },
+      first,
+      "2026-10",
+    );
+    let savings = await getSavings();
+    expect(totalMonthlySavings(savings, "2026-08")).toBe(0);
+    expect(totalMonthlySavings(savings, "2026-09")).toBe(10001);
+    expect(totalMonthlySavings(savings, "2026-10")).toBe(20075);
+    await expect(
+      saveSaving({ name: "Stale", amountInOre: 1 }, first, "2026-10"),
+    ).rejects.toThrow("giltighetsperiod");
+    await removeSaving(next, "2026-11");
+    savings = await getSavings();
+    expect(totalMonthlySavings(savings, "2026-09")).toBe(10001);
+    expect(totalMonthlySavings(savings, "2026-10")).toBe(20075);
+    expect(totalMonthlySavings(savings, "2026-11")).toBe(0);
+    const legacy = await withAuthenticatedDatabase(async (transaction) => {
+      const [household] = await transaction.select().from(households);
+      const [saving] = await transaction
+        .insert(savingsGoals)
+        .values({
+          householdId: household.id,
+          name: "Äldre",
+          monthlyContribution: "50.25",
+        })
+        .returning();
+      return saving.id;
+    });
+    await saveSaving({ name: "Äldre", amountInOre: 6000 }, legacy, "2027-01");
+    savings = await getSavings();
+    expect(totalMonthlySavings(savings, "2020-01")).toBe(5025);
+    expect(totalMonthlySavings(savings, "2026-12")).toBe(5025);
+    expect(totalMonthlySavings(savings, "2027-01")).toBe(6000);
   });
 });

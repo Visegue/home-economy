@@ -16,8 +16,21 @@ describe("PR version gate", () => {
     "pnpm-lock.yaml",
     "next.config.ts",
     "vercel.json",
+    "proxy.ts",
+    "middleware.ts",
+    "instrumentation.ts",
+    "instrumentation-client.ts",
+    "tsconfig.json",
+    "tsconfig.build.json",
+    "postcss.config.mjs",
+    "tailwind.config.ts",
+    "pnpm-workspace.yaml",
+    ".npmrc",
+    ".node-version",
+    ".nvmrc",
   ])("requires a bump for %s", (path) => {
     expect(needsVersionBump(path)).toBe(true);
+    expect(evaluateVersionChange("0.3.1", "0.3.1", [path]).blocked).toBe(true);
   });
 
   it.each([

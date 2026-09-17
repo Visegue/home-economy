@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isActiveInPeriod } from "@/features/budget/model";
 import {
   monthlyIncomeInputSchema,
   monthlyIncomeInOreSchema,
@@ -31,10 +32,16 @@ export interface Saving {
   id: number;
   name: string;
   amountInOre: number;
+  startsOn: string | null;
+  endsOn: string | null;
 }
 
-export function totalMonthlySavings(savings: Saving[]): number {
-  return savings.reduce((total, saving) => total + saving.amountInOre, 0);
+export function totalMonthlySavings(savings: Saving[], period: string): number {
+  return savings.reduce(
+    (total, saving) =>
+      total + (isActiveInPeriod(period, saving) ? saving.amountInOre : 0),
+    0,
+  );
 }
 
 const savingsFormatter = new Intl.NumberFormat("sv-SE", {

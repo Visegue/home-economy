@@ -17,6 +17,7 @@ const expense: BudgetExpense = {
   every: 12,
   destination: "allocated",
   startsOn: "2026-09-01",
+  endsOn: null,
   nextDueOn: "2027-08-31",
   owners: [
     { id: 1, name: "Kim" },
@@ -25,6 +26,11 @@ const expense: BudgetExpense = {
 };
 
 describe("monthly budget", () => {
+  it("includes the final expense month and excludes subsequent months", () => {
+    const ended = { ...expense, endsOn: "2026-12-01" };
+    expect(monthlySummary("2026-12", [ended], []).totalInOre).toBe(10000);
+    expect(monthlySummary("2027-01", [ended], []).totalInOre).toBe(0);
+  });
   it.each([
     [2, 60_000],
     [3, 40_000],

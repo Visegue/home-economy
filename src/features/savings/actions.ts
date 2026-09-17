@@ -7,6 +7,7 @@ import { requireSession } from "@/lib/auth/session";
 import { logServerError } from "@/lib/server-error-log";
 import { removeSaving, saveSaving } from "./data";
 import { savingIdSchema, savingInputSchema } from "./validation";
+import { periodSchema } from "@/features/budget/model";
 
 export interface SavingState {
   error?: string;
@@ -21,6 +22,8 @@ export async function saveSavingAction(
   formData: FormData,
 ): Promise<SavingState> {
   await requireSession();
+  const period = periodSchema.safeParse(formData.get("period"));
+  if (!period.success) return { error: "Välj en giltig månad." };
   if (id !== undefined && !savingIdSchema.safeParse(id).success)
     return { error: "Ogiltigt sparande." };
   const parsed = savingInputSchema.safeParse({
@@ -37,7 +40,7 @@ export async function saveSavingAction(
     };
   }
   try {
-    await saveSaving(parsed.data, id);
+    await saveSaving(parsed.data, id, period.data);
   } catch (error) {
     unstable_rethrow(error);
     logServerError({
@@ -54,13 +57,15 @@ export async function saveSavingAction(
 export async function removeSavingAction(
   id: number,
   _previous: SavingState,
-  _formData: FormData,
+  formData: FormData,
 ): Promise<SavingState> {
   await requireSession();
+  const period = periodSchema.safeParse(formData.get("period"));
+  if (!period.success) return { error: "Välj en giltig månad." };
   if (!savingIdSchema.safeParse(id).success)
     return { error: "Ogiltigt sparande." };
   try {
-    await removeSaving(id);
+    await removeSaving(id, period.data);
   } catch (error) {
     unstable_rethrow(error);
     logServerError({
@@ -68,7 +73,7 @@ export async function removeSavingAction(
       event: "saving.remove.failed",
       reference: randomUUID(),
     });
-    return { error: "Sparandet kunde inte tas bort. Försök igen om en stund." };
+    return { error: "Sparandet kunde inte avslutas. Försök snart igen." };
   }
   revalidatePath("/");
   return { success: true };

@@ -240,6 +240,7 @@ export const recurringItems = pgTable(
       .default(1)
       .notNull(),
     startsOn: date("starts_on", { mode: "date" }),
+    endsOn: date("ends_on", { mode: "date" }),
     nextDueOn: date("next_due_on", { mode: "date" }),
     destination: recurringDestination().default("direct").notNull(),
     notes: text("notes"),
@@ -253,6 +254,14 @@ export const recurringItems = pgTable(
       sql`char_length(${table.name}) between 1 and 160`,
     ),
     check("recurring_items_amount_nonnegative", sql`${table.amount} >= 0`),
+    check(
+      "recurring_items_end_first_day",
+      sql`${table.endsOn} is null or extract(day from ${table.endsOn}) = 1`,
+    ),
+    check(
+      "recurring_items_period_order",
+      sql`${table.endsOn} is null or ${table.startsOn} is null or ${table.endsOn} >= date_trunc('month', ${table.startsOn})::date`,
+    ),
     check(
       "recurring_items_cadence_positive",
       sql`${table.cadenceInterval} > 0`,
@@ -515,6 +524,9 @@ export const savingsGoals = pgTable(
     name: text("name").notNull(),
     targetAmount: money("target_amount"),
     targetDate: date("target_date", { mode: "date" }),
+    // NULL preserves the previous all-months behavior for existing savings.
+    startsOn: date("starts_on", { mode: "date" }),
+    endsOn: date("ends_on", { mode: "date" }),
     monthlyContribution: numeric("monthly_contribution", {
       precision: 14,
       scale: 2,
@@ -531,6 +543,18 @@ export const savingsGoals = pgTable(
       sql`char_length(${table.name}) between 1 and 160`,
     ),
     check("savings_goals_target_positive", sql`${table.targetAmount} > 0`),
+    check(
+      "savings_goals_start_first_day",
+      sql`${table.startsOn} is null or extract(day from ${table.startsOn}) = 1`,
+    ),
+    check(
+      "savings_goals_end_first_day",
+      sql`${table.endsOn} is null or extract(day from ${table.endsOn}) = 1`,
+    ),
+    check(
+      "savings_goals_period_order",
+      sql`${table.endsOn} is null or ${table.startsOn} is null or ${table.endsOn} >= ${table.startsOn}`,
+    ),
     check(
       "savings_goals_contribution_nonnegative",
       sql`${table.monthlyContribution} >= 0`,

@@ -24,11 +24,14 @@ import type { Saving } from "./validation";
 function SavingForm({
   saving,
   onSaved,
+  period,
 }: {
   saving?: Saving;
   onSaved: () => void;
+  period: string;
 }) {
   const fieldId = useId();
+  const [effectivePeriod, setEffectivePeriod] = useState(period);
   const [name, setName] = useState(saving?.name ?? "");
   const [amount, setAmount] = useState(
     incomeToInput(saving?.amountInOre ?? null),
@@ -44,6 +47,22 @@ function SavingForm({
 
   return (
     <form action={action} className="space-y-5">
+      <div className="space-y-2">
+        <Label htmlFor={`${fieldId}-period`}>
+          {saving ? "Ändringen gäller från" : "Från och med"}
+        </Label>
+        <Input
+          id={`${fieldId}-period`}
+          name="period"
+          type="month"
+          required
+          value={effectivePeriod}
+          onChange={(event) => setEffectivePeriod(event.target.value)}
+          min={saving?.startsOn ?? "1900-01"}
+          max={saving?.endsOn ?? "2199-12"}
+          disabled={pending}
+        />
+      </div>
       <div className="space-y-2">
         <Label htmlFor={`${fieldId}-name`}>Namn på sparandet</Label>
         <Input
@@ -75,12 +94,12 @@ function SavingForm({
           <Label htmlFor={`${fieldId}-amount`}>Belopp per månad (kr)</Label>
           <InfoButton title="Månadssparande">
             <p>
-              Beloppet ingår i summan att föra över till sparande och dras från
-              det som är kvar efter utgifter.
+              Beloppet ingår i överföringen till sparande och dras från det du
+              har kvar efter utgifter.
             </p>
             <p>
-              Sparandet gäller alla månader tills du ändrar eller tar bort det.
-              En ändring påverkar även tidigare månaders översikter.
+              Ändring och avslut gäller från vald månad. Tidigare månaders
+              belopp behålls.
             </p>
           </InfoButton>
         </div>
@@ -120,7 +139,13 @@ function SavingForm({
   );
 }
 
-export function SavingDialog({ saving }: { saving?: Saving }) {
+export function SavingDialog({
+  saving,
+  period,
+}: {
+  saving?: Saving;
+  period: string;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -145,27 +170,72 @@ export function SavingDialog({ saving }: { saving?: Saving }) {
             {saving ? "Ändra sparande" : "Lägg till sparande"}
           </DialogTitle>
         </DialogHeader>
-        <SavingForm saving={saving} onSaved={() => setOpen(false)} />
+        <SavingForm
+          saving={saving}
+          period={period}
+          onSaved={() => setOpen(false)}
+        />
       </DialogContent>
     </Dialog>
   );
 }
 
-export function RemoveSavingButton({ saving }: { saving: Saving }) {
+export function RemoveSavingButton({
+  saving,
+  period,
+}: {
+  saving: Saving;
+  period: string;
+}) {
+  const [confirm, setConfirm] = useState(false);
+  const [effectivePeriod, setEffectivePeriod] = useState(period);
   const [state, action, pending] = useActionState(
     removeSavingAction.bind(null, saving.id),
     {},
   );
+  if (!confirm)
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-label={`Avsluta ${saving.name}`}
+        onClick={() => setConfirm(true)}
+      >
+        Avsluta
+      </Button>
+    );
   return (
-    <form action={action}>
+    <form action={action} className="space-y-2">
+      <p className="text-xs">Tidigare månader behålls.</p>
+      <Label htmlFor={`saving-end-${saving.id}`}>Avsluta från</Label>
+      <Input
+        id={`saving-end-${saving.id}`}
+        name="period"
+        type="month"
+        required
+        value={effectivePeriod}
+        onChange={(event) => setEffectivePeriod(event.target.value)}
+        min={saving.startsOn ?? "1900-01"}
+        max={saving.endsOn ?? "2199-12"}
+        disabled={pending}
+      />
       <Button
         type="submit"
         variant="ghost"
         size="sm"
         disabled={pending}
-        aria-label={`Ta bort ${saving.name}`}
+        aria-label={`Bekräfta avslut av ${saving.name}`}
       >
-        {pending ? "Tar bort…" : "Ta bort"}
+        {pending ? "Avslutar…" : "Avsluta"}
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={pending}
+        onClick={() => setConfirm(false)}
+      >
+        Avbryt
       </Button>
       {state.error ? (
         <p role="alert" className="text-sm text-destructive">

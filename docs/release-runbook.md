@@ -1,122 +1,88 @@
 # Release och återställning
 
-GitHub Actions äger den automatiska releasen till Vercels produktionsdomän. En merge till
-`main` kör kvalitets- och webbläsartester, bygger en staged production-deployment,
-applicerar väntande Drizzle-migrationer i Neon, kontrollerar databasroll/RLS och
-smoketestar `/login` på den staged URL:en. Först därefter promoveras den. PR:er
-från betrodda branches går genom motsvarande migration, databaskontroll och
-smoketest i staging innan de får mergas.
+GitHub Actions sköter releasen. Efter merge till `main`:
 
-## Versionsnummer och GitHub Releases
+1. Kör kvalitets- och webbläsartester.
+2. Bygg i Vercel utan att flytta produktionsdomänen.
+3. Applicera väntande Drizzle-migrationer i Neon.
+4. Kontrollera databasroll/RLS och smoketesta `/login` på det nya bygget.
+5. Flytta domänen till det godkända bygget (promotion).
 
-`package.json` är källan till appens releaseversion; i produktion visas den som
-en liten rad längst ned under **Inställningar**. Den deployade committen och
-länken till GitHub-releaser visas först när raden öppnas. Preview använder
-samma kompakta layout och visar gren och exakt byggcommit när raden öppnas,
-inte det planerade releaseversionsnumret eller versionen på `main`. Dessa uppgifter
-skickas med av deployment-jobben; om commit-ID saknas visas `okänd` i stället
-för en gissning. Alla giltiga SemVer 2.0.0-versioner tillåts: `MAJOR.MINOR.PATCH`,
-prerelease som `0.3.0-beta.1` och byggmetadata som `0.3.0+build.2`. Fram till
-`1.0.0` är API och datamodell ännu inte stabila, men välj ändå versionshöjning
-avsiktligt: patch för rättningar, minor för nya funktioner och major för
-avsiktligt brutna kompatibilitetslöften.
+Betrodda PR:er måste klara migration, databaskontroll och smoketest i staging före merge.
 
-En PR som ändrar `src/`, `public/`, `drizzle/`, `scripts/`, `package.json`,
-`pnpm-lock.yaml` eller appens bygg-/deploykonfiguration måste ha en version med
-högre SemVer-ordning än versionen på `main`. Testfiler är undantagna, liksom
-rena dokumentations- och CI-ändringar. Den obligatoriska `quality`-kontrollen
-stoppar merge annars. En botkommentar på PR:en förklarar spärren och uppdateras
-när den lösts. `pnpm check` validerar versionsformatet lokalt. Enbart ändrad
-byggmetadata räcker inte: SemVer ignorerar `+...` vid jämförelse av versioner.
-Motivera versionsvalet i PR-beskrivningen. Om en annan PR hinner mergas med
-samma version, uppdatera grenen mot `main` och välj en ny, högre version innan
-merge. Ändras appens filstruktur måste även sökvägarna i
-`scripts/check-pr-version.mjs` och dess tester uppdateras.
+## Version och GitHub Release
 
-Efter lyckad promotion skapar det separat behörighetsbegränsade jobbet
-**Publish GitHub release** en tagg `v<version>` på exakt den deployade committen
-och en publicerad GitHub Release med automatiska ändringsnoteringar. En version
-med prerelease-suffix publiceras som GitHub-prerelease. Observera att merge till
-`main` fortfarande deployar den till produktion; prerelease är en etikett, inte
-en separat stagingmiljö. Inga personliga åtkomsttokens, externa
-release-tjänster eller nya betalkonton behövs.
-Den första releasen kräver ingen manuell initiering: när första lyckade
-produktionskörningen med release-jobbet avslutas skapas både tagg och GitHub
-Release automatiskt. Kontrollera ändå det nya release-jobbet efter första merge;
-om det misslyckas kan appen redan vara i produktion utan motsvarande GitHub
-Release. Följ felhanteringen nedan i stället för att flytta en tagg manuellt.
-Produktionskörningar serialiseras så att en deploy och dess release inte kan
-överlappa nästa produktionskörning.
-En senare merge med oförändrat versionsnummer är bara tillåten för filer utan
-releasepåverkan. Den deployas normalt men skapar ingen ny release. Återanvänd
-eller flytta inte en redan publicerad versionstagg.
+`package.json.version` är appens SemVer-version. I produktion visas den under **Inställningar**; öppna raden för deployad commit och releaselänk. Preview visar gren och exakt byggcommit, inte planerad version eller versionen på `main`. Deployjobben skickar uppgifterna. Saknad commit visas som `okänd`.
+
+SemVer 2.0.0 stöds: `MAJOR.MINOR.PATCH`, prerelease (`0.3.0-beta.1`) och byggmetadata (`0.3.0+build.2`). API och datamodell är inte stabila före `1.0.0`. Välj ändå medvetet:
+
+- **Patch:** rättningar.
+- **Minor:** nya funktioner.
+- **Major:** avsiktligt bruten utlovad kompatibilitet.
+
+### Krav på PR:er
+
+App- och releaseändringar kräver högre version än `main`. Det gäller `src/`, `public/`, `drizzle/`, `scripts/`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `proxy`/`middleware`, `instrumentation` samt TypeScript-, PostCSS-, Tailwind- och bygg-/deploykonfiguration.
+
+Testfiler samt rena dokumentations- och CI-ändringar är undantagna. `quality` stoppar annars merge; en botkommentar förklarar spärren och uppdateras när den lösts. `pnpm check` validerar versionsformatet lokalt.
+
+Motivera versionsvalet i PR:en. Enbart `+...` höjer inte SemVer-ordningen. Om `main` hunnit få samma version, uppdatera grenen och höj igen. Vid nya releasepåverkande sökvägar: uppdatera `scripts/check-pr-version.mjs` och dess tester.
+
+### Publicering
+
+Efter promotion skapar **Publish GitHub release**, med separat begränsad behörighet, taggen `v<version>` på deployad commit och publicerar en GitHub Release med automatiska ändringsnoteringar. Det sker även för första releasen, utan manuell start. Inga personliga åtkomsttokens, externa releasetjänster eller nya betalkonton behövs.
+
+Prerelease på `main` går också till produktion; GitHub-etiketten skapar ingen stagingmiljö. Oförändrad version är bara tillåten för ändringar utan releasepåverkan och deployas utan ny release. Produktionskörningar köas genom både deploy och publicering.
+
+Kontrollera release-jobbet efter första merge. Vid fel kan appen redan vara i produktion utan GitHub Release. Följ stegen nedan. Skapa eller flytta aldrig releasetaggar manuellt. Återanvänd inte publicerade versioner.
+
+## Migrationshistorik och hemligheter
+
+Migrationsköraren jämför databasens tidsstämplar och SHA-256-hashar med migrationsfilerna. Historiken måste vara ett exakt prefix av filerna. På Neon hålls kontrollen och migrationen under samma databaslås.
+
+Skriv aldrig om en applicerad migration, även om den bara körts i staging. Återställ originalfilen och skapa en ny migration. Innehåller staging en annan PR:s migration måste grenarna samordnas. Radera eller redigera aldrig historiken för att få grönt.
+
+Preview och Production kräver varsin `BETTER_AUTH_SECRET` med minst 32 tecken. Saknad hemlighet eller utvecklingsnyckeln stoppar bygge/uppstart. Kvalitetsjobbet har en syntetisk nyckel för sitt isolerade bygge. Vercel behöver miljöns riktiga nyckel vid både bygge och körning.
 
 ## Om ett steg misslyckas
 
-1. Öppna det misslyckade jobbet under GitHub Actions och identifiera första
-   felande steg. Kör vid behov `gh run view <run-id> --log-failed` lokalt. Kopiera
-   inte hemligheter eller personlig ekonomi till issues eller publika loggar.
-2. Om bygge, migration, databaskontroll eller smoketest misslyckas före
-   **Promote production deployment**, ligger den tidigare deploymenten kvar på
-   produktionsdomänen. Stoppa en ny release tills orsaken är känd. En lyckad
-   migration kan redan ha ändrat databasen; den rullas inte tillbaka automatiskt.
-3. Om promotionen misslyckas, kontrollera i Vercel vilken deployment
-   produktionsdomänen faktiskt pekar på. Återkör bara releasen när dess
-   databasmigrationer fortfarande är säkra att applicera.
-4. Om appen får problem efter promotion, prioritera en korrigerande release.
-   Att manuellt promovera en äldre Vercel-deployment är bara säkert om den äldre
-   appversionen är kompatibel med det nya databasschemat. Kontrollera detta
-   innan en sådan återgång.
-5. Om **Publish GitHub release** misslyckas har promotionen redan skett.
-   Kontrollera i Vercel att rätt commit är aktiv och kör om det misslyckade
-   GitHub-jobbet. Om versionstaggen redan finns på en annan commit stoppar
-   jobbet avsiktligt; granska orsaken i stället för att flytta taggen. Ett
-   utkast till release behöver granskas och hanteras manuellt innan omkörning.
+Börja med första felande steget i GitHub Actions. Vid behov: `gh run view <run-id> --log-failed`. Kopiera aldrig hemligheter eller personlig ekonomidata till issues eller publika loggar.
 
-Destruktiva databasändringar måste delas upp enligt expand/contract: lägg först
-till det nya schemat, flytta läsning/skrivning i en senare release och ta bort det
-gamla först när ingen körande app behöver det. Återställning av Neon-databasen
-är en sista utväg vid verifierad dataförlust, inte standardåtgärden för ett
-deployfel. Den kan förlora senare användarändringar och kräver separat beslut,
-kontroll av tillgänglig återställningspunkt och en plan för de data som skrivits
-sedan dess.
+| Fel                                                                                      | Åtgärd                                                                                                                                                                                                                           |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bygge, migration, databaskontroll eller smoketest före **Promote production deployment** | Gamla bygget ligger kvar på domänen. Stoppa nya releaser tills orsaken är känd. Databasen kan redan vara ändrad; migrationer rullas inte tillbaka automatiskt.                                                                   |
+| Promotion                                                                                | Kontrollera vilken deployment domänen pekar på i Vercel. Kör om först när migrationerna fortfarande är säkra att applicera.                                                                                                      |
+| Appfel efter promotion                                                                   | Prioritera en rättande release. Återgå till äldre deployment bara efter kontroll att den förstår det nya schemat och datan.                                                                                                      |
+| **Publish GitHub release**                                                               | Appen är redan promoverad. Verifiera aktiv commit i Vercel och kör om det misslyckade GitHub-jobbet. Finns taggen på annan commit: utred, flytta inte taggen. Releaseutkast måste granskas och hanteras manuellt före omkörning. |
+
+### Schemaändringar och återgång
+
+Dela destruktiva ändringar i flera releaser (expand/contract):
+
+1. Lägg till nytt schema.
+2. Flytta läsning och skrivning i en senare release.
+3. Ta bort gammalt schema först när ingen körande app behöver det.
+
+Återställ Neon bara som sista utväg vid verifierad dataförlust, inte som standard vid deployfel. Återställning kan förlora senare användarändringar. Den kräver separat beslut, en tillgänglig återställningspunkt och en plan för data som skrivits sedan dess.
+
+När giltighetsperioder för utgifter/sparande används får en äldre app som ignorerar slutmånad inte återinföras: den kan summera både gamla och nya perioder. Migration 0010 är additiv, men appen måste förstå perioderna. Äldre previews med samma stagingdatabas måste också uppdateras innan de redigerar posterna.
 
 ## Staging och PR:er
 
-Alla previews delar Neons `development`-branch. En migration i en PR påverkar
-därför andra previews och rullas inte tillbaka när PR:en stängs. Kör inte två
-motstridiga schemaändringar parallellt; samordna eller sekvensera dem. Fork- och
-Dependabot-PR:er har inte tillgång till staging-hemligheter. Om de ändrar
-databas-, release- eller CI-filer måste ändringarna först granskas och tas in
-på en betrodd branch, där `Deploy preview` kan validera dem.
-En ren versionshöjning i `package.json` är undantagen så att externa bidrag med
-vanliga appändringar fortfarande kan klara versionsspärren. Ändringar i
-beroenden, npm-skript eller annan paketkonfiguration kräver fortfarande en
-betrodd stagingkörning.
+Previews delar `development`. En PR:s migration påverkar därför andra previews och finns kvar efter stängning. Samordna motstridiga schemaändringar eller kör dem i turordning.
 
-Smoketestet verifierar endast att den nya appen levererar inloggningssidan via
-HTTPS. `pnpm db:check` verifierar separat databasåtkomst och RLS. Inget av dem
-bevisar att Google OAuth eller e-postleverans fungerar; kontrollera de flödena
-manuellt efter relevanta ändringar utan att lägga riktiga användaruppgifter i CI.
+Fork- och Dependabot-PR:er saknar staging-hemligheter. Ändringar i databas-, release- eller CI-filer måste granskas och köras från en betrodd branch via `Deploy preview`. Enbart versionshöjning i `package.json` är undantagen, så externa appbidrag kan klara versionskravet. Beroenden, npm-skript och annan paketkonfiguration kräver betrodd stagingkörning.
 
-## GitHub-skydd som behöver bevaras
+Smoketestet kontrollerar att inloggningssidan nås via HTTPS. `pnpm db:check` kontrollerar databasåtkomst och RLS. Google OAuth och mejlleverans måste testas manuellt efter relevanta ändringar. Lägg inte riktiga användaruppgifter i CI.
 
-Repot är publikt. GitHub CodeQL default setup, secret scanning, push protection
-och privat sårbarhetsrapportering är aktiverade. Actions har som standard bara
-läsbehörighet och får inte godkänna PR:er. Produktionsmiljön godtar bara branch
-`main`. Main-regeln kräver kvalitetstester, Playwright, `Deploy preview` och
-`Preview migration gate`; den sista kontrollen hindrar att ett hoppat
-preview-jobb godkänner känsliga ändringar från fork eller Dependabot. Ändra
-inte dessa inställningar utan att ersätta skyddet med en likvärdig kontroll.
+## GitHub-skydd
 
-GitHub Actions i repot är pinnade till fullständiga commit-SHA:n. Uppdatera
-dem avsiktligt när en ny version behövs och verifiera att SHA:n tillhör rätt
-officiell release. Säkerhetsbrister rapporteras enligt [SECURITY.md](../SECURITY.md).
+Det publika repot har CodeQL default setup, secret scanning, push protection och privat sårbarhetsrapportering. Actions har normalt läsbehörighet och får inte godkänna PR:er. Produktion godtar bara `main`.
+
+Main-regeln kräver kvalitetstester, Playwright, `Deploy preview` och `Preview migration gate`. Den sista hindrar känsliga fork-/Dependabot-ändringar från att godkännas genom ett hoppat preview-jobb. Ersätt skydd med likvärdiga kontroller om inställningarna ändras.
+
+Actions är pinnade till fullständiga commit-SHA:n. Uppdatera vid behov och verifiera SHA mot rätt officiell release. Rapportera säkerhetsbrister enligt [SECURITY.md](../SECURITY.md).
 
 ## Kostnadsram
 
-Flödet använder befintliga GitHub Actions-, Vercel- och Neon-resurser på deras
-kostnadsfria nivåer. Inga automatiska Neon-branches per PR, köpta
-observability-tjänster eller externa testkonton krävs. Deploys, tester och
-databaskontroller förbrukar fortfarande respektive gratiskvot. Vid kvotbrist:
-pausa nya releaser och minska onödiga körningar; uppgradera inte automatiskt.
+Flödet använder befintliga gratisnivåer i GitHub Actions, Vercel och Neon. Det kräver inga automatiska Neon-branches per PR, köpta observability-tjänster eller externa testkonton. Deploys, tester och databaskontroller använder ändå gratiskvoter. Vid kvotbrist: pausa nya releaser och minska onödiga körningar. Uppgradera inte automatiskt.
