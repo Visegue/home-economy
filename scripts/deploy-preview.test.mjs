@@ -56,6 +56,27 @@ describe("preview deployment", () => {
         target: ["preview"],
         gitBranch: env.PR_BRANCH,
       },
+      {
+        key: "APP_DEPLOY_ENV",
+        value: "preview",
+        type: "encrypted",
+        target: ["preview"],
+        gitBranch: env.PR_BRANCH,
+      },
+      {
+        key: "APP_DEPLOY_SHA",
+        value: env.GITHUB_SHA,
+        type: "encrypted",
+        target: ["preview"],
+        gitBranch: env.PR_BRANCH,
+      },
+      {
+        key: "APP_DEPLOY_BRANCH",
+        value: env.PR_BRANCH,
+        type: "encrypted",
+        target: ["preview"],
+        gitBranch: env.PR_BRANCH,
+      },
     ]);
     const deployment = JSON.parse(calls[2][1].body);
     expect(deployment.gitSource.sha).toBe(env.GITHUB_SHA);
