@@ -6,6 +6,8 @@ test("registrerar medlemmar, inkomst och utgifter och jämför månader", async 
   context,
   browser,
 }, testInfo) => {
+  // This full journey covers setup, editing, history and household isolation.
+  test.slow();
   await setSession(context, `budget-${testInfo.retry}`);
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Budgetfamiljen");
@@ -288,7 +290,7 @@ test("registrerar medlemmar, inkomst och utgifter och jämför månader", async 
 
   const outsiderContext = await browser.newContext();
   try {
-    await setSession(outsiderContext, "budget-outsider");
+    await setSession(outsiderContext, `budget-outsider-${testInfo.retry}`);
     const outsider = await outsiderContext.newPage();
     await outsider.goto("http://127.0.0.1:3000/onboarding");
     await outsider.getByLabel("Namn på hushållet").fill("Annat hushåll");
