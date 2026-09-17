@@ -72,6 +72,7 @@ export interface BudgetExpense {
   every: number;
   destination: "direct" | "allocated";
   startsOn: string | null;
+  endsOn: string | null;
   nextDueOn: string | null;
   owners: { id: number; name: string }[];
 }
@@ -126,14 +127,23 @@ export function shiftPeriod(period: string, months: number) {
   date.setUTCMonth(date.getUTCMonth() + months);
   return date.toISOString().slice(0, 7);
 }
+export function isActiveInPeriod(
+  period: string,
+  item: { startsOn: string | null; endsOn: string | null },
+) {
+  return (
+    (!item.startsOn || item.startsOn.slice(0, 7) <= period) &&
+    (!item.endsOn || item.endsOn.slice(0, 7) >= period)
+  );
+}
 export function monthlySummary(
   period: string,
   expenses: BudgetExpense[],
   incomes: BudgetIncome[],
   savingsInOre = 0,
 ) {
-  const activeExpenses = expenses.filter(
-    (expense) => !expense.startsOn || expense.startsOn.slice(0, 7) <= period,
+  const activeExpenses = expenses.filter((expense) =>
+    isActiveInPeriod(period, expense),
   );
   let directInOre = 0;
   let allocatedInOre = 0;

@@ -34,7 +34,7 @@ export const auth = betterAuth({
         to: user.email,
         subject: "Verifiera din e-postadress",
         intro:
-          "Bekräfta din e-postadress för att börja använda Hemekonomi med e-post och lösenord.",
+          "Bekräfta din e-postadress för att logga in i Hemekonomi med lösenord.",
         actionLabel: "Verifiera e-postadressen",
         actionUrl: url,
         idempotencyKey: `verify-email-${token}`,
@@ -50,8 +50,7 @@ export const auth = betterAuth({
       sendAuthEmail({
         to: user.email,
         subject: "Välj ett nytt lösenord",
-        intro:
-          "Följ länken för att välja ett nytt lösenord till ditt Hemekonomi-konto.",
+        intro: "Välj ett nytt lösenord för Hemekonomi via länken.",
         actionLabel: "Välj nytt lösenord",
         actionUrl: url,
         idempotencyKey: `reset-password-${token}`,

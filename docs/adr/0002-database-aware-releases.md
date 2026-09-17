@@ -3,49 +3,29 @@ status: accepted
 date: 2026-09-16
 ---
 
-# Keep releases database-aware with shared staging
+# Databasmedvetna releaser med gemensam staging
 
-The application stores personal financial data and has already had a production
-failure caused by a missed database migration. GitHub Actions is the only release
-orchestrator: it validates migrations against staging before a trusted PR can
-merge, and against production before a staged Vercel deployment is promoted.
-We use one long-lived Neon `development` branch for previews to stay within the
-open-source project's zero-spend budget.
+## Beslut
 
-On trusted PRs, quality and browser tests run first. The preview job then
-applies migrations with a direct owner connection, verifies the database with
-the restricted runtime connection, deploys the tested commit and checks that
-the login page responds. On `main`, a production deployment is staged without
-moving the domain; migrations, database verification and the same smoke test
-must pass before promotion. The production environment accepts only `main`.
-Fork and Dependabot PRs cannot use staging secrets, so a required gate rejects
-their database, auth, dependency and release changes until reviewed and rerun
-from a trusted branch.
+Appen lagrar personlig ekonomidata. En missad migration har redan orsakat produktionsfel. GitHub Actions sköter därför hela releasen och validerar databasen före deploy till användare.
 
-## Considered options
+Alla previews delar Neons långlivade `development`-branch för att hålla projektets budget på noll kronor.
 
-- **Vercel Git auto-deploy or migrations at app startup:** rejected because the
-  new app might receive traffic before its schema is ready, or multiple app
-  instances might race to migrate with elevated credentials.
-- **A Neon branch per PR:** better isolation, but more branches and active
-  computes consume the Free plan's shared allowances. Reconsider only if
-  incompatible parallel schema work becomes frequent and its resource use is
-  acceptable.
-- **Manual migrations after merge:** rejected because the release can be
-  forgotten or deployed out of order, as happened previously.
+- **Betrodd PR:** kvalitetstester och webbläsartester → migrera med direkt ägaranslutning → verifiera med begränsad runtime-roll → deploya testad commit → kontrollera inloggningssidan.
+- **`main`:** bygg utan att flytta produktionsdomänen → migrera → verifiera databas och inloggningssida → flytta domänen till nya bygget. Produktion godtar bara `main`.
+- **Fork/Dependabot:** får inga staging-secrets. En obligatorisk kontroll stoppar ändringar i databas, auth, beroenden och release tills de granskats och körts från en betrodd branch.
 
-## Consequences
+## Alternativ
 
-- Every migration must be backward-compatible with the previous app version.
-  Destructive changes need an expand/contract sequence.
-- Previews share schema and data in `development`; conflicting migrations must
-  be sequenced, and closing a PR does not undo a migration.
-- A failed post-migration check leaves the old production deployment in place
-  but does not automatically roll back the database. Recovery follows the
-  [release runbook](../release-runbook.md).
-- CI and hosted checks consume free-tier quotas. The smoke test does not cover
-  Google OAuth or email delivery; those require targeted manual verification.
+- **Vercels automatiska Git-deploy eller migration vid appstart:** kan släppa trafik före migration eller låta flera instanser migrera samtidigt med förhöjd behörighet.
+- **Neon-branch per PR:** bättre isolering, men använder mer av Free-planens gemensamma branch- och compute-kvot. Ompröva först vid återkommande schemaändringar som inte kan samsas, med accepterad resurskostnad.
+- **Manuell migration efter merge:** kan glömmas eller köras i fel ordning, som tidigare inträffat.
 
-This decision supersedes ADR 0001's expectation that preview automation creates
-and removes a Neon branch for each PR. Its other platform decisions remain in
-effect.
+## Följder
+
+- Migrationer måste stödja föregående appversion. Dela destruktiva ändringar enligt expand/contract.
+- Previews delar schema och data. Samordna motstridiga migrationer; stängd PR återställer inget.
+- Fel efter migration lämnar gamla produktionsbygget kvar men återställer inte databasen. Följ [release-runbooken](../release-runbook.md).
+- CI och kontroller i drift använder gratiskvoter. Smoketestet täcker inte Google OAuth eller mejlleverans; testa dem manuellt vid behov.
+
+Detta ersätter ADR 0001:s policy att skapa och ta bort en Neon-branch per PR. Övriga plattformsbeslut gäller fortsatt.
