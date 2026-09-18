@@ -33,7 +33,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
     getBudgetData(),
     getSavings(),
   ]);
-  const savingsInOre = totalMonthlySavings(savings);
+  const savingsInOre = totalMonthlySavings(savings, period);
   const summary = monthlySummary(period, expenses, incomes, savingsInOre);
   const year = period.slice(0, 4);
   const hasIncome = summary.incomeInOre !== null;
@@ -163,7 +163,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
           </CardContent>
         </Card>
       </section>
-      <SavingsSection savings={savings} />
+      <SavingsSection savings={savings} period={period} />
       <Card>
         <CardHeader>
           <CardTitle>Utgifter</CardTitle>
@@ -232,9 +232,19 @@ export async function OverviewDashboard({ period }: { period: string }) {
                       {formatBudgetSek(expense.amountInOre)}
                     </TableCell>
                     <TableCell>
+                      <ExpenseDialog
+                        key={`${expense.id}-${period}`}
+                        expense={expense}
+                        period={period}
+                        people={people}
+                      />
                       <RemoveExpenseButton
+                        key={`end-${expense.id}-${period}`}
                         id={expense.id}
                         name={expense.name}
+                        period={period}
+                        startsOn={expense.startsOn}
+                        endsOn={expense.endsOn}
                       />
                     </TableCell>
                   </TableRow>
@@ -279,7 +289,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
                   rowPeriod,
                   expenses,
                   incomes,
-                  savingsInOre,
+                  totalMonthlySavings(savings, rowPeriod),
                 );
                 return (
                   <TableRow

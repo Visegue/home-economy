@@ -98,14 +98,12 @@ function IncomeForm({
             </Label>
             <InfoButton title="Inkomster">
               <p>
-                Beloppet läggs till hushållets inkomster varje månad under
-                perioden. Både start- och slutmånaden ingår. Välj tills vidare
-                om inkomsten saknar slutdatum.
+                Inkomsten räknas varje månad, inklusive start- och slutmånad.
+                Välj tills vidare om den saknar slutdatum.
               </p>
               <p>
-                Vid exempelvis en löneökning: avsluta den gamla inkomsten och
-                lägg till det nya beloppet från nästa månad. Då behålls tidigare
-                månaders belopp.
+                Vid ändrat belopp: avsluta gamla inkomsten och lägg till en ny
+                från nästa månad. Då behålls tidigare månaders belopp.
               </p>
             </InfoButton>
           </div>
@@ -185,8 +183,8 @@ export function RemoveIncomeButton({ income }: { income: BudgetIncome }) {
     <form action={action} className="space-y-2">
       <input type="hidden" name="id" value={income.id} />
       <p className="text-sm">
-        Ta bort {income.name} för hela perioden? Använd slutmånad om historiken
-        ska behållas.
+        Ta bort {income.name} för hela perioden? Ange slutmånad för att behålla
+        historiken.
       </p>
       <div className="flex gap-2">
         <Button size="sm" variant="destructive" disabled={pending}>

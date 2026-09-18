@@ -12,7 +12,7 @@ import {
   removeIncome,
   saveIncome,
 } from "./data";
-import { expenseSchema, incomeSchema } from "./model";
+import { expenseSchema, incomeSchema, periodSchema } from "./model";
 
 export interface FormState {
   error?: string;
@@ -41,6 +41,15 @@ export async function addExpenseAction(
   _state: FormState,
   data: FormData,
 ): Promise<FormState> {
+  const id = data.get("id");
+  const parsedId = z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(Number.MAX_SAFE_INTEGER)
+    .optional()
+    .safeParse(id || undefined);
+  if (!parsedId.success) return { error: "Utgiften kunde inte hittas." };
   const parsed = expenseSchema.safeParse({
     name: data.get("name"),
     amount: data.get("amount"),
@@ -52,8 +61,8 @@ export async function addExpenseAction(
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   return mutate(async () => {
-    await addExpense(parsed.data);
-    return { success: "Utgiften har lagts till." };
+    await addExpense(parsed.data, parsedId.data);
+    return { success: "Utgiften har sparats." };
   });
 }
 export async function saveIncomeAction(
@@ -114,5 +123,7 @@ export async function removeExpenseAction(
     .max(Number.MAX_SAFE_INTEGER)
     .safeParse(data.get("id"));
   if (!parsed.success) return { error: "Utgiften kunde inte hittas." };
-  return mutate(() => removeExpense(parsed.data));
+  const period = periodSchema.safeParse(data.get("period"));
+  if (!period.success) return { error: "Välj en giltig månad." };
+  return mutate(() => removeExpense(parsed.data, period.data));
 }

@@ -5,6 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { DeploymentInfo } from "@/components/deployment-info";
 import { getBudgetData } from "@/features/budget/data";
 import { PersonDialog } from "@/features/budget/forms";
 import {
@@ -12,13 +13,16 @@ import {
   RemoveIncomeButton,
 } from "@/features/budget/income-form";
 import { currentPeriod, monthLabel } from "@/features/budget/model";
+import { getDeploymentVersion } from "@/lib/deployment-version";
 import { formatBudgetSek } from "@/lib/money";
+import packageJson from "../../../../package.json";
 
 export const metadata = { title: "Hushållsinställningar" };
 
 export default async function SettingsPage() {
   const { people, household, incomes } = await getBudgetData();
   const current = currentPeriod();
+  const deployment = getDeploymentVersion(packageJson.version, process.env);
   return (
     <div className="max-w-4xl space-y-6">
       <Card id="incomes">
@@ -89,6 +93,7 @@ export default async function SettingsPage() {
           )}
         </CardContent>
       </Card>
+      <DeploymentInfo deployment={deployment} />
     </div>
   );
 }

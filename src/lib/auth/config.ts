@@ -66,7 +66,24 @@ function getBaseUrl(): string {
 }
 
 function hasAuthSecret(): boolean {
-  return Boolean(process.env.BETTER_AUTH_SECRET);
+  return Boolean(process.env.BETTER_AUTH_SECRET?.trim());
+}
+
+function getAuthSecret(): string {
+  const secret = process.env.BETTER_AUTH_SECRET;
+  const hosted =
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL === "1" ||
+    ["preview", "production"].includes(process.env.VERCEL_ENV ?? "");
+  if (
+    hosted &&
+    (!secret || secret.trim().length < 32 || secret === developmentSecret)
+  ) {
+    throw new Error(
+      "BETTER_AUTH_SECRET måste vara en separat hemlighet med minst 32 tecken i drift.",
+    );
+  }
+  return secret?.trim() ? secret : developmentSecret;
 }
 
 export function isGoogleAuthConfigured(): boolean {
@@ -103,7 +120,7 @@ export function getAuthEnvironment(): AuthEnvironment {
     googleClientSecret:
       process.env.GOOGLE_CLIENT_SECRET || "google-secret-not-configured",
     oauthProxy: getOAuthProxyEnvironment(),
-    secret: process.env.BETTER_AUTH_SECRET || developmentSecret,
+    secret: getAuthSecret(),
     trustedOrigins: getTrustedOrigins(),
   };
 }

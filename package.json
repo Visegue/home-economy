@@ -1,6 +1,6 @@
 {
   "name": "home-economy",
-  "version": "0.1.0",
+  "version": "0.4.1",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -12,6 +12,7 @@
     "lint:fix": "oxlint --fix .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "check:version": "node scripts/check-app-version.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/run-vitest.mjs run",
     "test:watch": "node scripts/run-vitest.mjs",
@@ -21,7 +22,7 @@
     "db:migrate": "node scripts/migrate.mjs",
     "db:check": "node scripts/check-database.mjs",
     "db:studio": "drizzle-kit studio",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "check": "pnpm check:version && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.4",

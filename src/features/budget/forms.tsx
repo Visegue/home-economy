@@ -23,7 +23,8 @@ import {
   removeExpenseAction,
   type FormState,
 } from "./actions";
-import { amountSchema, cycles, monthLabel } from "./model";
+import { amountSchema, cycles, monthLabel, type BudgetExpense } from "./model";
+import { incomeToInput } from "@/features/income/validation";
 
 function Feedback({ state }: { state: FormState }) {
   return state.error ? (
@@ -40,24 +41,44 @@ function Feedback({ state }: { state: FormState }) {
 export function ExpenseDialog({
   period,
   people,
+  expense,
 }: {
   period: string;
   people: { id: number; name: string }[];
+  expense?: BudgetExpense;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <AddCardButton label="Lägg till utgift" />
+        {expense ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={`Ändra ${expense.name}`}
+          >
+            Ändra
+          </Button>
+        ) : (
+          <AddCardButton label="Lägg till utgift" />
+        )}
       </DialogTrigger>
       <FormDialogContent
-        title="Lägg till utgift"
-        description={`Gäller från ${monthLabel(period)} och framåt.`}
+        title={expense ? "Ändra utgift" : "Lägg till utgift"}
+        description={
+          (expense
+            ? "Välj månad för ändringen. Tidigare månaders belopp behålls."
+            : `Gäller från ${monthLabel(period)} och framåt.`) +
+          (expense?.endsOn
+            ? ` Perioden slutar ${monthLabel(expense.endsOn.slice(0, 7))}.`
+            : "")
+        }
       >
         {open ? (
           <ExpenseForm
             period={period}
             people={people}
+            expense={expense}
             onSaved={() => setOpen(false)}
           />
         ) : null}
@@ -70,17 +91,26 @@ function ExpenseForm({
   period,
   people,
   onSaved,
+  expense,
 }: {
   period: string;
   people: { id: number; name: string }[];
   onSaved: () => void;
+  expense?: BudgetExpense;
 }) {
-  const [type, setType] = useState("direct");
-  const [name, setName] = useState("");
-  const [amount, setAmount] = useState("");
-  const [months, setMonths] = useState("12");
-  const [nextDueOn, setNextDueOn] = useState("");
-  const [owners, setOwners] = useState<number[]>([]);
+  const [effectivePeriod, setEffectivePeriod] = useState(period);
+  const [type, setType] = useState(expense?.destination ?? "direct");
+  const [name, setName] = useState(expense?.name ?? "");
+  const [amount, setAmount] = useState(
+    incomeToInput(expense?.amountInOre ?? null),
+  );
+  const [months, setMonths] = useState(
+    String(expense ? expense.every * (expense.unit === "year" ? 12 : 1) : 12),
+  );
+  const [nextDueOn, setNextDueOn] = useState(expense?.nextDueOn ?? "");
+  const [owners, setOwners] = useState<number[]>(
+    expense?.owners.map((owner) => owner.id) ?? [],
+  );
   const [state, action, pending] = useActionState(
     async (previous: FormState, data: FormData) => {
       const result = await addExpenseAction(previous, data);
@@ -92,21 +122,36 @@ function ExpenseForm({
   const parsedAmount = amountSchema.safeParse(amount);
   return (
     <form action={action} className="space-y-5">
-      <input type="hidden" name="period" value={period} />
+      {expense ? <input type="hidden" name="id" value={expense.id} /> : null}
       <fieldset disabled={pending} className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="expense-period">
+            {expense ? "Ändringen gäller från" : "Från och med"}
+          </Label>
+          <Input
+            id="expense-period"
+            name="period"
+            type="month"
+            required
+            value={effectivePeriod}
+            onChange={(event) => setEffectivePeriod(event.target.value)}
+            min={expense?.startsOn?.slice(0, 7) ?? "1900-01"}
+            max={expense?.endsOn?.slice(0, 7) ?? "2199-12"}
+          />
+        </div>
         <fieldset className="grid grid-cols-2 gap-2">
           <legend className="mb-2 text-sm font-medium">
             <span className="inline-flex items-center gap-1">
               Typ av utgift
               <InfoButton title="Utgiftstyper">
                 <p>
-                  Direkta utgifter, som hyra, betalas varje månad och dras från
-                  månadsbudgeten.
+                  Direkta utgifter, som hyra, betalas och räknas i budgeten
+                  varje månad.
                 </p>
                 <p>
-                  För avsatta utgifter, som en årsförsäkring, läggs en del undan
-                  varje månad. Den delen ingår i budgetens utgifter och i
-                  beloppet att föra över till avsättningskontot.
+                  För avsatta utgifter, som en årsförsäkring, lägger du undan en
+                  del varje månad. Den räknas som utgift och ingår i
+                  överföringen till avsättningskontot.
                 </p>
               </InfoButton>
             </span>
@@ -133,7 +178,7 @@ function ExpenseForm({
                 name="type"
                 value={option.value}
                 checked={type === option.value}
-                onChange={() => setType(option.value)}
+                onChange={() => setType(option.value as "direct" | "allocated")}
                 className="mt-1 accent-primary"
               />
               <span>
@@ -196,7 +241,7 @@ function ExpenseForm({
                   id="expense-due"
                   name="nextDueOn"
                   type="date"
-                  min={`${period}-01`}
+                  min={`${effectivePeriod}-01`}
                   value={nextDueOn}
                   onChange={(event) => setNextDueOn(event.target.value)}
                   required
@@ -217,13 +262,12 @@ function ExpenseForm({
               </p>
               <InfoButton title="Månadsavsättningen">
                 <p>
-                  Beloppet per betalning delas med antalet månader mellan
-                  betalningarna. En årskostnad på 1 200 kr ger 100 kr per månad.
+                  Dela beloppet med månaderna mellan betalningar. En årskostnad
+                  på 1 200 kr blir 100 kr per månad.
                 </p>
                 <p>
-                  Kontots saldo och tiden till första betalningen räknas inte
-                  in. Om betalningen ligger nära kan du behöva sätta in mer
-                  första gången.
+                  Kontots saldo och tiden till första betalningen ingår inte. Är
+                  betalningen nära kan du behöva sätta in extra första gången.
                 </p>
               </InfoButton>
             </div>
@@ -235,9 +279,8 @@ function ExpenseForm({
               Ägare (frivilligt)
               <InfoButton title="Utgiftens ägare">
                 <p>
-                  Välj vilka medlemmar utgiften gäller. Beloppet räknas en gång
-                  i hushållets budget, även med flera ägare. Du kan också lämna
-                  valet tomt.
+                  Välj medlemmar eller lämna tomt. Utgiften räknas en gång i
+                  budgeten, även med flera ägare.
                 </p>
               </InfoButton>
             </span>
@@ -316,8 +359,8 @@ function PersonForm({ onSaved }: { onSaved: () => void }) {
         <Label htmlFor="person-name">Medlemmens namn</Label>
         <InfoButton title="Hushållets medlemmar">
           <p>
-            Medlemmar kan väljas som ägare på utgifter. Att lägga till ett namn
-            skapar inget konto och ger inte personen tillgång till hushållet.
+            Medlemmar kan anges som ägare på utgifter. Ett namn skapar inget
+            konto och ger ingen åtkomst till hushållet.
           </p>
         </InfoButton>
       </div>
@@ -342,19 +385,40 @@ function PersonForm({ onSaved }: { onSaved: () => void }) {
 export function RemoveExpenseButton({
   id,
   name,
+  period,
+  startsOn,
+  endsOn,
 }: {
   id: number;
   name: string;
+  period: string;
+  startsOn: string | null;
+  endsOn: string | null;
 }) {
   const [confirm, setConfirm] = useState(false);
+  const [effectivePeriod, setEffectivePeriod] = useState(period);
   const [state, action, pending] = useActionState(removeExpenseAction, {});
   return confirm ? (
     <form action={action} className="space-y-2 whitespace-normal">
       <input type="hidden" name="id" value={id} />
-      <p className="text-xs">Ta bort {name} ur budgeten för alla månader?</p>
+      <p className="text-xs">
+        Avsluta {name} från vald månad? Tidigare månader behålls.
+      </p>
+      <Label htmlFor={`expense-end-${id}`}>Avsluta från</Label>
+      <Input
+        id={`expense-end-${id}`}
+        name="period"
+        type="month"
+        value={effectivePeriod}
+        onChange={(event) => setEffectivePeriod(event.target.value)}
+        required
+        min={startsOn?.slice(0, 7) ?? "1900-01"}
+        max={endsOn?.slice(0, 7) ?? "2199-12"}
+        disabled={pending}
+      />
       <div className="flex gap-1">
         <Button variant="destructive" size="sm" disabled={pending}>
-          Ta bort
+          Avsluta
         </Button>
         <Button
           type="button"
@@ -372,10 +436,10 @@ export function RemoveExpenseButton({
     <Button
       variant="ghost"
       size="sm"
-      aria-label={`Ta bort ${name}`}
+      aria-label={`Avsluta ${name}`}
       onClick={() => setConfirm(true)}
     >
-      Ta bort
+      Avsluta
     </Button>
   );
 }

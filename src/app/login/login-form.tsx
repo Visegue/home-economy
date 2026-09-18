@@ -75,7 +75,7 @@ export function LoginForm({
 
     setPendingAction(null);
     setMessage(
-      "Inloggningen kunde inte startas. Kontrollera anslutningen och försök igen.",
+      "Kunde inte starta inloggningen. Kontrollera anslutningen och försök igen.",
     );
   }
 
@@ -84,24 +84,35 @@ export function LoginForm({
     startAction("sign-in");
 
     const formData = new FormData(event.currentTarget);
-    const { error } = await authClient.signIn.email({
-      email: String(formData.get("email")),
-      password: String(formData.get("password")),
-      rememberMe: true,
-      callbackURL: "/",
-    });
+    try {
+      const { error } = await authClient.signIn.email({
+        email: String(formData.get("email")),
+        password: String(formData.get("password")),
+        rememberMe: true,
+        callbackURL: "/",
+      });
 
-    if (error) {
-      setPendingAction(null);
+      if (error) {
+        setMessage(
+          error.status === 429
+            ? "För många försök. Vänta en stund och försök igen."
+            : error.status >= 500
+              ? "Inloggningen fungerar inte just nu. Försök snart igen."
+              : error.status === 403
+                ? "Verifiera e-postadressen före inloggning. Vi har skickat en ny länk."
+                : "E-postadressen eller lösenordet är fel.",
+        );
+        return;
+      }
+
+      window.location.assign("/");
+    } catch {
       setMessage(
-        error.status === 403
-          ? "Verifiera din e-postadress innan du loggar in. Vi har skickat en ny länk."
-          : "E-postadressen eller lösenordet är fel.",
+        "Kunde inte logga in. Kontrollera anslutningen och försök igen.",
       );
-      return;
+    } finally {
+      setPendingAction(null);
     }
-
-    window.location.assign("/");
   }
 
   async function signUpWithEmail(event: FormEvent<HTMLFormElement>) {
@@ -114,28 +125,36 @@ export function LoginForm({
 
     if (password !== passwordConfirmation) {
       setPendingAction(null);
-      setMessage("Lösenorden stämmer inte överens.");
+      setMessage("Lösenorden matchar inte.");
       return;
     }
 
-    const { error } = await authClient.signUp.email({
-      name: String(formData.get("name")),
-      email: String(formData.get("email")),
-      password,
-      callbackURL: "/",
-    });
+    try {
+      const { error } = await authClient.signUp.email({
+        name: String(formData.get("name")),
+        email: String(formData.get("email")),
+        password,
+        callbackURL: "/",
+      });
 
-    setPendingAction(null);
+      if (error) {
+        setMessage(
+          error.status === 429
+            ? "För många försök. Vänta en stund och försök igen."
+            : "Kontot kunde inte skapas. Kontrollera uppgifterna och försök igen.",
+        );
+        return;
+      }
 
-    if (error) {
+      setSuccess(true);
+      setMessage("Om adressen är ny får du ett mejl med en verifieringslänk.");
+    } catch {
       setMessage(
-        "Kontot kunde inte skapas. Kontrollera uppgifterna och försök igen.",
+        "Kontot kunde inte skapas. Kontrollera anslutningen och försök igen.",
       );
-      return;
+    } finally {
+      setPendingAction(null);
     }
-
-    setSuccess(true);
-    setMessage("Om adressen är ny får du ett mejl med en verifieringslänk.");
   }
 
   const pending = pendingAction !== null;
