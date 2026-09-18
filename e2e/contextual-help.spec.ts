@@ -76,6 +76,7 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
   await page
     .getByRole("button", { name: "Lägg till inkomst", exact: true })
     .click();
+  await expect(page.getByLabel("Namn på inkomsten")).toBeFocused();
   await page.getByRole("button", { name: "Information om inkomster" }).click();
   await expect(
     page.getByRole("dialog", { name: "Inkomster", exact: true }),
@@ -150,6 +151,7 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
       await trigger.tap();
       const dialog = mobilePage.getByRole("dialog", { name: label });
       await expect(dialog).toBeInViewport();
+      await expect(dialog).toBeFocused();
       expect(
         await mobilePage.evaluate(
           () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -157,6 +159,82 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
       ).toBe(true);
       await dialog.getByRole("button", { name: "Stäng" }).tap();
     }
+
+    const incomeTrigger = mobilePage.getByRole("button", {
+      name: "Lägg till inkomst",
+      exact: true,
+    });
+    await incomeTrigger.tap();
+    const incomeDialog = mobilePage.getByRole("dialog", {
+      name: "Lägg till inkomst",
+      exact: true,
+    });
+    await incomeDialog.getByLabel("Namn på inkomsten").fill("Mobilinkomst");
+
+    // Simulate a keyboard that shrinks only the visual viewport, as on phones.
+    // Resizing the Playwright window alone would also shrink dvh and miss this bug.
+    await mobilePage.evaluate(() => {
+      const viewport = window.visualViewport!;
+      Object.defineProperty(viewport, "height", {
+        configurable: true,
+        value: 280,
+      });
+      viewport.dispatchEvent(new Event("resize"));
+    });
+    await expect
+      .poll(async () => {
+        const bounds = await incomeDialog.boundingBox();
+        return !!bounds && bounds.y >= 16 && bounds.y + bounds.height <= 264;
+      })
+      .toBe(true);
+
+    // Browsers can also pan the visual viewport while a field has focus.
+    await mobilePage.evaluate(() => {
+      const viewport = window.visualViewport!;
+      Object.defineProperty(viewport, "offsetTop", {
+        configurable: true,
+        value: 48,
+      });
+      viewport.dispatchEvent(new Event("scroll"));
+    });
+    await expect
+      .poll(async () => {
+        const bounds = await incomeDialog.boundingBox();
+        return !!bounds && bounds.y >= 64 && bounds.y + bounds.height <= 312;
+      })
+      .toBe(true);
+    expect(await mobilePage.evaluate(() => window.innerHeight)).toBe(640);
+    await incomeDialog
+      .getByLabel("Belopp per månad efter skatt (kr)")
+      .fill("1234");
+    const saveIncome = incomeDialog.getByRole("button", {
+      name: "Spara inkomst",
+    });
+    await saveIncome.scrollIntoViewIfNeeded();
+    const saveBounds = await saveIncome.boundingBox();
+    expect(saveBounds!.y).toBeGreaterThanOrEqual(64);
+    expect(saveBounds!.y + saveBounds!.height).toBeLessThanOrEqual(312);
+    await saveIncome.tap();
+    await expect(incomeDialog).toHaveCount(0);
+    await expect(
+      mobilePage.getByText("Mobilinkomst", { exact: true }),
+    ).toBeVisible();
+    await expect(incomeTrigger).toBeFocused();
+
+    await mobilePage.evaluate(() => {
+      const viewport = window.visualViewport!;
+      Reflect.deleteProperty(viewport, "height");
+      Reflect.deleteProperty(viewport, "offsetTop");
+      viewport.dispatchEvent(new Event("resize"));
+    });
+    await incomeTrigger.tap();
+    await expect(incomeDialog).toBeInViewport({ ratio: 1 });
+    await expect(
+      incomeDialog.getByRole("button", { name: "Spara inkomst" }),
+    ).toBeInViewport({ ratio: 1 });
+    await incomeDialog
+      .getByRole("button", { name: "Stäng", exact: true })
+      .tap();
   } finally {
     await mobile.close();
   }
