@@ -1,15 +1,11 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { AddCardButton } from "@/components/add-card-button";
+import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -30,23 +26,19 @@ export function IncomeDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant={income ? "outline" : "default"}
-          size={income ? "sm" : "default"}
-          aria-label={income ? `Ändra ${income.name}` : undefined}
-        >
-          {income ? "Ändra" : "Lägg till inkomst"}
-        </Button>
+        {income ? (
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label={`Ändra ${income.name}`}
+          >
+            Ändra
+          </Button>
+        ) : (
+          <AddCardButton label="Lägg till inkomst" />
+        )}
       </DialogTrigger>
-      <DialogContent
-        className="max-h-[90dvh] overflow-y-auto sm:max-w-lg"
-        aria-describedby={undefined}
-      >
-        <DialogHeader>
-          <DialogTitle>
-            {income ? "Ändra inkomst" : "Lägg till inkomst"}
-          </DialogTitle>
-        </DialogHeader>
+      <FormDialogContent title={income ? "Ändra inkomst" : "Lägg till inkomst"}>
         {open ? (
           <IncomeForm
             income={income}
@@ -54,7 +46,7 @@ export function IncomeDialog({
             onSaved={() => setOpen(false)}
           />
         ) : null}
-      </DialogContent>
+      </FormDialogContent>
     </Dialog>
   );
 }

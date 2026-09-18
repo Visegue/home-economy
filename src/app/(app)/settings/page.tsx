@@ -1,6 +1,12 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { getBudgetData } from "@/features/budget/data";
-import { PersonForm } from "@/features/budget/forms";
+import { PersonDialog } from "@/features/budget/forms";
 import {
   IncomeDialog,
   RemoveIncomeButton,
@@ -18,9 +24,11 @@ export default async function SettingsPage() {
       <Card id="incomes">
         <CardHeader>
           <CardTitle>Hushållets inkomster</CardTitle>
+          <CardAction>
+            <IncomeDialog defaultStart={current} />
+          </CardAction>
         </CardHeader>
-        <CardContent className="space-y-5">
-          <IncomeDialog defaultStart={current} />
+        <CardContent>
           {incomes.length ? (
             <ul aria-label="Hushållets inkomster" className="divide-y">
               {incomes.map((income) => (
@@ -61,8 +69,11 @@ export default async function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Medlemmar i {household.name}</CardTitle>
+          <CardAction>
+            <PersonDialog />
+          </CardAction>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent>
           {people.length ? (
             <ul aria-label="Hushållets medlemmar" className="divide-y">
               {people.map((person) => (
@@ -76,7 +87,6 @@ export default async function SettingsPage() {
               Inga medlemmar tillagda ännu.
             </p>
           )}
-          <PersonForm />
         </CardContent>
       </Card>
     </div>

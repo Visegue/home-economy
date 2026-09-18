@@ -6,6 +6,7 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
   context,
   browser,
 }, testInfo) => {
+  test.setTimeout(120_000);
   const token = `help-${testInfo.retry}`;
   await setSession(context, token);
   await page.goto("/onboarding");
@@ -61,6 +62,8 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
   await expense.getByRole("button", { name: "Stäng", exact: true }).click();
 
   await page.goto("/settings");
+  await page.getByRole("button", { name: "Lägg till familjemedlem" }).click();
+  await page.getByLabel("Medlemmens namn").fill("Kim");
   await page
     .getByRole("button", { name: "Information om hushållets medlemmar" })
     .click();
@@ -68,6 +71,8 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
     page.getByRole("dialog", { name: "Hushållets medlemmar", exact: true }),
   ).toContainText("skapar inget konto");
   await page.keyboard.press("Escape");
+  await expect(page.getByLabel("Medlemmens namn")).toHaveValue("Kim");
+  await page.getByRole("button", { name: "Stäng", exact: true }).click();
   await page
     .getByRole("button", { name: "Lägg till inkomst", exact: true })
     .click();
@@ -77,6 +82,16 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
   ).toContainText("tidigare månaders belopp");
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Stäng", exact: true }).click();
+  const memberTrigger = page.getByRole("button", {
+    name: "Lägg till familjemedlem",
+  });
+  await memberTrigger.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("dialog", { name: "Lägg till familjemedlem" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(memberTrigger).toBeFocused();
 
   const mobile = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -107,6 +122,41 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
     await expect(
       mobilePage.getByRole("button", { name: "Spara sparande" }),
     ).toBeInViewport();
+    await mobilePage.getByRole("button", { name: "Stäng" }).tap();
+    await mobilePage.setViewportSize({ width: 320, height: 640 });
+
+    for (const label of ["Lägg till sparande", "Lägg till utgift"]) {
+      const trigger = mobilePage.getByRole("button", { name: label });
+      const bounds = await trigger.boundingBox();
+      expect(bounds?.width).toBeGreaterThanOrEqual(44);
+      expect(bounds?.height).toBeGreaterThanOrEqual(44);
+      await trigger.tap();
+      const dialog = mobilePage.getByRole("dialog", { name: label });
+      await expect(dialog).toBeInViewport();
+      expect(
+        await mobilePage.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+      await dialog.getByRole("button", { name: "Stäng" }).tap();
+    }
+
+    await mobilePage.goto("http://127.0.0.1:3000/settings");
+    for (const label of ["Lägg till inkomst", "Lägg till familjemedlem"]) {
+      const trigger = mobilePage.getByRole("button", { name: label });
+      const bounds = await trigger.boundingBox();
+      expect(bounds?.width).toBeGreaterThanOrEqual(44);
+      expect(bounds?.height).toBeGreaterThanOrEqual(44);
+      await trigger.tap();
+      const dialog = mobilePage.getByRole("dialog", { name: label });
+      await expect(dialog).toBeInViewport();
+      expect(
+        await mobilePage.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+      await dialog.getByRole("button", { name: "Stäng" }).tap();
+    }
   } finally {
     await mobile.close();
   }
