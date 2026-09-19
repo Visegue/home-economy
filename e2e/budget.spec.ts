@@ -1,19 +1,21 @@
 import { expect, test } from "@playwright/test";
 import { setSession } from "./helpers/session";
+import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
 
-test("registrerar medlemmar, inkomst och utgifter och jämför månader", async ({
+test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   page,
   context,
   browser,
 }, testInfo) => {
-  // This full journey covers setup, editing, history and household isolation.
+  // This full journey covers setup, editing and household isolation.
   test.slow();
+  const period = currentPeriod();
+  const nextPeriod = shiftPeriod(period, 1);
   await setSession(context, `budget-${testInfo.retry}`);
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Budgetfamiljen");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
-  await expect(page).toHaveURL("http://127.0.0.1:3000/");
-  await page.goto("/?month=2026-09");
+  await expect(page).toHaveURL(/\/$/);
   await expect(
     page.getByText("Ingen aktiv inkomst", { exact: true }).first(),
   ).toBeVisible();
@@ -89,14 +91,14 @@ test("registrerar medlemmar, inkomst och utgifter och jämför månader", async 
       .click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
   }
-  await addIncome("Lön", "29000", "2026-09");
-  await addIncome("Bidrag", "1000,50", "2026-09");
+  await addIncome("Lön", "29000", period);
+  await addIncome("Bidrag", "1000,50", period);
   await page.getByRole("button", { name: "Ändra Lön", exact: true }).click();
   await expect(
     page.getByRole("checkbox", { name: "Gäller tills vidare" }),
   ).toBeChecked();
   await page.getByRole("checkbox", { name: "Gäller tills vidare" }).uncheck();
-  await page.getByLabel("Till och med").fill("2026-09");
+  await page.getByLabel("Till och med").fill(period);
   await page
     .getByRole("button", { name: "Spara inkomst", exact: true })
     .click();
@@ -122,19 +124,20 @@ test("registrerar medlemmar, inkomst och utgifter och jämför månader", async 
   ).toBeChecked();
   await page.getByRole("checkbox", { name: "Gäller tills vidare" }).uncheck();
   await expect(page.getByLabel("Till och med", { exact: true })).toBeEmpty();
-  await page.getByLabel("Till och med", { exact: true }).fill("2026-09");
+  await page.getByLabel("Till och med", { exact: true }).fill(period);
   await page
     .getByRole("button", { name: "Spara inkomst", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await addIncome("Ny lön", "8999,50", "2026-10");
+  await addIncome("Ny lön", "8999,50", nextPeriod);
   await page.reload();
   await expect(
     page
       .getByRole("list", { name: "Hushållets inkomster" })
       .getByRole("listitem"),
   ).toHaveCount(3);
-  await page.goto("/?month=2026-09");
+  await page.goto("/?month=1900-01");
+  await expect(page).toHaveURL(/\/$/);
   await expect(
     page
       .locator('[data-slot="card"]')
@@ -148,8 +151,16 @@ test("registrerar medlemmar, inkomst och utgifter och jämför månader", async 
   await expect(
     page.getByRole("link", { name: "Registrera inkomst" }),
   ).toHaveCount(0);
+  await expect(page.getByLabel("Välj månad")).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: /föregående|nästa månad/i }),
+  ).toHaveCount(0);
+  await expect(page.getByText(/Månad för månad/)).toHaveCount(0);
 
   await page.getByRole("button", { name: "Lägg till utgift" }).click();
+  await expect(page.getByLabel("Från och med", { exact: true })).toHaveValue(
+    period,
+  );
   await page.getByLabel("Namn på utgiften").fill("Hyra");
   await page.getByLabel("Belopp per betalning (kr)").fill("10000");
   await page.getByRole("checkbox", { name: "Kim", exact: true }).check();
@@ -160,10 +171,10 @@ test("registrerar medlemmar, inkomst och utgifter och jämför månader", async 
   await expect(rent).toContainText("Kim, Robin");
 
   for (const [name, cycle, date, amount] of [
-    ["Bilförsäkring", "Kvartalsvis", "2026-11-30", "3000"],
-    ["Service", "Halvårsvis", "2027-02-28", "1200"],
-    ["Hemförsäkring", "Årsvis", "2027-08-31", "2400"],
-    ["Besiktning", "Vartannat år", "2028-08-31", "4800"],
+    ["Bilförsäkring", "Kvartalsvis", `${shiftPeriod(period, 2)}-01`, "3000"],
+    ["Service", "Halvårsvis", `${shiftPeriod(period, 5)}-01`, "1200"],
+    ["Hemförsäkring", "Årsvis", `${shiftPeriod(period, 11)}-01`, "2400"],
+    ["Besiktning", "Vartannat år", `${shiftPeriod(period, 23)}-01`, "4800"],
   ]) {
     await page.getByRole("button", { name: "Lägg till utgift" }).click();
     await page.getByRole("radio", { name: "Avsatt utgift" }).check();
@@ -186,7 +197,7 @@ test("registrerar medlemmar, inkomst och utgifter och jämför månader", async 
   await expect(rent).toContainText("Kim, Robin");
   await expect(
     page.getByRole("row").filter({ hasText: "Bilförsäkring" }),
-  ).toContainText("2026-11-30");
+  ).toContainText(`${shiftPeriod(period, 2)}-01`);
 
   await page.getByRole("button", { name: "Lägg till utgift" }).click();
   await page.getByLabel("Namn på utgiften").fill("Ogiltigt belopp");
@@ -227,13 +238,14 @@ test("registrerar medlemmar, inkomst och utgifter och jämför månader", async 
   ).toBeInViewport();
   await page.getByRole("button", { name: "Stäng", exact: true }).click();
 
-  await page.getByRole("link", { name: "Föregående månad" }).click();
-  await expect(
-    page.getByText("Inga utgifter för den här månaden", { exact: true }),
-  ).toBeVisible();
-  await page.goto("/?month=2026-10");
-  await expect(summary).toContainText("Saknas för att täcka utgifterna");
-  await expect(summary).toContainText("1 600,00".replaceAll(" ", "\u00a0"));
+  await page.getByRole("button", { name: "Ändra Hyra", exact: true }).click();
+  await expect(page.getByLabel("Ändringen gäller från")).toHaveValue(period);
+  await page.getByLabel("Belopp per betalning (kr)").fill("11000,25");
+  await page.getByRole("button", { name: "Spara utgift", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(rent).toContainText("11 000,25 kr");
+  await expect(rent).toContainText("Kim, Robin");
+
   await page
     .getByRole("button", { name: "Avsluta Besiktning", exact: true })
     .click();
@@ -260,12 +272,12 @@ test("registrerar medlemmar, inkomst och utgifter och jämför månader", async 
   ).toHaveCount(3);
   await page.getByRole("button", { name: "Ändra Ny lön", exact: true }).click();
   await page.getByRole("checkbox", { name: "Gäller tills vidare" }).uncheck();
-  await page.getByLabel("Till och med").fill("2026-09");
+  await page.getByLabel("Till och med").fill(period);
   await page
     .getByRole("button", { name: "Spara inkomst", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByLabel("Till och med").fill("2026-12");
+  await page.getByLabel("Till och med").fill(shiftPeriod(period, 3));
   await page
     .getByRole("button", { name: "Spara inkomst", exact: true })
     .click();
@@ -279,59 +291,27 @@ test("registrerar medlemmar, inkomst och utgifter och jämför månader", async 
       .getByRole("list", { name: "Hushållets inkomster" })
       .getByRole("listitem"),
   ).toHaveCount(2);
-  await page.goto("/?month=2026-12");
-  await expect(summary).toContainText("8 999,50".replaceAll(" ", "\u00a0"));
-  await page.getByRole("link", { name: "Nästa månad" }).click();
-  await expect(
-    summary.getByText("Ingen aktiv inkomst", { exact: true }).first(),
-  ).toBeVisible();
-  await page.goto("/?month=2026-09");
+  await page.goto(`/?month=${nextPeriod}`);
+  await expect(page).toHaveURL(/\/$/);
   await expect(summary).toContainText("29 000,00".replaceAll(" ", "\u00a0"));
   await expect(
     page.getByRole("row").filter({ hasText: "Besiktning" }),
-  ).toBeVisible();
-  const previousExpense = page
-    .getByRole("row")
-    .filter({ hasText: "Besiktning" });
-  const previousAmount = await previousExpense
-    .getByRole("cell")
-    .nth(1)
-    .innerText();
-  await page
-    .getByRole("button", { name: "Ändra Besiktning", exact: true })
-    .click();
-  await page.getByLabel("Belopp per betalning (kr)").fill("9600");
-  await page.getByRole("button", { name: "Spara utgift", exact: true }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(previousExpense.getByRole("cell").nth(1)).not.toHaveText(
-    previousAmount,
-  );
-  await page.goto("/?month=2026-10");
-  await expect(
-    page.getByRole("row").filter({ hasText: "Besiktning" }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "Ändra Hyra", exact: true }).click();
-  await page.getByLabel("Ändringen gäller från").fill("2026-10");
-  await page.getByLabel("Belopp per betalning (kr)").fill("11000,25");
-  await page.getByRole("button", { name: "Spara utgift", exact: true }).click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(rent).toContainText("11 000,25 kr");
-  await expect(rent).toContainText("Kim, Robin");
-  await page.goto("/?month=2026-09");
-  await expect(rent).toContainText("10 000,00 kr");
 
   const outsiderContext = await browser.newContext();
   try {
     await setSession(outsiderContext, `budget-outsider-${testInfo.retry}`);
     const outsider = await outsiderContext.newPage();
-    await outsider.goto("http://127.0.0.1:3000/onboarding");
+    const origin = new URL(page.url()).origin;
+    await outsider.goto(`${origin}/onboarding`);
     await outsider.getByLabel("Namn på hushållet").fill("Annat hushåll");
     await outsider.getByRole("button", { name: "Skapa mitt hushåll" }).click();
-    await expect(outsider).toHaveURL("http://127.0.0.1:3000/");
+    await expect(outsider).toHaveURL(`${origin}/`);
     await expect(
       outsider.getByText("Inga utgifter för den här månaden", { exact: true }),
     ).toBeVisible();
-    await outsider.goto("http://127.0.0.1:3000/settings");
+    await outsider.goto(`${origin}/settings`);
     await expect(
       outsider.getByText("Inga medlemmar tillagda ännu."),
     ).toBeVisible();

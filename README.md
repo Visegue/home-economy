@@ -6,7 +6,7 @@ Gränssnittet använder sand, aubergine, blått, senap och salvia. All demodata 
 
 ## Månadsbudget
 
-- **Månaden** visar inkomster, direkta utgifter, avsättningar och kvarvarande belopp eller underskott. Årslistan jämför tolv månader.
+- **Månaden** visar den aktuella månadens inkomster, direkta utgifter, avsättningar och kvarvarande belopp eller underskott. Utgifterna visas före sparmålen.
 - Lägg till inkomstkällor under **Inställningar → Hushållets inkomster** med namn, månadsbelopp efter skatt, startmånad och valfri slutmånad. Båda gränsmånaderna ingår. Utan slutmånad gäller inkomsten tills vidare. Aktiva källor summeras per månad.
 - Vid ändrat inkomstbelopp: avsluta den gamla inkomsten och skapa en ny från nästa månad. Då bevaras historiken. Äldre månadsregistreringar och medlemsinkomster migreras enligt [arkitekturen](docs/architecture.md#pengar-och-datum).
 - Utgifter betalas varje månad eller avsätts inför betalning var 2, 3, 6, 12 eller 24:e månad. Ange startmånad och, för avsatta utgifter, nästa betalningsdatum.
