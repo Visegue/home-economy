@@ -1,4 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { SavingDialog, RemoveSavingButton } from "./saving-form";
 import {
   formatSavingsAmount,
@@ -20,11 +26,11 @@ export function SavingsSection({
   return (
     <section aria-label="Dina sparmål" className="mt-4">
       <Card>
-        <CardHeader className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-1">
-            <CardTitle>Sparmål</CardTitle>
-          </div>
-          <SavingDialog key={period} period={period} />
+        <CardHeader>
+          <CardTitle>Sparmål</CardTitle>
+          <CardAction>
+            <SavingDialog key={period} period={period} />
+          </CardAction>
         </CardHeader>
         <CardContent>
           {savings.length === 0 ? (

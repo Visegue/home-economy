@@ -22,20 +22,43 @@ test("registrerar medlemmar, inkomst och utgifter och jämför månader", async 
   ).toBeVisible();
 
   await page.goto("/settings");
+  const memberCard = page.locator('[data-slot="card"]').filter({
+    has: page.getByRole("heading", { name: "Medlemmar i Budgetfamiljen" }),
+  });
+  await expect(memberCard.getByLabel("Medlemmens namn")).toHaveCount(0);
+  await expect(
+    memberCard.locator('[data-slot="card-action"]').getByRole("button", {
+      name: "Lägg till familjemedlem",
+    }),
+  ).toBeVisible();
   for (const name of ["Kim", "Robin"]) {
+    await page.getByRole("button", { name: "Lägg till familjemedlem" }).click();
     await page.getByLabel("Medlemmens namn").fill(name);
-    await page.getByRole("button", { name: "Lägg till medlem" }).click();
+    await page.getByRole("button", { name: "Spara familjemedlem" }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(
       page
         .getByRole("list", { name: "Hushållets medlemmar" })
         .getByText(name, { exact: true }),
     ).toBeVisible();
   }
+  await page.getByRole("button", { name: "Lägg till familjemedlem" }).click();
   await page.getByLabel("Medlemmens namn").fill("Kim");
-  await page.getByRole("button", { name: "Lägg till medlem" }).click();
-  await expect(page.locator("main").getByRole("alert")).toHaveText(
+  await page.getByRole("button", { name: "Spara familjemedlem" }).click();
+  await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(
     "Det finns redan en medlem med det namnet.",
   );
+  await page.getByRole("button", { name: "Stäng", exact: true }).click();
+
+  await expect(
+    page
+      .locator('[data-slot="card"]')
+      .filter({
+        has: page.getByRole("heading", { name: "Hushållets inkomster" }),
+      })
+      .locator('[data-slot="card-action"]')
+      .getByRole("button", { name: "Lägg till inkomst" }),
+  ).toBeVisible();
 
   async function addIncome(
     name: string,
@@ -112,6 +135,15 @@ test("registrerar medlemmar, inkomst och utgifter och jämför månader", async 
       .getByRole("listitem"),
   ).toHaveCount(3);
   await page.goto("/?month=2026-09");
+  await expect(
+    page
+      .locator('[data-slot="card"]')
+      .filter({
+        has: page.getByRole("heading", { name: "Utgifter", exact: true }),
+      })
+      .locator('[data-slot="card-action"]')
+      .getByRole("button", { name: "Lägg till utgift" }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: /inkomst/i })).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: "Registrera inkomst" }),

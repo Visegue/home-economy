@@ -2,7 +2,13 @@ import Link from "next/link";
 import { PiggyBank } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -37,10 +43,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
   );
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <MonthNavigation period={period} />
-        <ExpenseDialog key={period} period={period} people={people} />
-      </div>
+      <MonthNavigation period={period} />
       <section
         aria-label="Månadens nyckeltal"
         className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
@@ -164,6 +167,9 @@ export async function OverviewDashboard({ period }: { period: string }) {
       <Card>
         <CardHeader>
           <CardTitle>Utgifter</CardTitle>
+          <CardAction>
+            <ExpenseDialog key={period} period={period} people={people} />
+          </CardAction>
         </CardHeader>
         <CardContent>
           {summary.expenses.length ? (

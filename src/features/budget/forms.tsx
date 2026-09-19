@@ -1,18 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Plus } from "lucide-react";
 import { useActionState, useState } from "react";
+import { AddCardButton } from "@/components/add-card-button";
+import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -57,42 +51,38 @@ export function ExpenseDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant={expense ? "ghost" : "default"}
-          size={expense ? "sm" : "default"}
-          aria-label={expense ? `Ändra ${expense.name}` : undefined}
-        >
-          {expense ? (
-            "Ändra"
-          ) : (
-            <>
-              <Plus aria-hidden="true" className="size-4" />
-              Lägg till utgift
-            </>
-          )}
-        </Button>
+        {expense ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={`Ändra ${expense.name}`}
+          >
+            Ändra
+          </Button>
+        ) : (
+          <AddCardButton label="Lägg till utgift" />
+        )}
       </DialogTrigger>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>
-            {expense ? "Ändra utgift" : "Lägg till utgift"}
-          </DialogTitle>
-          <DialogDescription>
-            {expense
-              ? "Välj månad för ändringen. Tidigare månaders belopp behålls."
-              : `Gäller från ${monthLabel(period)} och framåt.`}
-            {expense?.endsOn
-              ? ` Perioden slutar ${monthLabel(expense.endsOn.slice(0, 7))}.`
-              : ""}
-          </DialogDescription>
-        </DialogHeader>
-        <ExpenseForm
-          period={period}
-          people={people}
-          expense={expense}
-          onSaved={() => setOpen(false)}
-        />
-      </DialogContent>
+      <FormDialogContent
+        title={expense ? "Ändra utgift" : "Lägg till utgift"}
+        description={
+          (expense
+            ? "Välj månad för ändringen. Tidigare månaders belopp behålls."
+            : `Gäller från ${monthLabel(period)} och framåt.`) +
+          (expense?.endsOn
+            ? ` Perioden slutar ${monthLabel(expense.endsOn.slice(0, 7))}.`
+            : "")
+        }
+      >
+        {open ? (
+          <ExpenseForm
+            period={period}
+            people={people}
+            expense={expense}
+            onSaved={() => setOpen(false)}
+          />
+        ) : null}
+      </FormDialogContent>
     </Dialog>
   );
 }
@@ -339,18 +329,32 @@ function ExpenseForm({
   );
 }
 
-export function PersonForm() {
+export function PersonDialog() {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <AddCardButton label="Lägg till familjemedlem" />
+      </DialogTrigger>
+      <FormDialogContent title="Lägg till familjemedlem">
+        {open ? <PersonForm onSaved={() => setOpen(false)} /> : null}
+      </FormDialogContent>
+    </Dialog>
+  );
+}
+
+function PersonForm({ onSaved }: { onSaved: () => void }) {
   const [name, setName] = useState("");
   const [state, action, pending] = useActionState(
     async (previous: FormState, data: FormData) => {
       const result = await addPersonAction(previous, data);
-      if (result.success) setName("");
+      if (result.success) onSaved();
       return result;
     },
     {},
   );
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} className="space-y-5">
       <div className="flex items-center gap-1">
         <Label htmlFor="person-name">Medlemmens namn</Label>
         <InfoButton title="Hushållets medlemmar">
@@ -360,23 +364,20 @@ export function PersonForm() {
           </p>
         </InfoButton>
       </div>
-      <div className="flex flex-wrap gap-2">
-        <Input
-          id="person-name"
-          name="name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          maxLength={120}
-          required
-          disabled={pending}
-          placeholder="Till exempel Kim"
-          className="w-full sm:w-64"
-        />
-        <Button type="submit" disabled={pending}>
-          {pending ? "Sparar…" : "Lägg till medlem"}
-        </Button>
-      </div>
+      <Input
+        id="person-name"
+        name="name"
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+        maxLength={120}
+        required
+        disabled={pending}
+        placeholder="Till exempel Kim"
+      />
       <Feedback state={state} />
+      <Button type="submit" disabled={pending} className="w-full">
+        {pending ? "Sparar…" : "Spara familjemedlem"}
+      </Button>
     </form>
   );
 }
