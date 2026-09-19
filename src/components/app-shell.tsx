@@ -13,7 +13,6 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
-import { UserMenu } from "@/components/user-menu";
 import { cn } from "@/lib/utils";
 
 const mainNavigation = [
@@ -168,7 +167,9 @@ export function AppShell({
               </Badge>
             </div>
           </div>
-          <UserMenu name={userName} />
+          <span className="hidden max-w-40 truncate text-sm text-muted-foreground md:inline">
+            {userName}
+          </span>
         </header>
 
         {children}

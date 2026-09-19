@@ -6,6 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { DeploymentInfo } from "@/components/deployment-info";
+import { SignOutButton } from "@/components/user-menu";
 import { getBudgetData } from "@/features/budget/data";
 import { PersonDialog } from "@/features/budget/forms";
 import {
@@ -94,6 +95,17 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
       <DeploymentInfo deployment={deployment} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Konto</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">
+            Logga ut från Hemekonomi på den här enheten.
+          </p>
+          <SignOutButton />
+        </CardContent>
+      </Card>
     </div>
   );
 }

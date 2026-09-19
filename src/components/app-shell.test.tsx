@@ -47,6 +47,10 @@ describe("AppShell", () => {
         { name: "Inställningar" },
       ),
     ).toHaveAttribute("href", "/settings");
+    expect(screen.getByText("Ada")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Logga ut" }),
+    ).not.toBeInTheDocument();
   });
 
   it("markerar den aktuella vyn och visar rätt rubrik", () => {

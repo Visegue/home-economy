@@ -20,8 +20,7 @@ import {
 import { monthlyEquivalent } from "@/domain/budget";
 import { getBudgetData } from "@/features/budget/data";
 import { ExpenseDialog, RemoveExpenseButton } from "@/features/budget/forms";
-import { MonthNavigation } from "@/features/budget/month-navigation";
-import { cycles, monthLabel, monthlySummary } from "@/features/budget/model";
+import { cycles, monthlySummary } from "@/features/budget/model";
 import { formatBudgetSek } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { getSavings } from "@/features/savings/data";
@@ -35,7 +34,6 @@ export async function OverviewDashboard({ period }: { period: string }) {
   ]);
   const savingsInOre = totalMonthlySavings(savings, period);
   const summary = monthlySummary(period, expenses, incomes, savingsInOre);
-  const year = period.slice(0, 4);
   const hasIncome = summary.incomeInOre !== null;
   const deficit = summary.remainingInOre !== null && summary.remainingInOre < 0;
   const reserved = summary.expenses.filter(
@@ -43,7 +41,6 @@ export async function OverviewDashboard({ period }: { period: string }) {
   );
   return (
     <div className="space-y-6">
-      <MonthNavigation period={period} />
       <section
         aria-label="Månadens nyckeltal"
         className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]"
@@ -163,7 +160,6 @@ export async function OverviewDashboard({ period }: { period: string }) {
           </CardContent>
         </Card>
       </section>
-      <SavingsSection savings={savings} period={period} />
       <Card>
         <CardHeader>
           <CardTitle>Utgifter</CardTitle>
@@ -265,82 +261,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
           )}
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>Månad för månad · {year}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Månad</TableHead>
-                <TableHead className="text-right">Inkomster</TableHead>
-                <TableHead className="text-right">Direkta</TableHead>
-                <TableHead className="text-right">Avsatta</TableHead>
-                <TableHead className="text-right">Utgifter totalt</TableHead>
-                <TableHead className="text-right">Sparande</TableHead>
-                <TableHead className="text-right">Kvar / underskott</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {Array.from({ length: 12 }, (_, index) => {
-                const rowPeriod = `${year}-${String(index + 1).padStart(2, "0")}`;
-                const row = monthlySummary(
-                  rowPeriod,
-                  expenses,
-                  incomes,
-                  totalMonthlySavings(savings, rowPeriod),
-                );
-                return (
-                  <TableRow
-                    key={rowPeriod}
-                    className={cn(rowPeriod === period && "bg-primary/5")}
-                  >
-                    <TableCell>
-                      <Link
-                        href={`/?month=${rowPeriod}`}
-                        aria-current={rowPeriod === period ? "date" : undefined}
-                        className="font-medium text-primary capitalize underline-offset-4 hover:underline"
-                      >
-                        {monthLabel(rowPeriod).split(" ")[0]}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {row.incomeInOre === null
-                        ? "—"
-                        : formatBudgetSek(row.incomeInOre)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatBudgetSek(row.directInOre)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatBudgetSek(row.allocatedInOre)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatBudgetSek(row.totalInOre)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatBudgetSek(row.savingsInOre)}
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        "text-right font-medium tabular-nums",
-                        row.remainingInOre !== null &&
-                          row.remainingInOre < 0 &&
-                          "text-destructive",
-                      )}
-                    >
-                      {row.remainingInOre === null
-                        ? "—"
-                        : formatBudgetSek(row.remainingInOre)}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <SavingsSection savings={savings} period={period} />
       <Button variant="link" asChild>
         <Link href="/settings">Hushållets medlemmar och inkomster</Link>
       </Button>
