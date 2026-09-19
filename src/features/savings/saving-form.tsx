@@ -1,16 +1,11 @@
 "use client";
 
 import { useActionState, useId, useState } from "react";
-import { Plus } from "lucide-react";
+import { AddCardButton } from "@/components/add-card-button";
+import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { incomeToInput } from "@/features/income/validation";
@@ -132,7 +127,7 @@ function SavingForm({
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" disabled={pending} className="w-full">
         {pending ? "Sparar…" : "Spara sparande"}
       </Button>
     </form>
@@ -150,32 +145,25 @@ export function SavingDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant={saving ? "ghost" : "default"}
-          size="sm"
-          aria-label={saving ? `Ändra ${saving.name}` : undefined}
-        >
-          {saving ? (
-            "Ändra"
-          ) : (
-            <>
-              <Plus aria-hidden="true" /> Lägg till sparande
-            </>
-          )}
-        </Button>
+        {saving ? (
+          <Button variant="ghost" size="sm" aria-label={`Ändra ${saving.name}`}>
+            Ändra
+          </Button>
+        ) : (
+          <AddCardButton label="Lägg till sparande" />
+        )}
       </DialogTrigger>
-      <DialogContent aria-describedby={undefined}>
-        <DialogHeader>
-          <DialogTitle>
-            {saving ? "Ändra sparande" : "Lägg till sparande"}
-          </DialogTitle>
-        </DialogHeader>
-        <SavingForm
-          saving={saving}
-          period={period}
-          onSaved={() => setOpen(false)}
-        />
-      </DialogContent>
+      <FormDialogContent
+        title={saving ? "Ändra sparande" : "Lägg till sparande"}
+      >
+        {open ? (
+          <SavingForm
+            saving={saving}
+            period={period}
+            onSaved={() => setOpen(false)}
+          />
+        ) : null}
+      </FormDialogContent>
     </Dialog>
   );
 }

@@ -22,6 +22,11 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   const summary = page.getByRole("region", { name: "Månadens nyckeltal" });
   await expect(total).toHaveText("0 kr");
   await expect(section).toContainText("Inga sparmål ännu");
+  await expect(
+    section
+      .locator('[data-slot="card-action"]')
+      .getByRole("button", { name: "Lägg till sparande" }),
+  ).toBeVisible();
 
   await section.getByRole("button", { name: "Lägg till sparande" }).click();
   const dialog = page.getByRole("dialog");
