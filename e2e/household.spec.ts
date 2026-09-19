@@ -14,14 +14,25 @@ test("skapar hushåll och behåller det vid återbesök", async ({
     .getByRole("textbox", { name: "Namn på hushållet" })
     .fill("Testfamiljen");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
-  await expect(page).toHaveURL("http://127.0.0.1:3000/");
+  await expect(page).toHaveURL(/\/$/);
   await expect(
     page.getByRole("region", { name: "Månadens nyckeltal" }),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Logga ut" })).toHaveCount(0);
   await expect(page.getByText("Testfamiljen", { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByText("Testfamiljen", { exact: true })).toBeVisible();
   await page.goto("/settings");
+  const accountCard = page.locator('[data-slot="card"]').filter({
+    has: page.getByRole("heading", { name: "Konto", exact: true }),
+  });
+  await expect(accountCard).toBeVisible();
+  await expect(
+    accountCard.getByRole("button", { name: "Logga ut" }),
+  ).toBeVisible();
+  await expect(page.locator('[data-slot="card"]').last()).toContainText(
+    "Konto",
+  );
   await expect(page.getByText("Förhandsversion aaaaaaa")).toBeVisible();
   await page.getByText("Förhandsversion aaaaaaa").click();
   await expect(page.getByText("Gren: codex/test-preview")).toBeVisible();
@@ -31,18 +42,22 @@ test("skapar hushåll och behåller det vid återbesök", async ({
     page.getByRole("link", { name: "Se publicerade releaser på GitHub" }),
   ).toHaveAttribute("href", "https://github.com/Visegue/home-economy/releases");
 
+  const origin = new URL(page.url()).origin;
   const returningContext = await browser.newContext();
   try {
     await setSession(returningContext, token);
     const returningPage = await returningContext.newPage();
-    await returningPage.goto("http://127.0.0.1:3000/onboarding");
-    await expect(returningPage).toHaveURL("http://127.0.0.1:3000/");
+    await returningPage.goto(`${origin}/onboarding`);
+    await expect(returningPage).toHaveURL(`${origin}/`);
     await expect(
       returningPage.getByText("Testfamiljen", { exact: true }),
     ).toBeVisible();
   } finally {
     await returningContext.close();
   }
+
+  await accountCard.getByRole("button", { name: "Logga ut" }).click();
+  await expect(page).toHaveURL(/\/login$/);
 });
 
 for (const token of ["expired", "missing-session"]) {
