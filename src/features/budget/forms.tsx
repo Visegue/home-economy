@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { AddCardButton } from "@/components/add-card-button";
 import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
-import { Button } from "@/components/ui/button";
+import { Pencil, Save, CircleStop, X } from "lucide-react";
+import { ActionIconButton } from "@/components/action-icon-button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,23 +49,33 @@ export function ExpenseDialog({
   expense?: BudgetExpense;
 }) {
   const [open, setOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const removeTriggerRef = useRef<HTMLButtonElement | null>(null);
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        setOpen(value);
+        if (!value) setRemoving(false);
+      }}
+    >
       <DialogTrigger asChild>
         {expense ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={`Ändra ${expense.name}`}
-          >
-            Ändra
-          </Button>
+          <ActionIconButton label={`Ändra ${expense.name}`} tone="edit">
+            <Pencil aria-hidden="true" />
+          </ActionIconButton>
         ) : (
           <AddCardButton label="Lägg till utgift" />
         )}
       </DialogTrigger>
       <FormDialogContent
-        title={expense ? "Ändra utgift" : "Lägg till utgift"}
+        title={
+          removing
+            ? "Avsluta utgift"
+            : expense
+              ? "Ändra utgift"
+              : "Lägg till utgift"
+        }
         description={
           (expense
             ? "Välj månad för ändringen. Tidigare månaders belopp behålls."
@@ -75,12 +86,39 @@ export function ExpenseDialog({
         }
       >
         {open ? (
-          <ExpenseForm
-            period={period}
-            people={people}
-            expense={expense}
-            onSaved={() => setOpen(false)}
-          />
+          <>
+            <div hidden={removing} className="space-y-4">
+              <ExpenseForm
+                period={period}
+                people={people}
+                expense={expense}
+                onRemove={(trigger) => {
+                  removeTriggerRef.current = trigger;
+                  setRemoving(true);
+                }}
+                onSaved={() => {
+                  setOpen(false);
+                  setRemoving(false);
+                }}
+              />
+            </div>
+            {removing && expense ? (
+              <RemoveExpenseForm
+                expense={expense}
+                period={period}
+                onCancel={() => {
+                  setRemoving(false);
+                  requestAnimationFrame(() =>
+                    removeTriggerRef.current?.focus(),
+                  );
+                }}
+                onRemoved={() => {
+                  setOpen(false);
+                  setRemoving(false);
+                }}
+              />
+            ) : null}
+          </>
         ) : null}
       </FormDialogContent>
     </Dialog>
@@ -91,11 +129,13 @@ function ExpenseForm({
   period,
   people,
   onSaved,
+  onRemove,
   expense,
 }: {
   period: string;
   people: { id: number; name: string }[];
   onSaved: () => void;
+  onRemove: (trigger: HTMLButtonElement) => void;
   expense?: BudgetExpense;
 }) {
   const [effectivePeriod, setEffectivePeriod] = useState(period);
@@ -322,9 +362,28 @@ function ExpenseForm({
         </fieldset>
       </fieldset>
       <Feedback state={state} />
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Sparar…" : "Spara utgift"}
-      </Button>
+      <div className="sticky bottom-0 z-10 flex items-center justify-between gap-2 border-t bg-popover pt-3">
+        {expense ? (
+          <ActionIconButton
+            label={`Avsluta ${expense.name}`}
+            tone="danger"
+            disabled={pending}
+            onClick={(event) => onRemove(event.currentTarget)}
+          >
+            <CircleStop aria-hidden="true" />
+          </ActionIconButton>
+        ) : (
+          <span />
+        )}
+        <ActionIconButton
+          type="submit"
+          label="Spara utgift"
+          tone="positive"
+          pending={pending}
+        >
+          <Save aria-hidden="true" />
+        </ActionIconButton>
+      </div>
     </form>
   );
 }
@@ -375,71 +434,79 @@ function PersonForm({ onSaved }: { onSaved: () => void }) {
         placeholder="Till exempel Kim"
       />
       <Feedback state={state} />
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Sparar…" : "Spara familjemedlem"}
-      </Button>
+      <div className="flex justify-end">
+        <ActionIconButton
+          type="submit"
+          label="Spara familjemedlem"
+          tone="positive"
+          pending={pending}
+        >
+          <Save aria-hidden="true" />
+        </ActionIconButton>
+      </div>
     </form>
   );
 }
 
-export function RemoveExpenseButton({
-  id,
-  name,
+function RemoveExpenseForm({
+  expense,
   period,
-  startsOn,
-  endsOn,
+  onCancel,
+  onRemoved,
 }: {
-  id: number;
-  name: string;
+  expense: BudgetExpense;
   period: string;
-  startsOn: string | null;
-  endsOn: string | null;
+  onCancel: () => void;
+  onRemoved: () => void;
 }) {
-  const [confirm, setConfirm] = useState(false);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
   const [effectivePeriod, setEffectivePeriod] = useState(period);
-  const [state, action, pending] = useActionState(removeExpenseAction, {});
-  return confirm ? (
-    <form action={action} className="space-y-2 whitespace-normal">
-      <input type="hidden" name="id" value={id} />
-      <p className="text-xs">
-        Avsluta {name} från vald månad? Tidigare månader behålls.
-      </p>
-      <Label htmlFor={`expense-end-${id}`}>Avsluta från</Label>
+  const [state, action, pending] = useActionState(
+    async (previous: FormState, data: FormData) => {
+      const result = await removeExpenseAction(previous, data);
+      if (result.success) onRemoved();
+      return result;
+    },
+    {},
+  );
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="id" value={expense.id} />
+      <p>Avsluta {expense.name} från vald månad? Tidigare månader behålls.</p>
+      <Label htmlFor={`expense-end-${expense.id}`}>Avsluta från</Label>
       <Input
-        id={`expense-end-${id}`}
+        id={`expense-end-${expense.id}`}
         name="period"
         type="month"
         value={effectivePeriod}
         onChange={(event) => setEffectivePeriod(event.target.value)}
         required
-        min={startsOn?.slice(0, 7) ?? "1900-01"}
-        max={endsOn?.slice(0, 7) ?? "2199-12"}
+        min={expense.startsOn?.slice(0, 7) ?? "1900-01"}
+        max={expense.endsOn?.slice(0, 7) ?? "2199-12"}
         disabled={pending}
       />
-      <div className="flex gap-1">
-        <Button variant="destructive" size="sm" disabled={pending}>
-          Avsluta
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setConfirm(false)}
-          disabled={pending}
-        >
-          Avbryt
-        </Button>
-      </div>
       <Feedback state={state} />
+      <div className="flex justify-end gap-2">
+        <ActionIconButton
+          ref={cancelRef}
+          label="Avbryt"
+          disabled={pending}
+          onClick={onCancel}
+        >
+          <X aria-hidden="true" />
+        </ActionIconButton>
+        <ActionIconButton
+          type="submit"
+          label={`Bekräfta avslut av ${expense.name}`}
+          tone="danger"
+          pending={pending}
+        >
+          <CircleStop aria-hidden="true" />
+        </ActionIconButton>
+      </div>
     </form>
-  ) : (
-    <Button
-      variant="ghost"
-      size="sm"
-      aria-label={`Avsluta ${name}`}
-      onClick={() => setConfirm(true)}
-    >
-      Avsluta
-    </Button>
   );
 }

@@ -39,6 +39,12 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
       .getByRole("button", { name: "Lägg till sparande" }),
   ).toBeVisible();
 
+  await page.getByRole("button", { name: "Lägg till utgift" }).click();
+  await page.getByLabel("Namn på utgiften").fill("Mobil");
+  await page.getByLabel("Belopp per betalning (kr)").fill("250");
+  await page.getByRole("button", { name: "Spara utgift" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
   await section.getByRole("button", { name: "Lägg till sparande" }).click();
   const dialog = page.getByRole("dialog");
   const name = dialog.getByRole("textbox", { name: "Namn på sparandet" });
@@ -61,7 +67,29 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await dialog.getByRole("button", { name: "Spara sparande" }).click();
   await expect(total).toHaveText("1 751,04 kr");
   await expect(summary).toContainText("Kvar efter utgifter och sparande");
-  await expect(summary).toContainText("3 248,96 kr");
+  await expect(summary).toContainText("2 998,96 kr");
+  await expect(
+    section.getByRole("button", { name: "Ändra Buffert" }),
+  ).toHaveCount(0);
+  await section.getByRole("button", { name: "Hantera sparmål" }).click();
+  await expect(page.getByRole("button", { name: "Ändra Mobil" })).toHaveCount(
+    0,
+  );
+  await page.getByRole("button", { name: "Hantera utgifter" }).click();
+  await expect(page.getByRole("button", { name: "Ändra Mobil" })).toBeVisible();
+  await page.getByRole("button", { name: "Klar med utgifter" }).click();
+  await expect(page.getByRole("button", { name: "Ändra Mobil" })).toHaveCount(
+    0,
+  );
+  await expect(
+    section.getByRole("button", { name: "Ändra Buffert" }),
+  ).toBeVisible();
+  await page.mouse.move(0, 0);
+  await page.screenshot({
+    path: testInfo.outputPath("card-management-desktop.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
   await section.getByRole("button", { name: "Ändra Buffert" }).click();
   await expect(dialog.getByLabel("Ändringen gäller från")).toHaveValue(start);
   await expect(amount).toHaveValue("1250,75");
@@ -69,7 +97,7 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await amount.fill("2000,99");
   await dialog.getByRole("button", { name: "Spara sparande" }).click();
   await expect(total).toHaveText("2 501,28 kr");
-  await expect(summary).toContainText("2 498,72 kr");
+  await expect(summary).toContainText("2 248,72 kr");
   await page.reload();
   await expect(section).toContainText("Ny buffert");
   await expect(total).toHaveText("2 501,28 kr");
@@ -77,23 +105,42 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await page.goto("/?month=1900-01");
   await expect(page).toHaveURL(/\/$/);
   await expect(total).toHaveText("2 501,28 kr");
+  await expect(
+    section.getByRole("button", { name: "Ändra Ny buffert" }),
+  ).toHaveCount(0);
+  await section.getByRole("button", { name: "Hantera sparmål" }).click();
+  await section.getByRole("button", { name: "Klar med sparmål" }).click();
+  await expect(
+    section.getByRole("button", { name: "Ändra Ny buffert" }),
+  ).toHaveCount(0);
+  await section.getByRole("button", { name: "Hantera sparmål" }).click();
   await section.getByRole("button", { name: "Ändra Ny buffert" }).click();
   await expect(dialog.getByLabel("Ändringen gäller från")).toHaveValue(start);
   await dialog.getByRole("button", { name: "Stäng", exact: true }).click();
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await section.getByRole("button", { name: "Avsluta Ny buffert" }).click();
-  await section
+  await page.screenshot({
+    path: testInfo.outputPath("card-management-mobile.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
+  await section.getByRole("button", { name: "Ändra Ny buffert" }).click();
+  await dialog.getByRole("button", { name: "Avsluta Ny buffert" }).click();
+  await dialog
     .getByRole("button", { name: "Bekräfta avslut av Ny buffert" })
     .click();
   await expect(total).toHaveText("500,29 kr");
-  await section.getByRole("button", { name: "Avsluta Semester" }).click();
-  await section
+  await section.getByRole("button", { name: "Ändra Semester" }).click();
+  await dialog.getByRole("button", { name: "Avsluta Semester" }).click();
+  await dialog
     .getByRole("button", { name: "Bekräfta avslut av Semester" })
     .click();
   await expect(total).toHaveText("0 kr");
+  await expect(
+    section.getByRole("button", { name: /Hantera sparmål|Klar med sparmål/ }),
+  ).toHaveCount(0);
   await page.reload();
-  await expect(summary).toContainText("5 000,00 kr");
+  await expect(summary).toContainText("4 750,00 kr");
   await expect(section).toContainText("Inga sparmål ännu");
   await expect(total).toHaveText("0 kr");
 });

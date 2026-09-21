@@ -1,24 +1,13 @@
 import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { ActionIconButton } from "@/components/action-icon-button";
 
 export function AddCardButton({
   label,
-  className,
   ...props
-}: Omit<React.ComponentProps<typeof Button>, "children"> & {
-  label: string;
-}) {
+}: Omit<React.ComponentProps<typeof ActionIconButton>, "children">) {
   return (
-    <Button
-      type="button"
-      size="icon"
-      className={cn("size-11 sm:size-8", className)}
-      aria-label={label}
-      title={label}
-      {...props}
-    >
+    <ActionIconButton label={label} tone="primary" {...props}>
       <Plus aria-hidden="true" />
-    </Button>
+    </ActionIconButton>
   );
 }

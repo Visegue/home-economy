@@ -27,6 +27,12 @@ test("sparar valfri nettoinkomst vid onboarding och i inställningarna", async (
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
   await expect(page).toHaveURL("http://127.0.0.1:3000/");
   await page.goto("/settings");
+  await expect(
+    page.getByRole("button", { name: "Ändra Månadsinkomst", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Hantera inkomster", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Ändra Månadsinkomst", exact: true })
     .click();
@@ -41,6 +47,12 @@ test("sparar valfri nettoinkomst vid onboarding och i inställningarna", async (
     .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.reload();
+  await expect(
+    page.getByRole("button", { name: "Ändra Månadsinkomst", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Hantera inkomster", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Ändra Månadsinkomst", exact: true })
     .click();
