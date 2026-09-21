@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { AddCardButton } from "@/components/add-card-button";
 import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
-import { Button } from "@/components/ui/button";
+import { Pencil, Save, Trash2, X } from "lucide-react";
+import { ActionIconButton } from "@/components/action-icon-button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,28 +24,66 @@ export function IncomeDialog({
   defaultStart: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const removeTriggerRef = useRef<HTMLButtonElement | null>(null);
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        setOpen(value);
+        if (!value) setRemoving(false);
+      }}
+    >
       <DialogTrigger asChild>
         {income ? (
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label={`Ändra ${income.name}`}
-          >
-            Ändra
-          </Button>
+          <ActionIconButton label={`Ändra ${income.name}`} tone="edit">
+            <Pencil aria-hidden="true" />
+          </ActionIconButton>
         ) : (
           <AddCardButton label="Lägg till inkomst" />
         )}
       </DialogTrigger>
-      <FormDialogContent title={income ? "Ändra inkomst" : "Lägg till inkomst"}>
+      <FormDialogContent
+        title={
+          removing
+            ? "Ta bort inkomst"
+            : income
+              ? "Ändra inkomst"
+              : "Lägg till inkomst"
+        }
+      >
         {open ? (
-          <IncomeForm
-            income={income}
-            defaultStart={defaultStart}
-            onSaved={() => setOpen(false)}
-          />
+          <>
+            <div hidden={removing} className="space-y-4">
+              <IncomeForm
+                income={income}
+                defaultStart={defaultStart}
+                onRemove={(trigger) => {
+                  removeTriggerRef.current = trigger;
+                  setRemoving(true);
+                }}
+                onSaved={() => {
+                  setOpen(false);
+                  setRemoving(false);
+                }}
+              />
+            </div>
+            {removing && income ? (
+              <RemoveIncomeForm
+                income={income}
+                onCancel={() => {
+                  setRemoving(false);
+                  requestAnimationFrame(() =>
+                    removeTriggerRef.current?.focus(),
+                  );
+                }}
+                onRemoved={() => {
+                  setOpen(false);
+                  setRemoving(false);
+                }}
+              />
+            ) : null}
+          </>
         ) : null}
       </FormDialogContent>
     </Dialog>
@@ -55,10 +94,12 @@ function IncomeForm({
   income,
   defaultStart,
   onSaved,
+  onRemove,
 }: {
   income?: BudgetIncome;
   defaultStart: string;
   onSaved: () => void;
+  onRemove: (trigger: HTMLButtonElement) => void;
 }) {
   const [name, setName] = useState(income?.name ?? "");
   const [amount, setAmount] = useState(
@@ -169,51 +210,83 @@ function IncomeForm({
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" className="w-full" disabled={pending}>
-        {pending ? "Sparar…" : "Spara inkomst"}
-      </Button>
+      <div className="sticky bottom-0 z-10 flex items-center justify-between gap-2 border-t bg-popover pt-3">
+        {income ? (
+          <ActionIconButton
+            label={`Ta bort ${income.name}`}
+            tone="danger"
+            disabled={pending}
+            onClick={(event) => onRemove(event.currentTarget)}
+          >
+            <Trash2 aria-hidden="true" />
+          </ActionIconButton>
+        ) : (
+          <span />
+        )}
+        <ActionIconButton
+          type="submit"
+          label="Spara inkomst"
+          tone="positive"
+          pending={pending}
+        >
+          <Save aria-hidden="true" />
+        </ActionIconButton>
+      </div>
     </form>
   );
 }
 
-export function RemoveIncomeButton({ income }: { income: BudgetIncome }) {
-  const [confirm, setConfirm] = useState(false);
-  const [state, action, pending] = useActionState(removeIncomeAction, {});
-  return confirm ? (
-    <form action={action} className="space-y-2">
+function RemoveIncomeForm({
+  income,
+  onCancel,
+  onRemoved,
+}: {
+  income: BudgetIncome;
+  onCancel: () => void;
+  onRemoved: () => void;
+}) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
+  const [state, action, pending] = useActionState(
+    async (previous: FormState, data: FormData) => {
+      const result = await removeIncomeAction(previous, data);
+      if (result.success) onRemoved();
+      return result;
+    },
+    {},
+  );
+  return (
+    <form action={action} className="space-y-4">
       <input type="hidden" name="id" value={income.id} />
-      <p className="text-sm">
+      <p>
         Ta bort {income.name} för hela perioden? Ange slutmånad för att behålla
         historiken.
       </p>
-      <div className="flex gap-2">
-        <Button size="sm" variant="destructive" disabled={pending}>
-          Bekräfta borttagning
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          disabled={pending}
-          onClick={() => setConfirm(false)}
-        >
-          Avbryt
-        </Button>
-      </div>
       {state.error ? (
         <p role="alert" className="text-sm text-destructive">
           {state.error}
         </p>
       ) : null}
+      <div className="flex justify-end gap-2">
+        <ActionIconButton
+          ref={cancelRef}
+          label="Avbryt"
+          disabled={pending}
+          onClick={onCancel}
+        >
+          <X aria-hidden="true" />
+        </ActionIconButton>
+        <ActionIconButton
+          type="submit"
+          label="Bekräfta borttagning"
+          tone="danger"
+          pending={pending}
+        >
+          <Trash2 aria-hidden="true" />
+        </ActionIconButton>
+      </div>
     </form>
-  ) : (
-    <Button
-      size="sm"
-      variant="ghost"
-      aria-label={`Ta bort ${income.name}`}
-      onClick={() => setConfirm(true)}
-    >
-      Ta bort
-    </Button>
   );
 }
