@@ -1,3 +1,8 @@
+import {
+  CardManagement,
+  CardManagementButton,
+  ManagementOnly,
+} from "@/components/card-management";
 import Link from "next/link";
 import { PiggyBank } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +24,7 @@ import {
 } from "@/components/ui/table";
 import { monthlyEquivalent } from "@/domain/budget";
 import { getBudgetData } from "@/features/budget/data";
-import { ExpenseDialog, RemoveExpenseButton } from "@/features/budget/forms";
+import { ExpenseDialog } from "@/features/budget/forms";
 import { cycles, monthlySummary } from "@/features/budget/model";
 import { formatBudgetSek } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -160,107 +165,113 @@ export async function OverviewDashboard({ period }: { period: string }) {
           </CardContent>
         </Card>
       </section>
-      <Card>
-        <CardHeader>
-          <CardTitle>Utgifter</CardTitle>
-          <CardAction>
-            <ExpenseDialog key={period} period={period} people={people} />
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          {summary.expenses.length ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Utgift</TableHead>
-                  <TableHead className="text-right">Per månad</TableHead>
-                  <TableHead>Typ</TableHead>
-                  <TableHead>Ägare</TableHead>
-                  <TableHead>Nästa betalning</TableHead>
-                  <TableHead className="text-right">Per betalning</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Åtgärder</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {summary.expenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell className="font-medium">
-                      {expense.name}
-                      <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                        {expense.destination === "direct"
-                          ? "Varje månad"
-                          : (cycles.find(
-                              (cycle) =>
-                                cycle.months ===
-                                expense.every *
-                                  (expense.unit === "year" ? 12 : 1),
-                            )?.label ??
-                            `Var ${expense.every}:e ${expense.unit === "week" ? "vecka" : "månad"}`)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {formatBudgetSek(monthlyEquivalent(expense))}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          expense.destination === "allocated"
-                            ? "secondary"
-                            : "outline"
-                        }
-                      >
-                        {expense.destination === "allocated"
-                          ? "Avsatt"
-                          : "Direkt"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-44 whitespace-normal">
-                      {expense.owners.map((owner) => owner.name).join(", ") || (
-                        <span className="text-muted-foreground">
-                          Ingen vald
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>{expense.nextDueOn ?? "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatBudgetSek(expense.amountInOre)}
-                    </TableCell>
-                    <TableCell>
-                      <ExpenseDialog
-                        key={`${expense.id}-${period}`}
-                        expense={expense}
-                        period={period}
-                        people={people}
-                      />
-                      <RemoveExpenseButton
-                        key={`end-${expense.id}-${period}`}
-                        id={expense.id}
-                        name={expense.name}
-                        period={period}
-                        startsOn={expense.startsOn}
-                        endsOn={expense.endsOn}
-                      />
-                    </TableCell>
+      <CardManagement key={period} hasItems={summary.expenses.length > 0}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Utgifter</CardTitle>
+            <CardAction className="flex items-center gap-2">
+              <ExpenseDialog key={period} period={period} people={people} />
+              {summary.expenses.length ? (
+                <CardManagementButton label="utgifter" />
+              ) : null}
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            {summary.expenses.length ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Utgift</TableHead>
+                    <TableHead className="text-right">Per månad</TableHead>
+                    <TableHead>Typ</TableHead>
+                    <TableHead>Ägare</TableHead>
+                    <TableHead>Nästa betalning</TableHead>
+                    <TableHead className="text-right">Per betalning</TableHead>
+                    <ManagementOnly>
+                      <TableHead>
+                        <span className="sr-only">Åtgärder</span>
+                      </TableHead>
+                    </ManagementOnly>
                   </TableRow>
-                ))}
-                <TableRow className="bg-muted/50 font-semibold">
-                  <TableCell>Totalt per månad</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatBudgetSek(summary.totalInOre)}
-                  </TableCell>
-                  <TableCell colSpan={5} />
-                </TableRow>
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="py-8 text-center">
-              <p className="font-medium">Inga utgifter för den här månaden</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {summary.expenses.map((expense) => (
+                    <TableRow key={expense.id}>
+                      <TableCell className="font-medium">
+                        {expense.name}
+                        <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                          {expense.destination === "direct"
+                            ? "Varje månad"
+                            : (cycles.find(
+                                (cycle) =>
+                                  cycle.months ===
+                                  expense.every *
+                                    (expense.unit === "year" ? 12 : 1),
+                              )?.label ??
+                              `Var ${expense.every}:e ${expense.unit === "week" ? "vecka" : "månad"}`)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        {formatBudgetSek(monthlyEquivalent(expense))}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            expense.destination === "allocated"
+                              ? "secondary"
+                              : "outline"
+                          }
+                        >
+                          {expense.destination === "allocated"
+                            ? "Avsatt"
+                            : "Direkt"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-44 whitespace-normal">
+                        {expense.owners
+                          .map((owner) => owner.name)
+                          .join(", ") || (
+                          <span className="text-muted-foreground">
+                            Ingen vald
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>{expense.nextDueOn ?? "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatBudgetSek(expense.amountInOre)}
+                      </TableCell>
+                      <ManagementOnly>
+                        <TableCell className="text-right">
+                          <ExpenseDialog
+                            key={`${expense.id}-${period}`}
+                            expense={expense}
+                            period={period}
+                            people={people}
+                          />
+                        </TableCell>
+                      </ManagementOnly>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-muted/50 font-semibold">
+                    <TableCell>Totalt per månad</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatBudgetSek(summary.totalInOre)}
+                    </TableCell>
+                    <TableCell colSpan={4} />
+                    <ManagementOnly>
+                      <TableCell />
+                    </ManagementOnly>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="py-8 text-center">
+                <p className="font-medium">Inga utgifter för den här månaden</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </CardManagement>
       <SavingsSection savings={savings} period={period} />
       <Button variant="link" asChild>
         <Link href="/settings">Hushållets medlemmar och inkomster</Link>

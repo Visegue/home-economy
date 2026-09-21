@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { AddCardButton } from "@/components/add-card-button";
 import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
-import { Button } from "@/components/ui/button";
+import { Pencil, Save, CircleStop, X } from "lucide-react";
+import { ActionIconButton } from "@/components/action-icon-button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,10 +20,12 @@ import type { Saving } from "./validation";
 function SavingForm({
   saving,
   onSaved,
+  onRemove,
   period,
 }: {
   saving?: Saving;
   onSaved: () => void;
+  onRemove: (trigger: HTMLButtonElement) => void;
   period: string;
 }) {
   const fieldId = useId();
@@ -127,9 +130,28 @@ function SavingForm({
           {state.error}
         </p>
       ) : null}
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Sparar…" : "Spara sparande"}
-      </Button>
+      <div className="sticky bottom-0 z-10 flex items-center justify-between gap-2 border-t bg-popover pt-3">
+        {saving ? (
+          <ActionIconButton
+            label={`Avsluta ${saving.name}`}
+            tone="danger"
+            disabled={pending}
+            onClick={(event) => onRemove(event.currentTarget)}
+          >
+            <CircleStop aria-hidden="true" />
+          </ActionIconButton>
+        ) : (
+          <span />
+        )}
+        <ActionIconButton
+          type="submit"
+          label="Spara sparande"
+          tone="positive"
+          pending={pending}
+        >
+          <Save aria-hidden="true" />
+        </ActionIconButton>
+      </div>
     </form>
   );
 }
@@ -142,59 +164,100 @@ export function SavingDialog({
   period: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const removeTriggerRef = useRef<HTMLButtonElement | null>(null);
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(value) => {
+        setOpen(value);
+        if (!value) setRemoving(false);
+      }}
+    >
       <DialogTrigger asChild>
         {saving ? (
-          <Button variant="ghost" size="sm" aria-label={`Ändra ${saving.name}`}>
-            Ändra
-          </Button>
+          <ActionIconButton label={`Ändra ${saving.name}`} tone="edit">
+            <Pencil aria-hidden="true" />
+          </ActionIconButton>
         ) : (
           <AddCardButton label="Lägg till sparande" />
         )}
       </DialogTrigger>
       <FormDialogContent
-        title={saving ? "Ändra sparande" : "Lägg till sparande"}
+        title={
+          removing
+            ? "Avsluta sparande"
+            : saving
+              ? "Ändra sparande"
+              : "Lägg till sparande"
+        }
       >
         {open ? (
-          <SavingForm
-            saving={saving}
-            period={period}
-            onSaved={() => setOpen(false)}
-          />
+          <>
+            <div hidden={removing} className="space-y-4">
+              <SavingForm
+                saving={saving}
+                period={period}
+                onRemove={(trigger) => {
+                  removeTriggerRef.current = trigger;
+                  setRemoving(true);
+                }}
+                onSaved={() => {
+                  setOpen(false);
+                  setRemoving(false);
+                }}
+              />
+            </div>
+            {removing && saving ? (
+              <RemoveSavingForm
+                saving={saving}
+                period={period}
+                onCancel={() => {
+                  setRemoving(false);
+                  requestAnimationFrame(() =>
+                    removeTriggerRef.current?.focus(),
+                  );
+                }}
+                onRemoved={() => {
+                  setOpen(false);
+                  setRemoving(false);
+                }}
+              />
+            ) : null}
+          </>
         ) : null}
       </FormDialogContent>
     </Dialog>
   );
 }
 
-export function RemoveSavingButton({
+function RemoveSavingForm({
   saving,
   period,
+  onCancel,
+  onRemoved,
 }: {
   saving: Saving;
   period: string;
+  onCancel: () => void;
+  onRemoved: () => void;
 }) {
-  const [confirm, setConfirm] = useState(false);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
   const [effectivePeriod, setEffectivePeriod] = useState(period);
   const [state, action, pending] = useActionState(
-    removeSavingAction.bind(null, saving.id),
+    async (previous: SavingState, data: FormData) => {
+      const result = await removeSavingAction(saving.id, previous, data);
+      if (result.success) onRemoved();
+      return result;
+    },
     {},
   );
-  if (!confirm)
-    return (
-      <Button
-        variant="ghost"
-        size="sm"
-        aria-label={`Avsluta ${saving.name}`}
-        onClick={() => setConfirm(true)}
-      >
-        Avsluta
-      </Button>
-    );
   return (
-    <form action={action} className="space-y-2">
-      <p className="text-xs">Tidigare månader behålls.</p>
+    <form action={action} className="space-y-4">
+      <p>Avsluta {saving.name} från vald månad? Tidigare månader behålls.</p>
       <Label htmlFor={`saving-end-${saving.id}`}>Avsluta från</Label>
       <Input
         id={`saving-end-${saving.id}`}
@@ -207,29 +270,29 @@ export function RemoveSavingButton({
         max={saving.endsOn ?? "2199-12"}
         disabled={pending}
       />
-      <Button
-        type="submit"
-        variant="ghost"
-        size="sm"
-        disabled={pending}
-        aria-label={`Bekräfta avslut av ${saving.name}`}
-      >
-        {pending ? "Avslutar…" : "Avsluta"}
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        disabled={pending}
-        onClick={() => setConfirm(false)}
-      >
-        Avbryt
-      </Button>
       {state.error ? (
         <p role="alert" className="text-sm text-destructive">
           {state.error}
         </p>
       ) : null}
+      <div className="flex justify-end gap-2">
+        <ActionIconButton
+          ref={cancelRef}
+          label="Avbryt"
+          disabled={pending}
+          onClick={onCancel}
+        >
+          <X aria-hidden="true" />
+        </ActionIconButton>
+        <ActionIconButton
+          type="submit"
+          label={`Bekräfta avslut av ${saving.name}`}
+          tone="danger"
+          pending={pending}
+        >
+          <CircleStop aria-hidden="true" />
+        </ActionIconButton>
+      </div>
     </form>
   );
 }

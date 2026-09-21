@@ -93,6 +93,12 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   }
   await addIncome("Lön", "29000", period);
   await addIncome("Bidrag", "1000,50", period);
+  await expect(
+    page.getByRole("button", { name: "Ändra Lön", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Hantera inkomster", exact: true })
+    .click();
   await page.getByRole("button", { name: "Ändra Lön", exact: true }).click();
   await expect(
     page.getByRole("checkbox", { name: "Gäller tills vidare" }),
@@ -118,6 +124,12 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     .getByRole("listitem")
     .filter({ has: page.getByRole("heading", { name: "Lön", exact: true }) });
   await expect(salary).toContainText("tills vidare");
+  await expect(
+    page.getByRole("button", { name: "Ändra Lön", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Hantera inkomster", exact: true })
+    .click();
   await page.getByRole("button", { name: "Ändra Lön", exact: true }).click();
   await expect(
     page.getByRole("checkbox", { name: "Gäller tills vidare" }),
@@ -238,6 +250,18 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   ).toBeInViewport();
   await page.getByRole("button", { name: "Stäng", exact: true }).click();
 
+  await expect(
+    page.getByRole("button", { name: "Ändra Hyra", exact: true }),
+  ).toHaveCount(0);
+  const manageExpenses = page.getByRole("button", {
+    name: "Hantera utgifter",
+    exact: true,
+  });
+  await manageExpenses.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("button", { name: "Klar med utgifter" }),
+  ).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Ändra Hyra", exact: true }).click();
   await expect(page.getByLabel("Ändringen gäller från")).toHaveValue(period);
   await page.getByLabel("Belopp per betalning (kr)").fill("11000,25");
@@ -247,17 +271,26 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await expect(rent).toContainText("Kim, Robin");
 
   await page
+    .getByRole("button", { name: "Ändra Besiktning", exact: true })
+    .click();
+  await page
     .getByRole("button", { name: "Avsluta Besiktning", exact: true })
     .click();
-  await page.getByRole("button", { name: "Avbryt", exact: true }).click();
   await expect(
-    page.getByRole("row").filter({ hasText: "Besiktning" }),
+    page.getByRole("button", { name: "Avbryt", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("button", { name: "Avsluta Besiktning", exact: true }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("dialog", { name: "Ändra utgift" }),
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Avsluta Besiktning", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Avsluta", exact: true })
+    .getByRole("button", { name: "Bekräfta avslut av Besiktning", exact: true })
     .last()
     .click();
   await expect(
@@ -270,6 +303,9 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
       .getByRole("list", { name: "Hushållets inkomster" })
       .getByRole("listitem"),
   ).toHaveCount(3);
+  await page
+    .getByRole("button", { name: "Hantera inkomster", exact: true })
+    .click();
   await page.getByRole("button", { name: "Ändra Ny lön", exact: true }).click();
   await page.getByRole("checkbox", { name: "Gäller tills vidare" }).uncheck();
   await page.getByLabel("Till och med").fill(period);
@@ -282,6 +318,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     .getByRole("button", { name: "Spara inkomst", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Ändra Bidrag", exact: true }).click();
   await page
     .getByRole("button", { name: "Ta bort Bidrag", exact: true })
     .click();
