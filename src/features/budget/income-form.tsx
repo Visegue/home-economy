@@ -2,6 +2,12 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { AddCardButton } from "@/components/add-card-button";
+import {
+  FormDialog,
+  useFormGuard,
+  useCloseAfterSave,
+} from "@/components/form-dialog";
+import { savedMessage, useSaveNotice } from "@/components/save-notice";
 import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
 import { Pencil, Save, Trash2, X } from "lucide-react";
@@ -14,7 +20,13 @@ import {
   saveIncomeAction,
   type FormState,
 } from "./actions";
-import type { BudgetIncome } from "./model";
+import {
+  amountSchema,
+  monthLabel,
+  periodSchema,
+  shiftPeriod,
+  type BudgetIncome,
+} from "./model";
 
 export function IncomeDialog({
   income,
@@ -25,7 +37,7 @@ export function IncomeDialog({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <FormDialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {income ? (
           <ActionIconButton label={`Ändra ${income.name}`} tone="edit">
@@ -44,7 +56,7 @@ export function IncomeDialog({
           />
         ) : null}
       </FormDialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }
 
@@ -83,16 +95,44 @@ function IncomeForm({
   const [amount, setAmount] = useState(
     income ? (income.amountInOre / 100).toFixed(2).replace(".", ",") : "",
   );
-  const [startsOn, setStartsOn] = useState(income?.startsOn ?? defaultStart);
+  const [startsOn, setStartsOn] = useState(
+    income
+      ? defaultStart < income.startsOn
+        ? income.startsOn
+        : income.endsOn && defaultStart > income.endsOn
+          ? income.endsOn
+          : defaultStart
+      : defaultStart,
+  );
   const [endsOn, setEndsOn] = useState(income?.endsOn ?? "");
   const [ongoing, setOngoing] = useState(income?.endsOn == null);
+  const notify = useSaveNotice();
   const [state, action, pending] = useActionState(
     async (previous: FormState, data: FormData) => {
       const result = await saveIncomeAction(previous, data);
-      if (result.success) onSaved();
+      if (result.success) {
+        notify(
+          savedMessage(
+            income ? "Inkomsten uppdaterad" : "Inkomsten tillagd",
+            String(data.get("startsOn")),
+          ),
+        );
+      }
       return result;
     },
     {},
+  );
+
+  useCloseAfterSave(Boolean(state.success), pending, onSaved);
+  const parsedAmount = amountSchema.safeParse(amount);
+  useFormGuard(
+    {
+      name,
+      amount: parsedAmount.success ? parsedAmount.data : amount,
+      startsOn,
+      endsOn: ongoing ? "" : endsOn,
+    },
+    pending,
   );
   return (
     <form action={action} className="space-y-4">
@@ -121,8 +161,9 @@ function IncomeForm({
                 Välj tills vidare om den saknar slutdatum.
               </p>
               <p>
-                Vid ändrat belopp: avsluta gamla inkomsten och lägg till en ny
-                från nästa månad. Då behålls tidigare månaders belopp.
+                Välj vilken månad ändringen börjar gälla. Det gamla beloppet
+                avslutas automatiskt månaden före. Då behålls tidigare månaders
+                belopp.
               </p>
             </InfoButton>
           </div>
@@ -147,13 +188,15 @@ function IncomeForm({
         </label>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="income-start">Från och med</Label>
+            <Label htmlFor="income-start">
+              {income ? "Ändringen gäller från" : "Från och med"}
+            </Label>
             <Input
               id="income-start"
               name="startsOn"
               type="month"
-              min="1900-01"
-              max="2199-12"
+              min={income?.startsOn ?? "1900-01"}
+              max={income?.endsOn ?? "2199-12"}
               value={startsOn}
               onChange={(event) => setStartsOn(event.target.value)}
               required
@@ -179,7 +222,10 @@ function IncomeForm({
         </div>
         {income ? (
           <p className="text-sm text-muted-foreground">
-            Ändringar gäller hela perioden.
+            {periodSchema.safeParse(startsOn).success &&
+            startsOn > income.startsOn
+              ? `Det gamla beloppet behålls till och med ${monthLabel(shiftPeriod(startsOn, -1))}. Ändringen gäller från ${monthLabel(startsOn)}.`
+              : "Ändringen gäller från inkomstens startmånad och ersätter hela perioden."}
           </p>
         ) : null}
       </fieldset>

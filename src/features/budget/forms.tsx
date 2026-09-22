@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { AddCardButton } from "@/components/add-card-button";
+import {
+  FormDialog,
+  useFormGuard,
+  useCloseAfterSave,
+} from "@/components/form-dialog";
+import { savedMessage, useSaveNotice } from "@/components/save-notice";
 import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
 import { Pencil, Save, CircleStop, X } from "lucide-react";
@@ -50,7 +56,7 @@ export function ExpenseDialog({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <FormDialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {expense ? (
           <ActionIconButton label={`Ändra ${expense.name}`} tone="edit">
@@ -80,7 +86,7 @@ export function ExpenseDialog({
           />
         ) : null}
       </FormDialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }
 
@@ -137,15 +143,37 @@ function ExpenseForm({
   const [owners, setOwners] = useState<number[]>(
     expense?.owners.map((owner) => owner.id) ?? [],
   );
+  const notify = useSaveNotice();
   const [state, action, pending] = useActionState(
     async (previous: FormState, data: FormData) => {
       const result = await addExpenseAction(previous, data);
-      if (result.success) onSaved();
+      if (result.success) {
+        notify(
+          savedMessage(
+            expense ? "Utgiften uppdaterad" : "Utgiften tillagd",
+            String(data.get("period")),
+          ),
+        );
+      }
       return result;
     },
     {},
   );
+
+  useCloseAfterSave(Boolean(state.success), pending, onSaved);
   const parsedAmount = amountSchema.safeParse(amount);
+  useFormGuard(
+    {
+      name,
+      amount: parsedAmount.success ? parsedAmount.data : amount,
+      period: effectivePeriod,
+      type,
+      months: type === "allocated" ? months : null,
+      nextDueOn: type === "allocated" ? nextDueOn : null,
+      owners: owners.toSorted((a, b) => a - b),
+    },
+    pending,
+  );
   return (
     <form action={action} className="space-y-5">
       {expense ? <input type="hidden" name="id" value={expense.id} /> : null}
@@ -365,27 +393,33 @@ function ExpenseForm({
 export function PersonDialog() {
   const [open, setOpen] = useState(false);
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <FormDialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <AddCardButton label="Lägg till familjemedlem" />
       </DialogTrigger>
       <FormDialogContent title="Lägg till familjemedlem">
         {open ? <PersonForm onSaved={() => setOpen(false)} /> : null}
       </FormDialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }
 
 function PersonForm({ onSaved }: { onSaved: () => void }) {
   const [name, setName] = useState("");
+  const notify = useSaveNotice();
   const [state, action, pending] = useActionState(
     async (previous: FormState, data: FormData) => {
       const result = await addPersonAction(previous, data);
-      if (result.success) onSaved();
+      if (result.success) {
+        notify("Familjemedlemmen tillagd");
+      }
       return result;
     },
     {},
   );
+
+  useCloseAfterSave(Boolean(state.success), pending, onSaved);
+  useFormGuard({ name }, pending);
   return (
     <form action={action} className="space-y-5">
       <div className="flex items-center gap-1">

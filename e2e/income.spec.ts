@@ -1,5 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { setSession } from "./helpers/session";
+import {
+  currentPeriod,
+  monthLabel,
+  shiftPeriod,
+} from "../src/features/budget/model";
 
 test("sparar valfri nettoinkomst vid onboarding och i inställningarna", async ({
   page,
@@ -58,6 +63,38 @@ test("sparar valfri nettoinkomst vid onboarding och i inställningarna", async (
     .click();
   await expect(amount).toHaveValue("34000,29");
   await page.getByRole("button", { name: "Stäng", exact: true }).click();
+  await page.goto("/");
+  await expect(
+    page.getByRole("region", { name: "Månadens nyckeltal" }),
+  ).toContainText("34 000");
+
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "Hantera inkomster" }).click();
+  await page
+    .getByRole("button", { name: "Ändra Månadsinkomst", exact: true })
+    .click();
+  const nextMonth = shiftPeriod(currentPeriod(), 1);
+  await page.getByLabel("Ändringen gäller från").fill(nextMonth);
+  await amount.fill("36000,50");
+  await expect(page.getByRole("dialog")).toContainText(
+    `Det gamla beloppet behålls till och med ${monthLabel(currentPeriod())}`,
+  );
+  await page.getByRole("button", { name: "Spara inkomst" }).click();
+  await expect(page.getByRole("status")).toContainText(
+    `Inkomsten uppdaterad från ${monthLabel(nextMonth)}`,
+  );
+  const rows = page
+    .getByRole("list", { name: "Hushållets inkomster" })
+    .getByRole("listitem");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.filter({ hasText: "34\u00a0000,29" })).toContainText(
+    monthLabel(currentPeriod()),
+  );
+  await expect(rows.filter({ hasText: "36\u00a0000,50" })).toContainText(
+    monthLabel(nextMonth),
+  );
+  await page.reload();
+  await expect(rows).toHaveCount(2);
   await page.goto("/");
   await expect(
     page.getByRole("region", { name: "Månadens nyckeltal" }),
