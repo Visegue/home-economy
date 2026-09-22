@@ -51,6 +51,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     "Det finns redan en medlem med det namnet.",
   );
   await page.getByRole("button", { name: "Stäng", exact: true }).click();
+  await page.getByRole("button", { name: "Kasta ändringar" }).click();
 
   await expect(
     page
@@ -222,6 +223,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     "Ogiltigt belopp",
   );
   await page.getByRole("button", { name: "Stäng", exact: true }).click();
+  await page.getByRole("button", { name: "Kasta ändringar" }).click();
 
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.screenshot({
@@ -249,6 +251,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     page.getByRole("button", { name: "Spara utgift" }),
   ).toBeInViewport();
   await page.getByRole("button", { name: "Stäng", exact: true }).click();
+  await page.getByRole("button", { name: "Kasta ändringar" }).click();
 
   await expect(
     page.getByRole("button", { name: "Ändra Hyra", exact: true }),

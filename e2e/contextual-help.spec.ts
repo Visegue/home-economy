@@ -60,6 +60,7 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
   await page.screenshot({ path: testInfo.outputPath("expense-help.png") });
   await page.getByRole("button", { name: "Stäng information" }).click();
   await expense.getByRole("button", { name: "Stäng", exact: true }).click();
+  await page.getByRole("button", { name: "Kasta ändringar" }).click();
 
   await page.goto("/settings");
   await page.getByRole("button", { name: "Lägg till familjemedlem" }).click();
@@ -73,6 +74,7 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
   await page.keyboard.press("Escape");
   await expect(page.getByLabel("Medlemmens namn")).toHaveValue("Kim");
   await page.getByRole("button", { name: "Stäng", exact: true }).click();
+  await page.getByRole("button", { name: "Kasta ändringar" }).click();
   await page
     .getByRole("button", { name: "Lägg till inkomst", exact: true })
     .click();
@@ -124,6 +126,7 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
       mobilePage.getByRole("button", { name: "Spara sparande" }),
     ).toBeInViewport();
     await mobilePage.getByRole("button", { name: "Stäng" }).tap();
+    await mobilePage.getByRole("button", { name: "Kasta ändringar" }).tap();
     await mobilePage.setViewportSize({ width: 320, height: 640 });
 
     for (const label of ["Lägg till sparande", "Lägg till utgift"]) {

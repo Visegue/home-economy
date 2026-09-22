@@ -2,6 +2,12 @@
 
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { AddCardButton } from "@/components/add-card-button";
+import {
+  FormDialog,
+  useFormGuard,
+  useCloseAfterSave,
+} from "@/components/form-dialog";
+import { savedMessage, useSaveNotice } from "@/components/save-notice";
 import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
 import { Pencil, Save, CircleStop, X } from "lucide-react";
@@ -9,7 +15,10 @@ import { ActionIconButton } from "@/components/action-icon-button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { incomeToInput } from "@/features/income/validation";
+import {
+  incomeToInput,
+  monthlyIncomeInputSchema,
+} from "@/features/income/validation";
 import {
   removeSavingAction,
   saveSavingAction,
@@ -32,13 +41,32 @@ function SavingForm({
   const [amount, setAmount] = useState(
     incomeToInput(saving?.amountInOre ?? null),
   );
+  const notify = useSaveNotice();
   const [state, action, pending] = useActionState(
     async (previous: SavingState, formData: FormData) => {
       const result = await saveSavingAction(saving?.id, previous, formData);
-      if (result.success) onSaved();
+      if (result.success) {
+        notify(
+          savedMessage(
+            saving ? "Sparandet uppdaterat" : "Sparandet tillagt",
+            String(formData.get("period")),
+          ),
+        );
+      }
       return result;
     },
     {},
+  );
+
+  useCloseAfterSave(Boolean(state.success), pending, onSaved);
+  const parsedAmount = monthlyIncomeInputSchema.safeParse(amount);
+  useFormGuard(
+    {
+      name,
+      amount: parsedAmount.success ? parsedAmount.data : amount,
+      period: effectivePeriod,
+    },
+    pending,
   );
 
   return (
@@ -151,7 +179,7 @@ export function SavingDialog({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <FormDialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {saving ? (
           <ActionIconButton label={`Ändra ${saving.name}`} tone="edit">
@@ -172,7 +200,7 @@ export function SavingDialog({
           />
         ) : null}
       </FormDialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }
 

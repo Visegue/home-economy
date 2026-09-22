@@ -221,18 +221,30 @@ export async function saveIncome(input: IncomeInput) {
       endsOn: input.endsOn ? new Date(`${input.endsOn}-01T00:00:00Z`) : null,
     };
     if (input.id) {
-      const updated = await transaction
-        .update(householdIncomes)
-        .set(values)
+      const [existing] = await transaction
+        .select()
+        .from(householdIncomes)
         .where(
           and(
             eq(householdIncomes.id, input.id),
             eq(householdIncomes.householdId, household.id),
           ),
         )
-        .returning();
-      if (!updated.length) throw new Error("Income not found in household");
-      return updated[0].id;
+        .for("update");
+      if (!existing) throw new Error("Income not found in household");
+      const validity = validateEffectivePeriod(input.startsOn, existing);
+      if (validity.replacesWholePeriod) {
+        const [updated] = await transaction
+          .update(householdIncomes)
+          .set(values)
+          .where(eq(householdIncomes.id, existing.id))
+          .returning();
+        return updated.id;
+      }
+      await transaction
+        .update(householdIncomes)
+        .set({ endsOn: validity.previousEndsOn })
+        .where(eq(householdIncomes.id, existing.id));
     }
     const [income] = await transaction
       .insert(householdIncomes)
