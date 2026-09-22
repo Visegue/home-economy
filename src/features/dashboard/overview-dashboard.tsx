@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/table";
 import { monthlyEquivalent } from "@/domain/budget";
 import { getBudgetData } from "@/features/budget/data";
-import { ExpenseDialog } from "@/features/budget/forms";
+import { ExpenseDialog, RemoveExpenseDialog } from "@/features/budget/forms";
 import { cycles, monthlySummary } from "@/features/budget/model";
 import { formatBudgetSek } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -242,12 +242,19 @@ export async function OverviewDashboard({ period }: { period: string }) {
                       </TableCell>
                       <ManagementOnly>
                         <TableCell className="text-right">
-                          <ExpenseDialog
-                            key={`${expense.id}-${period}`}
-                            expense={expense}
-                            period={period}
-                            people={people}
-                          />
+                          <div className="flex justify-end gap-2">
+                            <ExpenseDialog
+                              key={`${expense.id}-${period}`}
+                              expense={expense}
+                              period={period}
+                              people={people}
+                            />
+                            <RemoveExpenseDialog
+                              key={`remove-${expense.id}-${period}`}
+                              expense={expense}
+                              period={period}
+                            />
+                          </div>
                         </TableCell>
                       </ManagementOnly>
                     </TableRow>

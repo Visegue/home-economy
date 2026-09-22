@@ -14,7 +14,10 @@ import { DeploymentInfo } from "@/components/deployment-info";
 import { SignOutButton } from "@/components/user-menu";
 import { getBudgetData } from "@/features/budget/data";
 import { PersonDialog } from "@/features/budget/forms";
-import { IncomeDialog } from "@/features/budget/income-form";
+import {
+  IncomeDialog,
+  RemoveIncomeDialog,
+} from "@/features/budget/income-form";
 import { currentPeriod, monthLabel } from "@/features/budget/model";
 import { getDeploymentVersion } from "@/lib/deployment-version";
 import { formatBudgetSek } from "@/lib/money";
@@ -64,7 +67,10 @@ export default async function SettingsPage() {
                       </p>
                     </div>
                     <ManagementOnly>
-                      <IncomeDialog income={income} defaultStart={current} />
+                      <div className="flex items-start gap-2">
+                        <IncomeDialog income={income} defaultStart={current} />
+                        <RemoveIncomeDialog income={income} />
+                      </div>
                     </ManagementOnly>
                   </li>
                 ))}

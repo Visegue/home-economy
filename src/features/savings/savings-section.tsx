@@ -10,7 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { SavingDialog } from "./saving-form";
+import { SavingDialog, RemoveSavingDialog } from "./saving-form";
 import {
   formatSavingsAmount,
   totalMonthlySavings,
@@ -66,11 +66,18 @@ export function SavingsSection({
                       </p>
                     </div>
                     <ManagementOnly>
-                      <SavingDialog
-                        key={`${saving.id}-${period}`}
-                        saving={saving}
-                        period={period}
-                      />
+                      <div className="flex items-center gap-2">
+                        <SavingDialog
+                          key={`${saving.id}-${period}`}
+                          saving={saving}
+                          period={period}
+                        />
+                        <RemoveSavingDialog
+                          key={`remove-${saving.id}-${period}`}
+                          saving={saving}
+                          period={period}
+                        />
+                      </div>
                     </ManagementOnly>
                   </li>
                 ))}

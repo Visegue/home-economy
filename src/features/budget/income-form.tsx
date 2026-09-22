@@ -24,16 +24,8 @@ export function IncomeDialog({
   defaultStart: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [removing, setRemoving] = useState(false);
-  const removeTriggerRef = useRef<HTMLButtonElement | null>(null);
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(value) => {
-        setOpen(value);
-        if (!value) setRemoving(false);
-      }}
-    >
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {income ? (
           <ActionIconButton label={`Ändra ${income.name}`} tone="edit">
@@ -43,47 +35,35 @@ export function IncomeDialog({
           <AddCardButton label="Lägg till inkomst" />
         )}
       </DialogTrigger>
-      <FormDialogContent
-        title={
-          removing
-            ? "Ta bort inkomst"
-            : income
-              ? "Ändra inkomst"
-              : "Lägg till inkomst"
-        }
-      >
+      <FormDialogContent title={income ? "Ändra inkomst" : "Lägg till inkomst"}>
         {open ? (
-          <>
-            <div hidden={removing} className="space-y-4">
-              <IncomeForm
-                income={income}
-                defaultStart={defaultStart}
-                onRemove={(trigger) => {
-                  removeTriggerRef.current = trigger;
-                  setRemoving(true);
-                }}
-                onSaved={() => {
-                  setOpen(false);
-                  setRemoving(false);
-                }}
-              />
-            </div>
-            {removing && income ? (
-              <RemoveIncomeForm
-                income={income}
-                onCancel={() => {
-                  setRemoving(false);
-                  requestAnimationFrame(() =>
-                    removeTriggerRef.current?.focus(),
-                  );
-                }}
-                onRemoved={() => {
-                  setOpen(false);
-                  setRemoving(false);
-                }}
-              />
-            ) : null}
-          </>
+          <IncomeForm
+            income={income}
+            defaultStart={defaultStart}
+            onSaved={() => setOpen(false)}
+          />
+        ) : null}
+      </FormDialogContent>
+    </Dialog>
+  );
+}
+
+export function RemoveIncomeDialog({ income }: { income: BudgetIncome }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <ActionIconButton label={`Ta bort ${income.name}`} tone="danger">
+          <Trash2 aria-hidden="true" />
+        </ActionIconButton>
+      </DialogTrigger>
+      <FormDialogContent title="Ta bort inkomst">
+        {open ? (
+          <RemoveIncomeForm
+            income={income}
+            onCancel={() => setOpen(false)}
+            onRemoved={() => setOpen(false)}
+          />
         ) : null}
       </FormDialogContent>
     </Dialog>
@@ -94,12 +74,10 @@ function IncomeForm({
   income,
   defaultStart,
   onSaved,
-  onRemove,
 }: {
   income?: BudgetIncome;
   defaultStart: string;
   onSaved: () => void;
-  onRemove: (trigger: HTMLButtonElement) => void;
 }) {
   const [name, setName] = useState(income?.name ?? "");
   const [amount, setAmount] = useState(
@@ -210,19 +188,7 @@ function IncomeForm({
           {state.error}
         </p>
       ) : null}
-      <div className="sticky bottom-0 z-10 flex items-center justify-between gap-2 border-t bg-popover pt-3">
-        {income ? (
-          <ActionIconButton
-            label={`Ta bort ${income.name}`}
-            tone="danger"
-            disabled={pending}
-            onClick={(event) => onRemove(event.currentTarget)}
-          >
-            <Trash2 aria-hidden="true" />
-          </ActionIconButton>
-        ) : (
-          <span />
-        )}
+      <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-popover pt-3">
         <ActionIconButton
           type="submit"
           label="Spara inkomst"
