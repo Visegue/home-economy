@@ -20,12 +20,10 @@ import type { Saving } from "./validation";
 function SavingForm({
   saving,
   onSaved,
-  onRemove,
   period,
 }: {
   saving?: Saving;
   onSaved: () => void;
-  onRemove: (trigger: HTMLButtonElement) => void;
   period: string;
 }) {
   const fieldId = useId();
@@ -130,19 +128,7 @@ function SavingForm({
           {state.error}
         </p>
       ) : null}
-      <div className="sticky bottom-0 z-10 flex items-center justify-between gap-2 border-t bg-popover pt-3">
-        {saving ? (
-          <ActionIconButton
-            label={`Avsluta ${saving.name}`}
-            tone="danger"
-            disabled={pending}
-            onClick={(event) => onRemove(event.currentTarget)}
-          >
-            <CircleStop aria-hidden="true" />
-          </ActionIconButton>
-        ) : (
-          <span />
-        )}
+      <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-popover pt-3">
         <ActionIconButton
           type="submit"
           label="Spara sparande"
@@ -164,16 +150,8 @@ export function SavingDialog({
   period: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [removing, setRemoving] = useState(false);
-  const removeTriggerRef = useRef<HTMLButtonElement | null>(null);
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(value) => {
-        setOpen(value);
-        if (!value) setRemoving(false);
-      }}
-    >
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {saving ? (
           <ActionIconButton label={`Ändra ${saving.name}`} tone="edit">
@@ -184,47 +162,43 @@ export function SavingDialog({
         )}
       </DialogTrigger>
       <FormDialogContent
-        title={
-          removing
-            ? "Avsluta sparande"
-            : saving
-              ? "Ändra sparande"
-              : "Lägg till sparande"
-        }
+        title={saving ? "Ändra sparande" : "Lägg till sparande"}
       >
         {open ? (
-          <>
-            <div hidden={removing} className="space-y-4">
-              <SavingForm
-                saving={saving}
-                period={period}
-                onRemove={(trigger) => {
-                  removeTriggerRef.current = trigger;
-                  setRemoving(true);
-                }}
-                onSaved={() => {
-                  setOpen(false);
-                  setRemoving(false);
-                }}
-              />
-            </div>
-            {removing && saving ? (
-              <RemoveSavingForm
-                saving={saving}
-                period={period}
-                onCancel={() => {
-                  setRemoving(false);
-                  requestAnimationFrame(() =>
-                    removeTriggerRef.current?.focus(),
-                  );
-                }}
-                onRemoved={() => {
-                  setOpen(false);
-                  setRemoving(false);
-                }}
-              />
-            ) : null}
-          </>
+          <SavingForm
+            saving={saving}
+            period={period}
+            onSaved={() => setOpen(false)}
+          />
+        ) : null}
+      </FormDialogContent>
+    </Dialog>
+  );
+}
+
+export function RemoveSavingDialog({
+  saving,
+  period,
+}: {
+  saving: Saving;
+  period: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <ActionIconButton label={`Avsluta ${saving.name}`} tone="danger">
+          <CircleStop aria-hidden="true" />
+        </ActionIconButton>
+      </DialogTrigger>
+      <FormDialogContent title="Avsluta sparande">
+        {open ? (
+          <RemoveSavingForm
+            saving={saving}
+            period={period}
+            onCancel={() => setOpen(false)}
+            onRemoved={() => setOpen(false)}
+          />
         ) : null}
       </FormDialogContent>
     </Dialog>

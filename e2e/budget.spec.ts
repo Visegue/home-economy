@@ -253,6 +253,9 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await expect(
     page.getByRole("button", { name: "Ändra Hyra", exact: true }),
   ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Avsluta Besiktning", exact: true }),
+  ).toHaveCount(0);
   const manageExpenses = page.getByRole("button", {
     name: "Hantera utgifter",
     exact: true,
@@ -262,6 +265,9 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await expect(
     page.getByRole("button", { name: "Klar med utgifter" }),
   ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.getByRole("button", { name: "Avsluta Besiktning", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Ändra Hyra", exact: true }).click();
   await expect(page.getByLabel("Ändringen gäller från")).toHaveValue(period);
   await page.getByLabel("Belopp per betalning (kr)").fill("11000,25");
@@ -270,9 +276,6 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await expect(rent).toContainText("11 000,25 kr");
   await expect(rent).toContainText("Kim, Robin");
 
-  await page
-    .getByRole("button", { name: "Ändra Besiktning", exact: true })
-    .click();
   await page
     .getByRole("button", { name: "Avsluta Besiktning", exact: true })
     .click();
@@ -283,9 +286,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await expect(
     page.getByRole("button", { name: "Avsluta Besiktning", exact: true }),
   ).toBeFocused();
-  await expect(
-    page.getByRole("dialog", { name: "Ändra utgift" }),
-  ).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page
     .getByRole("button", { name: "Avsluta Besiktning", exact: true })
     .click();
@@ -318,7 +319,6 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     .getByRole("button", { name: "Spara inkomst", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.getByRole("button", { name: "Ändra Bidrag", exact: true }).click();
   await page
     .getByRole("button", { name: "Ta bort Bidrag", exact: true })
     .click();

@@ -71,6 +71,9 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await expect(
     section.getByRole("button", { name: "Ändra Buffert" }),
   ).toHaveCount(0);
+  await expect(section.getByRole("button", { name: /^Avsluta / })).toHaveCount(
+    0,
+  );
   await section.getByRole("button", { name: "Hantera sparmål" }).click();
   await expect(page.getByRole("button", { name: "Ändra Mobil" })).toHaveCount(
     0,
@@ -83,6 +86,9 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   );
   await expect(
     section.getByRole("button", { name: "Ändra Buffert" }),
+  ).toBeVisible();
+  await expect(
+    section.getByRole("button", { name: "Avsluta Buffert", exact: true }),
   ).toBeVisible();
   await page.mouse.move(0, 0);
   await page.screenshot({
@@ -108,11 +114,17 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await expect(
     section.getByRole("button", { name: "Ändra Ny buffert" }),
   ).toHaveCount(0);
+  await expect(section.getByRole("button", { name: /^Avsluta / })).toHaveCount(
+    0,
+  );
   await section.getByRole("button", { name: "Hantera sparmål" }).click();
   await section.getByRole("button", { name: "Klar med sparmål" }).click();
   await expect(
     section.getByRole("button", { name: "Ändra Ny buffert" }),
   ).toHaveCount(0);
+  await expect(section.getByRole("button", { name: /^Avsluta / })).toHaveCount(
+    0,
+  );
   await section.getByRole("button", { name: "Hantera sparmål" }).click();
   await section.getByRole("button", { name: "Ändra Ny buffert" }).click();
   await expect(dialog.getByLabel("Ändringen gäller från")).toHaveValue(start);
@@ -124,14 +136,12 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
     fullPage: true,
     animations: "disabled",
   });
-  await section.getByRole("button", { name: "Ändra Ny buffert" }).click();
-  await dialog.getByRole("button", { name: "Avsluta Ny buffert" }).click();
+  await section.getByRole("button", { name: "Avsluta Ny buffert" }).click();
   await dialog
     .getByRole("button", { name: "Bekräfta avslut av Ny buffert" })
     .click();
   await expect(total).toHaveText("500,29 kr");
-  await section.getByRole("button", { name: "Ändra Semester" }).click();
-  await dialog.getByRole("button", { name: "Avsluta Semester" }).click();
+  await section.getByRole("button", { name: "Avsluta Semester" }).click();
   await dialog
     .getByRole("button", { name: "Bekräfta avslut av Semester" })
     .click();

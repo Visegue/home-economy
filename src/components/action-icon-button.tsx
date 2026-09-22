@@ -42,7 +42,7 @@ export function ActionIconButton({
                   : "ghost"
           }
           className={cn(
-            "size-11 sm:size-8",
+            "size-12 sm:size-10 [&_svg:not([class*='size-'])]:size-5",
             tone === "neutral" && "text-muted-foreground",
             tone === "positive" &&
               "bg-accent text-accent-foreground hover:bg-accent/80 hover:text-accent-foreground",

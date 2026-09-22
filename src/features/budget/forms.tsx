@@ -49,16 +49,8 @@ export function ExpenseDialog({
   expense?: BudgetExpense;
 }) {
   const [open, setOpen] = useState(false);
-  const [removing, setRemoving] = useState(false);
-  const removeTriggerRef = useRef<HTMLButtonElement | null>(null);
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(value) => {
-        setOpen(value);
-        if (!value) setRemoving(false);
-      }}
-    >
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {expense ? (
           <ActionIconButton label={`Ändra ${expense.name}`} tone="edit">
@@ -69,13 +61,7 @@ export function ExpenseDialog({
         )}
       </DialogTrigger>
       <FormDialogContent
-        title={
-          removing
-            ? "Avsluta utgift"
-            : expense
-              ? "Ändra utgift"
-              : "Lägg till utgift"
-        }
+        title={expense ? "Ändra utgift" : "Lägg till utgift"}
         description={
           (expense
             ? "Välj månad för ändringen. Tidigare månaders belopp behålls."
@@ -86,39 +72,41 @@ export function ExpenseDialog({
         }
       >
         {open ? (
-          <>
-            <div hidden={removing} className="space-y-4">
-              <ExpenseForm
-                period={period}
-                people={people}
-                expense={expense}
-                onRemove={(trigger) => {
-                  removeTriggerRef.current = trigger;
-                  setRemoving(true);
-                }}
-                onSaved={() => {
-                  setOpen(false);
-                  setRemoving(false);
-                }}
-              />
-            </div>
-            {removing && expense ? (
-              <RemoveExpenseForm
-                expense={expense}
-                period={period}
-                onCancel={() => {
-                  setRemoving(false);
-                  requestAnimationFrame(() =>
-                    removeTriggerRef.current?.focus(),
-                  );
-                }}
-                onRemoved={() => {
-                  setOpen(false);
-                  setRemoving(false);
-                }}
-              />
-            ) : null}
-          </>
+          <ExpenseForm
+            period={period}
+            people={people}
+            expense={expense}
+            onSaved={() => setOpen(false)}
+          />
+        ) : null}
+      </FormDialogContent>
+    </Dialog>
+  );
+}
+
+export function RemoveExpenseDialog({
+  expense,
+  period,
+}: {
+  expense: BudgetExpense;
+  period: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <ActionIconButton label={`Avsluta ${expense.name}`} tone="danger">
+          <CircleStop aria-hidden="true" />
+        </ActionIconButton>
+      </DialogTrigger>
+      <FormDialogContent title="Avsluta utgift">
+        {open ? (
+          <RemoveExpenseForm
+            expense={expense}
+            period={period}
+            onCancel={() => setOpen(false)}
+            onRemoved={() => setOpen(false)}
+          />
         ) : null}
       </FormDialogContent>
     </Dialog>
@@ -129,13 +117,11 @@ function ExpenseForm({
   period,
   people,
   onSaved,
-  onRemove,
   expense,
 }: {
   period: string;
   people: { id: number; name: string }[];
   onSaved: () => void;
-  onRemove: (trigger: HTMLButtonElement) => void;
   expense?: BudgetExpense;
 }) {
   const [effectivePeriod, setEffectivePeriod] = useState(period);
@@ -362,19 +348,7 @@ function ExpenseForm({
         </fieldset>
       </fieldset>
       <Feedback state={state} />
-      <div className="sticky bottom-0 z-10 flex items-center justify-between gap-2 border-t bg-popover pt-3">
-        {expense ? (
-          <ActionIconButton
-            label={`Avsluta ${expense.name}`}
-            tone="danger"
-            disabled={pending}
-            onClick={(event) => onRemove(event.currentTarget)}
-          >
-            <CircleStop aria-hidden="true" />
-          </ActionIconButton>
-        ) : (
-          <span />
-        )}
+      <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-popover pt-3">
         <ActionIconButton
           type="submit"
           label="Spara utgift"

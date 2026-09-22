@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { Check, Ellipsis } from "lucide-react";
+import { Check, Pencil } from "lucide-react";
 import { ActionIconButton } from "@/components/action-icon-button";
 
 const ManagementContext = createContext<{
@@ -41,7 +41,7 @@ export function CardManagementButton({ label }: { label: string }) {
       aria-pressed={editing}
       onClick={() => setEditing(!editing)}
     >
-      {editing ? <Check aria-hidden="true" /> : <Ellipsis aria-hidden="true" />}
+      {editing ? <Check aria-hidden="true" /> : <Pencil aria-hidden="true" />}
     </ActionIconButton>
   );
 }
