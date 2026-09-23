@@ -172,7 +172,7 @@ Skapa en Resend API-nyckel, verifiera avsändardomänen och sätt `RESEND_API_KE
 
 Alla Google-konton kan registrera sig. Vid första inloggningen skapar användaren ett eget hushåll. En unik databasregel tillåter ett personligt ägarhushåll per konto. Tvingande RLS skyddar datan även om en fråga saknar hushållsfilter.
 
-Google och lösenord länkas vid samma verifierade e-postadress. Google-användare kan lägga till lösenord via **Glömt lösenord?** Google-token lagras krypterat och OAuth-state som en engångspost i databasen.
+Under **Inställningar → Konto** visas kopplade inloggningssätt. Befintligt lösenord ändras med det nuvarande lösenordet; övriga enheter loggas ut. Google-användare kan lägga till lösenord via en mejllänk utan att skapa ett nytt konto eller hushåll. Lösenordskonton kan koppla Google med samma verifierade e-postadress. Flödet **Glömt lösenord?** finns också kvar. Google-token lagras krypterat och OAuth-state som en engångspost i databasen.
 
 ## Dokumentation
 
