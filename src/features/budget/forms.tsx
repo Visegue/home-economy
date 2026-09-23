@@ -11,7 +11,7 @@ import {
 import { savedMessage, useSaveNotice } from "@/components/save-notice";
 import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
-import { Pencil, Save, CircleStop, X } from "lucide-react";
+import { Pencil, Save, CircleStop, Trash2, X } from "lucide-react";
 import { ActionIconButton } from "@/components/action-icon-button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,8 @@ import {
 import { formatBudgetSek } from "@/lib/money";
 import {
   addExpenseAction,
-  addPersonAction,
+  savePersonAction,
+  removePersonAction,
   removeExpenseAction,
   type FormState,
 } from "./actions";
@@ -390,28 +391,48 @@ function ExpenseForm({
   );
 }
 
-export function PersonDialog() {
+type Person = { id: number; name: string };
+
+export function PersonDialog({ person }: { person?: Person }) {
   const [open, setOpen] = useState(false);
   return (
     <FormDialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <AddCardButton label="Lägg till familjemedlem" />
+        {person ? (
+          <ActionIconButton label={`Ändra ${person.name}`} tone="edit">
+            <Pencil aria-hidden="true" />
+          </ActionIconButton>
+        ) : (
+          <AddCardButton label="Lägg till familjemedlem" />
+        )}
       </DialogTrigger>
-      <FormDialogContent title="Lägg till familjemedlem">
-        {open ? <PersonForm onSaved={() => setOpen(false)} /> : null}
+      <FormDialogContent
+        title={person ? "Ändra familjemedlem" : "Lägg till familjemedlem"}
+      >
+        {open ? (
+          <PersonForm person={person} onSaved={() => setOpen(false)} />
+        ) : null}
       </FormDialogContent>
     </FormDialog>
   );
 }
 
-function PersonForm({ onSaved }: { onSaved: () => void }) {
-  const [name, setName] = useState("");
+function PersonForm({
+  person,
+  onSaved,
+}: {
+  person?: Person;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(person?.name ?? "");
   const notify = useSaveNotice();
   const [state, action, pending] = useActionState(
     async (previous: FormState, data: FormData) => {
-      const result = await addPersonAction(previous, data);
+      const result = await savePersonAction(previous, data);
       if (result.success) {
-        notify("Familjemedlemmen tillagd");
+        notify(
+          person ? "Familjemedlemmen uppdaterad" : "Familjemedlemmen tillagd",
+        );
       }
       return result;
     },
@@ -422,6 +443,7 @@ function PersonForm({ onSaved }: { onSaved: () => void }) {
   useFormGuard({ name }, pending);
   return (
     <form action={action} className="space-y-5">
+      {person ? <input type="hidden" name="id" value={person.id} /> : null}
       <div className="flex items-center gap-1">
         <Label htmlFor="person-name">Medlemmens namn</Label>
         <InfoButton title="Hushållets medlemmar">
@@ -450,6 +472,76 @@ function PersonForm({ onSaved }: { onSaved: () => void }) {
           pending={pending}
         >
           <Save aria-hidden="true" />
+        </ActionIconButton>
+      </div>
+    </form>
+  );
+}
+
+export function RemovePersonDialog({ person }: { person: Person }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <ActionIconButton label={`Ta bort ${person.name}`} tone="danger">
+          <Trash2 aria-hidden="true" />
+        </ActionIconButton>
+      </DialogTrigger>
+      <FormDialogContent title="Ta bort familjemedlem">
+        {open ? (
+          <RemovePersonForm person={person} onClose={() => setOpen(false)} />
+        ) : null}
+      </FormDialogContent>
+    </Dialog>
+  );
+}
+
+function RemovePersonForm({
+  person,
+  onClose,
+}: {
+  person: Person;
+  onClose: () => void;
+}) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    cancelRef.current?.focus();
+  }, []);
+  const notify = useSaveNotice();
+  const [state, action, pending] = useActionState(
+    async (previous: FormState, data: FormData) => {
+      const result = await removePersonAction(previous, data);
+      if (result.success) notify("Familjemedlemmen borttagen");
+      return result;
+    },
+    {},
+  );
+  useCloseAfterSave(Boolean(state.success), pending, onClose);
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="id" value={person.id} />
+      <p>Vill du ta bort {person.name} från hushållet?</p>
+      <p className="text-sm text-muted-foreground">
+        Utgifterna finns kvar, men {person.name} tas bort som ägare även för
+        tidigare månader.
+      </p>
+      <Feedback state={state} />
+      <div className="flex justify-end gap-2">
+        <ActionIconButton
+          ref={cancelRef}
+          label="Avbryt"
+          disabled={pending}
+          onClick={onClose}
+        >
+          <X aria-hidden="true" />
+        </ActionIconButton>
+        <ActionIconButton
+          type="submit"
+          label={`Bekräfta borttagning av ${person.name}`}
+          tone="danger"
+          pending={pending}
+        >
+          <Trash2 aria-hidden="true" />
         </ActionIconButton>
       </div>
     </form>

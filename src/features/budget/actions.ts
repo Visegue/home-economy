@@ -8,6 +8,8 @@ import { logServerError } from "@/lib/server-error-log";
 import {
   addExpense,
   addPerson,
+  updatePerson,
+  removePerson,
   removeExpense,
   removeIncome,
   saveIncome,
@@ -95,10 +97,18 @@ export async function removeIncomeAction(
   if (!parsed.success) return { error: "Inkomsten kunde inte hittas." };
   return mutate(() => removeIncome(parsed.data));
 }
-export async function addPersonAction(
+const personIdSchema = z.coerce
+  .number()
+  .int()
+  .positive()
+  .max(Number.MAX_SAFE_INTEGER);
+
+export async function savePersonAction(
   _state: FormState,
   data: FormData,
 ): Promise<FormState> {
+  const id = personIdSchema.optional().safeParse(data.get("id") || undefined);
+  if (!id.success) return { error: "Medlemmen kunde inte hittas." };
   const parsed = z
     .string()
     .trim()
@@ -107,10 +117,24 @@ export async function addPersonAction(
     .safeParse(data.get("name"));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   return mutate(async () =>
-    (await addPerson(parsed.data))
-      ? { success: "Medlemmen har lagts till." }
+    (await (id.data
+      ? updatePerson(id.data, parsed.data)
+      : addPerson(parsed.data)))
+      ? { success: "Medlemmen har sparats." }
       : { error: "Det finns redan en medlem med det namnet." },
   );
+}
+
+export async function removePersonAction(
+  _state: FormState,
+  data: FormData,
+): Promise<FormState> {
+  const id = personIdSchema.safeParse(data.get("id"));
+  if (!id.success) return { error: "Medlemmen kunde inte hittas." };
+  return mutate(async () => {
+    await removePerson(id.data);
+    return { success: "Medlemmen har tagits bort." };
+  });
 }
 export async function removeExpenseAction(
   _state: FormState,

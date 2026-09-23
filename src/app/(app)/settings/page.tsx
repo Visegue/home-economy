@@ -13,7 +13,7 @@ import {
 import { DeploymentInfo } from "@/components/deployment-info";
 import { SignOutButton } from "@/components/user-menu";
 import { getBudgetData } from "@/features/budget/data";
-import { PersonDialog } from "@/features/budget/forms";
+import { PersonDialog, RemovePersonDialog } from "@/features/budget/forms";
 import {
   IncomeDialog,
   RemoveIncomeDialog,
@@ -36,10 +36,10 @@ export default async function SettingsPage() {
           <CardHeader>
             <CardTitle>Hushållets inkomster</CardTitle>
             <CardAction className="flex items-center gap-2">
-              <IncomeDialog defaultStart={current} />
               {incomes.length ? (
                 <CardManagementButton label="inkomster" />
               ) : null}
+              <IncomeDialog defaultStart={current} />
             </CardAction>
           </CardHeader>
           <CardContent>
@@ -83,30 +83,45 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
       </CardManagement>
-      <Card>
-        <CardHeader>
-          <CardTitle>Medlemmar i {household.name}</CardTitle>
-          <CardAction>
-            <PersonDialog />
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          {people.length ? (
-            <ul aria-label="Hushållets medlemmar" className="divide-y">
-              {people.map((person) => (
-                <li key={person.id} className="py-3 font-medium">
-                  {person.name}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Inga medlemmar tillagda ännu.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-      <DeploymentInfo deployment={deployment} />
+      <CardManagement hasItems={people.length > 0}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Medlemmar i {household.name}</CardTitle>
+            <CardAction className="flex items-center gap-2">
+              {people.length ? (
+                <CardManagementButton label="medlemmar" />
+              ) : null}
+              <PersonDialog />
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            {people.length ? (
+              <ul aria-label="Hushållets medlemmar" className="divide-y">
+                {people.map((person) => (
+                  <li
+                    key={person.id}
+                    className="flex flex-wrap items-center justify-between gap-3 py-3"
+                  >
+                    <span className="min-w-0 flex-1 font-medium break-words">
+                      {person.name}
+                    </span>
+                    <ManagementOnly>
+                      <div className="flex items-center gap-2">
+                        <PersonDialog person={person} />
+                        <RemovePersonDialog person={person} />
+                      </div>
+                    </ManagementOnly>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Inga medlemmar tillagda ännu.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </CardManagement>
       <Card>
         <CardHeader>
           <CardTitle>Konto</CardTitle>
@@ -118,6 +133,7 @@ export default async function SettingsPage() {
           <SignOutButton />
         </CardContent>
       </Card>
+      <DeploymentInfo deployment={deployment} />
     </div>
   );
 }
