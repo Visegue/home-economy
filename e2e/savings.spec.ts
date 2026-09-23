@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { setSession } from "./helpers/session";
-import { currentPeriod } from "../src/features/budget/model";
+import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
 
 test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma", async ({
   page,
@@ -18,7 +18,11 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
   await expect(page).toHaveURL(/\/$/);
   const section = page.getByRole("region", { name: "Dina sparmål" });
-  const total = section.getByRole("status", { name: "Totalt månadssparande" });
+  const transfers = page.getByRole("region", {
+    name: "Att föra över",
+    exact: true,
+  });
+  const total = transfers.getByRole("status", { name: "Totalt att föra över" });
   const summary = page.getByRole("region", { name: "Månadens nyckeltal" });
   const cardTitles = await page
     .locator('[data-slot="card-title"]')
@@ -31,7 +35,7 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
     page.getByRole("link", { name: /föregående|nästa månad/i }),
   ).toHaveCount(0);
   await expect(page.getByText(/Månad för månad/)).toHaveCount(0);
-  await expect(total).toHaveText("0 kr");
+  await expect(total).toHaveText("0,00 kr");
   await expect(section).toContainText("Inga sparmål ännu");
   await expect(
     section
@@ -145,12 +149,42 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await dialog
     .getByRole("button", { name: "Bekräfta avslut av Semester" })
     .click();
-  await expect(total).toHaveText("0 kr");
+  await expect(total).toHaveText("0,00 kr");
   await expect(
     section.getByRole("button", { name: /Hantera sparmål|Klar med sparmål/ }),
   ).toHaveCount(0);
   await page.reload();
   await expect(summary).toContainText("4 750,00 kr");
   await expect(section).toContainText("Inga sparmål ännu");
-  await expect(total).toHaveText("0 kr");
+  await expect(total).toHaveText("0,00 kr");
+  // Transfers include reserves and active savings, without counting direct expenses.
+  await page.getByRole("button", { name: "Lägg till utgift" }).click();
+  await page.getByLabel("Namn på utgiften").fill("Årsförsäkring");
+  await page.getByRole("radio", { name: /Avsatt utgift/ }).check();
+  await page.getByLabel("Belopp per betalning (kr)").fill("1203");
+  await page.getByLabel("Nästa betalning", { exact: true }).fill(`${start}-28`);
+  await page.getByRole("button", { name: "Spara utgift" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(total).toHaveText("100,25 kr");
+  await expect(transfers).toContainText("Avsättningskonto100,25 kr");
+  for (const [savingName, savingStart] of [
+    ["Semester", start],
+    ["Framtida sparande", shiftPeriod(start, 1)],
+  ]) {
+    await section.getByRole("button", { name: "Lägg till sparande" }).click();
+    await name.fill(savingName);
+    await amount.fill("50,50");
+    await dialog.getByLabel("Från och med", { exact: true }).fill(savingStart);
+    await dialog.getByRole("button", { name: "Spara sparande" }).click();
+    await expect(dialog).toHaveCount(0);
+  }
+  await expect(total).toHaveText("150,75 kr");
+  await expect(transfers).toContainText("Semester50,50 kr");
+  await expect(transfers).not.toContainText("Framtida sparande");
+  await expect(section).not.toContainText("Att föra över");
+  await page.screenshot({
+    path: testInfo.outputPath("transfers-mobile.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
 });

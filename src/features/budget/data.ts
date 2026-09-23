@@ -279,3 +279,48 @@ export async function addPerson(name: string) {
     return created.length > 0;
   });
 }
+
+export async function updatePerson(id: number, name: string) {
+  return withAuthenticatedDatabase(async (transaction, user) => {
+    const household = await ownedHousehold(transaction, user.id);
+    const [duplicate] = await transaction
+      .select({ id: householdPeople.id })
+      .from(householdPeople)
+      .where(
+        and(
+          eq(householdPeople.householdId, household.id),
+          eq(householdPeople.name, name),
+        ),
+      );
+    if (duplicate && duplicate.id !== id) return false;
+    const updated = await transaction
+      .update(householdPeople)
+      .set({ name })
+      .where(
+        and(
+          eq(householdPeople.id, id),
+          eq(householdPeople.householdId, household.id),
+        ),
+      )
+      .returning();
+    if (!updated.length) throw new Error("Household person not found");
+    return true;
+  });
+}
+
+export async function removePerson(id: number) {
+  return withAuthenticatedDatabase(async (transaction, user) => {
+    const household = await ownedHousehold(transaction, user.id);
+    // Owner links cascade; the expenses themselves are preserved.
+    const removed = await transaction
+      .delete(householdPeople)
+      .where(
+        and(
+          eq(householdPeople.id, id),
+          eq(householdPeople.householdId, household.id),
+        ),
+      )
+      .returning();
+    if (!removed.length) throw new Error("Household person not found");
+  });
+}
