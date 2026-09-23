@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/card";
 import { DeploymentInfo } from "@/components/deployment-info";
 import { SignOutButton } from "@/components/user-menu";
+import { AccountSettings } from "@/features/account/account-settings";
+import { getAccountSettings } from "@/features/account/data";
 import { getBudgetData } from "@/features/budget/data";
 import { PersonDialog, RemovePersonDialog } from "@/features/budget/forms";
 import {
@@ -25,8 +27,16 @@ import packageJson from "../../../../package.json";
 
 export const metadata = { title: "Hushållsinställningar" };
 
-export default async function SettingsPage() {
-  const { people, household, incomes } = await getBudgetData();
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ accountLink?: string }>;
+}) {
+  const [{ people, household, incomes }, account, query] = await Promise.all([
+    getBudgetData(),
+    getAccountSettings(),
+    searchParams,
+  ]);
   const current = currentPeriod();
   const deployment = getDeploymentVersion(packageJson.version, process.env);
   return (
@@ -122,15 +132,27 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
       </CardManagement>
-      <Card>
+      <Card id="account">
         <CardHeader>
           <CardTitle>Konto</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            Logga ut från Hemekonomi på den här enheten.
-          </p>
-          <SignOutButton />
+        <CardContent className="space-y-5">
+          <AccountSettings
+            {...account}
+            linkResult={
+              query.accountLink === "error"
+                ? "error"
+                : query.accountLink === "success"
+                  ? "success"
+                  : undefined
+            }
+          />
+          <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-5">
+            <p className="text-sm text-muted-foreground">
+              Logga ut från Hemekonomi på den här enheten.
+            </p>
+            <SignOutButton />
+          </div>
         </CardContent>
       </Card>
       <DeploymentInfo deployment={deployment} />
