@@ -12,11 +12,13 @@ export function FormDialogContent({
   title,
   description,
   children,
+  onOpenAutoFocus,
+  ...props
 }: {
   title: string;
   description?: string;
   children: ReactNode;
-}) {
+} & Omit<React.ComponentProps<typeof DialogContent>, "title" | "children">) {
   const contentRef = useRef<HTMLDivElement>(null);
   const attachContent = useCallback((content: HTMLDivElement | null) => {
     contentRef.current = content;
@@ -60,9 +62,12 @@ export function FormDialogContent({
 
   return (
     <DialogContent
+      {...props}
       ref={attachContent}
       className="max-h-[90dvh] scroll-py-4 overflow-y-auto overscroll-contain sm:max-w-lg"
       onOpenAutoFocus={(event) => {
+        onOpenAutoFocus?.(event);
+        if (event.defaultPrevented) return;
         if (window.matchMedia("(pointer: coarse)").matches) {
           event.preventDefault();
           contentRef.current?.focus({ preventScroll: true });

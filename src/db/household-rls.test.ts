@@ -43,6 +43,8 @@ import { createPersonalHousehold } from "@/features/households/data";
 import {
   addExpense,
   addPerson,
+  updatePerson,
+  removePerson,
   getBudgetData,
   saveIncome,
   removeIncome,
@@ -568,6 +570,69 @@ describe("budget persistence and isolation", () => {
   });
 });
 
+describe("income changes with history", () => {
+  it("splits a source atomically, preserves boundaries and rejects stale or unauthorized changes", async () => {
+    identity.userId = "owner";
+    const original = {
+      name: "Historiklön",
+      amount: 3_000_050,
+      startsOn: "2026-12",
+      endsOn: "2027-06",
+    };
+    const id = await saveIncome(original);
+    const change = { ...original, id, amount: 3_200_075, startsOn: "2027-01" };
+
+    identity.userId = "outsider";
+    await expect(saveIncome(change)).rejects.toThrow(
+      "Income not found in household",
+    );
+    identity.userId = "owner";
+    await expect(
+      saveIncome({ ...change, startsOn: "2026-11" }),
+    ).rejects.toThrow("giltighetsperiod");
+    // An insert failure must also roll back the preceding end-date update.
+    await expect(saveIncome({ ...change, name: "" })).rejects.toMatchObject({
+      cause: { code: "23514" },
+    });
+    expect(
+      (await getBudgetData()).incomes.find((income) => income.id === id),
+    ).toMatchObject({
+      startsOn: "2026-12",
+      endsOn: "2027-06",
+      amountInOre: 3_000_050,
+    });
+
+    const nextId = await saveIncome(change);
+    expect(nextId).not.toBe(id);
+    const sources = (await getBudgetData()).incomes.filter(
+      (income) => income.id === id || income.id === nextId,
+    );
+    expect(sources).toHaveLength(2);
+    expect(sources.find((income) => income.id === id)).toMatchObject({
+      endsOn: "2026-12",
+      amountInOre: 3_000_050,
+    });
+    expect(sources.find((income) => income.id === nextId)).toMatchObject({
+      startsOn: "2027-01",
+      endsOn: "2027-06",
+      amountInOre: 3_200_075,
+    });
+    expect(monthlySummary("2026-12", [], sources).incomeInOre).toBe(3_000_050);
+    expect(monthlySummary("2027-01", [], sources).incomeInOre).toBe(3_200_075);
+    expect(monthlySummary("2027-06", [], sources).incomeInOre).toBe(3_200_075);
+    expect(monthlySummary("2027-07", [], sources).incomeInOre).toBeNull();
+    await expect(saveIncome(change)).rejects.toThrow("giltighetsperiod");
+    expect(await saveIncome({ ...change, id: nextId, amount: 0 })).toBe(nextId);
+    expect(
+      (await getBudgetData()).incomes.filter(
+        (income) => income.name === original.name,
+      ),
+    ).toHaveLength(2);
+    await removeIncome(id);
+    await removeIncome(nextId);
+  });
+});
+
 describe("initial household income", () => {
   it("creates an ongoing source once and preserves zero and omitted income", async () => {
     for (const [id, amount] of [
@@ -812,5 +877,60 @@ describe("expense and saving validity", () => {
     expect(totalMonthlySavings(savings, "2020-01")).toBe(5025);
     expect(totalMonthlySavings(savings, "2026-12")).toBe(5025);
     expect(totalMonthlySavings(savings, "2027-01")).toBe(6000);
+  });
+});
+
+describe("household person management", () => {
+  it("renames and removes owners without deleting expenses, and isolates other households", async () => {
+    await database.insert(user).values({
+      id: "people-owner",
+      name: "Testperson",
+      email: "people@example.test",
+      emailVerified: true,
+    });
+    identity.userId = "people-owner";
+    await createPersonalHousehold("Medlemstest");
+    await addPerson("Kim");
+    await addPerson("Robin");
+    const people = (await getBudgetData()).people;
+    const kim = people.find((person) => person.name === "Kim")!;
+    const robin = people.find((person) => person.name === "Robin")!;
+    const expenseId = await addExpense({
+      name: "Gemensam hyra",
+      amount: 123456,
+      period: "2026-09",
+      type: "direct",
+      months: 1,
+      nextDueOn: "",
+      ownerIds: [kim.id, robin.id],
+    });
+    expect(await updatePerson(kim.id, "Robin")).toBe(false);
+    expect(await updatePerson(kim.id, "Kim Ny")).toBe(true);
+    expect(await updatePerson(kim.id, "Kim Ny")).toBe(true);
+    let expense = (await getBudgetData()).expenses.find(
+      (item) => item.id === expenseId,
+    )!;
+    expect(expense.owners).toContainEqual({ id: kim.id, name: "Kim Ny" });
+
+    identity.userId = "owner";
+    await expect(updatePerson(kim.id, "Intrång")).rejects.toThrow(
+      "Household person not found",
+    );
+    await expect(removePerson(kim.id)).rejects.toThrow(
+      "Household person not found",
+    );
+
+    identity.userId = "people-owner";
+    await removePerson(kim.id);
+    const budget = await getBudgetData();
+    expect(budget.people).toEqual([robin]);
+    expense = budget.expenses.find((item) => item.id === expenseId)!;
+    expect(expense.amountInOre).toBe(123456);
+    expect(expense.owners).toEqual([robin]);
+    await removePerson(robin.id);
+    expect(
+      (await getBudgetData()).expenses.find((item) => item.id === expenseId)
+        ?.owners,
+    ).toEqual([]);
   });
 });

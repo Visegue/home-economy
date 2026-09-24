@@ -11,6 +11,7 @@ import {
   Card,
   CardAction,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -25,7 +26,12 @@ import {
 import { monthlyEquivalent } from "@/domain/budget";
 import { getBudgetData } from "@/features/budget/data";
 import { ExpenseDialog, RemoveExpenseDialog } from "@/features/budget/forms";
-import { cycles, monthlySummary } from "@/features/budget/model";
+import {
+  cycles,
+  monthlySummary,
+  isActiveInPeriod,
+  monthLabel,
+} from "@/features/budget/model";
 import { formatBudgetSek } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { getSavings } from "@/features/savings/data";
@@ -41,8 +47,8 @@ export async function OverviewDashboard({ period }: { period: string }) {
   const summary = monthlySummary(period, expenses, incomes, savingsInOre);
   const hasIncome = summary.incomeInOre !== null;
   const deficit = summary.remainingInOre !== null && summary.remainingInOre < 0;
-  const reserved = summary.expenses.filter(
-    (expense) => expense.destination === "allocated",
+  const activeSavings = savings.filter((saving) =>
+    isActiveInPeriod(period, saving),
   );
   return (
     <div className="space-y-6">
@@ -130,50 +136,55 @@ export async function OverviewDashboard({ period }: { period: string }) {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-secondary/35">
-          <CardHeader>
-            <PiggyBank
-              className="mb-1 size-6 text-secondary-foreground"
-              aria-hidden="true"
-            />
-            <CardTitle>Att föra över till avsättningskontot</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-semibold tracking-tight tabular-nums">
-              {formatBudgetSek(summary.allocatedInOre)}
-              <span className="ml-1 text-sm font-normal text-muted-foreground">
-                / månad
-              </span>
-            </p>
-
-            {reserved.length ? (
-              <ul className="mt-5 space-y-2 text-sm">
-                {reserved.map((expense) => (
-                  <li key={expense.id} className="flex justify-between gap-4">
-                    <span>{expense.name}</span>
-                    <span className="shrink-0 tabular-nums">
-                      {formatBudgetSek(monthlyEquivalent(expense))}
-                    </span>
-                  </li>
+        <section aria-label="Att föra över">
+          <Card className="h-full bg-secondary/35">
+            <CardHeader>
+              <PiggyBank
+                className="mb-1 size-6 text-secondary-foreground"
+                aria-hidden="true"
+              />
+              <CardTitle>Att föra över</CardTitle>
+              <CardDescription>{monthLabel(period)}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <dl className="space-y-3 text-sm">
+                <div className="flex justify-between gap-4">
+                  <dt>Avsättningskonto</dt>
+                  <dd className="shrink-0 tabular-nums">
+                    {formatBudgetSek(summary.allocatedInOre)}
+                  </dd>
+                </div>
+                {activeSavings.map((saving) => (
+                  <div key={saving.id} className="flex justify-between gap-4">
+                    <dt className="min-w-0 break-words">{saving.name}</dt>
+                    <dd className="shrink-0 tabular-nums">
+                      {formatBudgetSek(saving.amountInOre)}
+                    </dd>
+                  </div>
                 ))}
-              </ul>
-            ) : (
-              <p className="mt-5 text-sm text-muted-foreground">
-                Inga avsatta utgifter ännu.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+              </dl>
+              <div className="mt-5 border-t pt-4">
+                <p className="text-sm font-medium">Totalt att föra över</p>
+                <output
+                  aria-label="Totalt att föra över"
+                  className="mt-1 block text-3xl font-semibold tracking-tight tabular-nums"
+                >
+                  {formatBudgetSek(summary.allocatedInOre + savingsInOre)}
+                </output>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
       </section>
       <CardManagement key={period} hasItems={summary.expenses.length > 0}>
         <Card>
           <CardHeader>
             <CardTitle>Utgifter</CardTitle>
             <CardAction className="flex items-center gap-2">
-              <ExpenseDialog key={period} period={period} people={people} />
               {summary.expenses.length ? (
                 <CardManagementButton label="utgifter" />
               ) : null}
+              <ExpenseDialog key={period} period={period} people={people} />
             </CardAction>
           </CardHeader>
           <CardContent>
