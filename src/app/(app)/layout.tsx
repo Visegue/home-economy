@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { SaveNoticeProvider } from "@/components/save-notice";
 import { getCurrentHousehold } from "@/features/households/data";
 import { requireSession } from "@/lib/auth/session";
 
@@ -16,8 +17,10 @@ export default async function AuthenticatedLayout({
   if (!household) redirect("/onboarding");
 
   return (
-    <AppShell householdName={household.name} userName={session.user.name}>
-      {children}
-    </AppShell>
+    <SaveNoticeProvider>
+      <AppShell householdName={household.name} userName={session.user.name}>
+        {children}
+      </AppShell>
+    </SaveNoticeProvider>
   );
 }

@@ -56,7 +56,15 @@ test("skapar hushåll och behåller det vid återbesök", async ({
     await returningContext.close();
   }
 
-  await accountCard.getByRole("button", { name: "Logga ut" }).click();
+  const [signOutResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/auth/sign-out" &&
+        response.request().method() === "POST",
+    ),
+    accountCard.getByRole("button", { name: "Logga ut" }).click(),
+  ]);
+  expect(signOutResponse.ok()).toBe(true);
   await expect(page).toHaveURL(/\/login$/);
 });
 

@@ -1,6 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import { hashPassword } from "better-auth/crypto";
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -12,6 +13,7 @@ try {
   const database = new PGlite(dataDir);
   try {
     await migrate(drizzle(database), { migrationsFolder: "drizzle" });
+    const passwordHash = await hashPassword("synthetic-account-password-123");
     for (const id of [
       "onboarding-0",
       "onboarding-1",
@@ -23,6 +25,18 @@ try {
       "budget-outsider-1",
       "budget-outsider-2",
       "budget-preview",
+      "form-feedback-0",
+      "form-feedback-1",
+      "form-feedback-2",
+      "members-0",
+      "members-1",
+      "members-2",
+      "account-password-0",
+      "account-password-1",
+      "account-password-2",
+      "account-google-0",
+      "account-google-1",
+      "account-google-2",
       "help-0",
       "help-1",
       "help-2",
@@ -44,6 +58,23 @@ try {
          values ($1, $1, $1, $2, now())`,
         [id, new Date(Date.now() + (id === "expired" ? -1 : 1) * 86_400_000)],
       );
+      if (id.startsWith("account-")) {
+        const credential = id.startsWith("account-password-");
+        await database.query(
+          `insert into public.account (id, account_id, provider_id, user_id, password)
+           values ($1, $1, $2, $1, $3)`,
+          [
+            id,
+            credential ? "credential" : "google",
+            credential ? passwordHash : null,
+          ],
+        );
+        await database.query(
+          `insert into public.session (id, token, user_id, expires_at, updated_at)
+           values ($1, $1, $2, $3, now())`,
+          [`${id}-other`, id, new Date(Date.now() + 86_400_000)],
+        );
+      }
     }
   } finally {
     await database.close();

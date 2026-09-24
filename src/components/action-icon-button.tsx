@@ -64,7 +64,9 @@ export function ActionIconButton({
         </Button>
       </TooltipTrigger>
       {/* An open dialog/menu must own Escape, including during animations. */}
-      {expanded ? null : <TooltipContent>{label}</TooltipContent>}
+      {tooltipOpen && !expanded ? (
+        <TooltipContent>{label}</TooltipContent>
+      ) : null}
     </Tooltip>
   );
 }

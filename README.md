@@ -8,7 +8,8 @@ Gränssnittet använder sand, aubergine, blått, senap och salvia. All demodata 
 
 - **Månaden** visar den aktuella månadens inkomster, direkta utgifter, avsättningar och kvarvarande belopp eller underskott. Utgifterna visas före sparmålen.
 - Lägg till inkomstkällor under **Inställningar → Hushållets inkomster** med namn, månadsbelopp efter skatt, startmånad och valfri slutmånad. Båda gränsmånaderna ingår. Utan slutmånad gäller inkomsten tills vidare. Aktiva källor summeras per månad.
-- Vid ändrat inkomstbelopp: avsluta den gamla inkomsten och skapa en ny från nästa månad. Då bevaras historiken. Äldre månadsregistreringar och medlemsinkomster migreras enligt [arkitekturen](docs/architecture.md#pengar-och-datum).
+- Vid ändrat inkomstbelopp: välj **Ändra** och **Ändringen gäller från**. Det gamla beloppet avslutas automatiskt månaden före och det nya börjar gälla vald månad. Ändring från inkomstens startmånad ersätter hela perioden. Äldre månadsregistreringar och medlemsinkomster migreras enligt [arkitekturen](docs/architecture.md#pengar-och-datum).
+- Formulär för utgifter, inkomster, sparande och familjemedlemmar bekräftar när sparningen lyckats. Stänger du ett ändrat formulär med krysset, Escape eller ett tryck utanför väljer du om du vill fortsätta redigera eller kasta ändringarna.
 - Utgifter betalas varje månad eller avsätts inför betalning var 2, 3, 6, 12 eller 24:e månad. Ange startmånad och, för avsatta utgifter, nästa betalningsdatum.
 - Månadsavsättningen är beloppet delat med intervallet, avrundat till öre per utgift. Betalningen räknas inte dubbelt. Kontots saldo och extra avsättning inför första betalningen ingår inte.
 - **Ändra** och **Avsluta** utgifter eller sparande gäller från vald månad. Tidigare månader behålls. Avslut från startmånaden döljer hela perioden; lagrade kopplingar till månadsplaner finns kvar.
@@ -171,7 +172,7 @@ Skapa en Resend API-nyckel, verifiera avsändardomänen och sätt `RESEND_API_KE
 
 Alla Google-konton kan registrera sig. Vid första inloggningen skapar användaren ett eget hushåll. En unik databasregel tillåter ett personligt ägarhushåll per konto. Tvingande RLS skyddar datan även om en fråga saknar hushållsfilter.
 
-Google och lösenord länkas vid samma verifierade e-postadress. Google-användare kan lägga till lösenord via **Glömt lösenord?** Google-token lagras krypterat och OAuth-state som en engångspost i databasen.
+Under **Inställningar → Konto** visas kopplade inloggningssätt. Befintligt lösenord ändras med det nuvarande lösenordet; övriga enheter loggas ut. Google-användare kan lägga till lösenord via en mejllänk utan att skapa ett nytt konto eller hushåll. Lösenordskonton kan koppla Google med samma verifierade e-postadress. Flödet **Glömt lösenord?** finns också kvar. Google-token lagras krypterat och OAuth-state som en engångspost i databasen.
 
 ## Dokumentation
 

@@ -37,7 +37,7 @@ export function CardManagementButton({ label }: { label: string }) {
   return (
     <ActionIconButton
       label={editing ? `Klar med ${label}` : `Hantera ${label}`}
-      tone={editing ? "positive" : "neutral"}
+      tone={editing ? "positive" : "edit"}
       aria-pressed={editing}
       onClick={() => setEditing(!editing)}
     >
