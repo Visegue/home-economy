@@ -80,7 +80,7 @@ test("byter lösenord, behåller hushållet och loggar ut andra enheter", async 
       }),
     );
     await page.getByRole("button", { name: "Koppla Google" }).click();
-    await expect(page).toHaveURL(/^https:\/\/accounts.google.com\//);
+    await expect(page).toHaveURL(/^https:\/\/accounts\.google\.com\//);
     const state = new URL(page.url()).searchParams.get("state");
     expect(state).toBeTruthy();
     await page.goto(
