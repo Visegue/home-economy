@@ -21,16 +21,35 @@ test("redigerar och tar bort medlemmar med bevarade utgifter", async ({
   }
   const members = page.getByRole("list", { name: "Hushållets medlemmar" });
   await expect(members.getByRole("button")).toHaveCount(0);
+  const addButton = page.getByRole("button", {
+    name: "Lägg till familjemedlem",
+  });
+  const editButton = page.getByRole("button", { name: "Hantera medlemmar" });
   for (const width of [1280, 320]) {
     await page.setViewportSize({ width, height: 800 });
-    const add = await page
-      .getByRole("button", { name: "Lägg till familjemedlem" })
-      .boundingBox();
-    const edit = await page
-      .getByRole("button", { name: "Hantera medlemmar" })
-      .boundingBox();
-    expect(add!.x).toBeGreaterThan(edit!.x);
-    expect(add!.y).toBe(edit!.y);
+    // Responsive button sizes transition after a resize. Measure both buttons
+    // in the same browser frame and retry until their final alignment is reached.
+    await expect(async () => {
+      const positions = await addButton.or(editButton).evaluateAll((buttons) =>
+        buttons.map((button) => {
+          const rect = button.getBoundingClientRect();
+          return {
+            label: button.getAttribute("aria-label"),
+            x: rect.x,
+            y: rect.y,
+            width: rect.width,
+          };
+        }),
+      );
+      const add = positions.find(
+        (button) => button.label === "Lägg till familjemedlem",
+      )!;
+      const edit = positions.find(
+        (button) => button.label === "Hantera medlemmar",
+      )!;
+      expect(add.x).toBeGreaterThanOrEqual(edit.x + edit.width);
+      expect(Math.abs(add.y - edit.y)).toBeLessThan(0.5);
+    }).toPass({ timeout: 5000 });
   }
   const account = await page
     .getByRole("heading", { name: "Konto", exact: true })
