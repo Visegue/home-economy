@@ -1,3 +1,4 @@
+import { MemberAvatar } from "@/components/member-avatar";
 import {
   CardManagement,
   CardManagementButton,
@@ -112,9 +113,12 @@ export default async function SettingsPage({
                     key={person.id}
                     className="flex flex-wrap items-center justify-between gap-3 py-3"
                   >
-                    <span className="min-w-0 flex-1 font-medium break-words">
-                      {person.name}
-                    </span>
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <MemberAvatar name={person.name} color={person.color} />
+                      <span className="min-w-0 font-medium break-words">
+                        {person.name}
+                      </span>
+                    </div>
                     <ManagementOnly>
                       <div className="flex items-center gap-2">
                         <PersonDialog person={person} />

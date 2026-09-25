@@ -1,3 +1,4 @@
+import { MemberAvatarGroup } from "@/components/member-avatar-group";
 import {
   CardManagement,
   CardManagementButton,
@@ -238,10 +239,10 @@ export async function OverviewDashboard({ period }: { period: string }) {
                             : "Direkt"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="max-w-44 whitespace-normal">
-                        {expense.owners
-                          .map((owner) => owner.name)
-                          .join(", ") || (
+                      <TableCell>
+                        {expense.owners.length ? (
+                          <MemberAvatarGroup people={expense.owners} />
+                        ) : (
                           <span className="text-muted-foreground">
                             Ingen vald
                           </span>
