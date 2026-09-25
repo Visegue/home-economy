@@ -890,11 +890,13 @@ describe("household person management", () => {
     });
     identity.userId = "people-owner";
     await createPersonalHousehold("Medlemstest");
-    await addPerson("Kim");
+    await addPerson("Kim", "#356b9b");
     await addPerson("Robin");
     const people = (await getBudgetData()).people;
     const kim = people.find((person) => person.name === "Kim")!;
     const robin = people.find((person) => person.name === "Robin")!;
+    expect(kim.color).toBe("#356b9b");
+    expect(robin.color).toBe("#85466b");
     const expenseId = await addExpense({
       name: "Gemensam hyra",
       amount: 123456,
@@ -905,15 +907,19 @@ describe("household person management", () => {
       ownerIds: [kim.id, robin.id],
     });
     expect(await updatePerson(kim.id, "Robin")).toBe(false);
-    expect(await updatePerson(kim.id, "Kim Ny")).toBe(true);
+    expect(await updatePerson(kim.id, "Kim Ny", "#36735b")).toBe(true);
     expect(await updatePerson(kim.id, "Kim Ny")).toBe(true);
     let expense = (await getBudgetData()).expenses.find(
       (item) => item.id === expenseId,
     )!;
-    expect(expense.owners).toContainEqual({ id: kim.id, name: "Kim Ny" });
+    expect(expense.owners).toContainEqual({
+      id: kim.id,
+      name: "Kim Ny",
+      color: "#36735b",
+    });
 
     identity.userId = "owner";
-    await expect(updatePerson(kim.id, "Intrång")).rejects.toThrow(
+    await expect(updatePerson(kim.id, "Intrång", "#ffffff")).rejects.toThrow(
       "Household person not found",
     );
     await expect(removePerson(kim.id)).rejects.toThrow(
@@ -921,6 +927,13 @@ describe("household person management", () => {
     );
 
     identity.userId = "people-owner";
+    expect(
+      (await getBudgetData()).people.find((person) => person.id === kim.id)
+        ?.color,
+    ).toBe("#36735b");
+    await expect(updatePerson(kim.id, "Kim Ny", "invalid")).rejects.toThrow(
+      /Failed query/,
+    );
     await removePerson(kim.id);
     const budget = await getBudgetData();
     expect(budget.people).toEqual([robin]);

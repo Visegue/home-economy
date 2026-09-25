@@ -297,12 +297,17 @@ export const householdPeople = pgTable(
       .notNull()
       .references(() => households.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    color: text("color").default("#85466b").notNull(),
     createdAt: createdAt(),
   },
   (table) => [
     check(
       "household_people_name_length",
       sql`char_length(${table.name}) between 1 and 120`,
+    ),
+    check(
+      "household_people_color_hex",
+      sql`${table.color} ~ '^#[0-9A-Fa-f]{6}$'`,
     ),
     unique("household_people_id_household_unique").on(
       table.id,

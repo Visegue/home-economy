@@ -16,11 +16,25 @@ test("redigerar och tar bort medlemmar med bevarade utgifter", async ({
   for (const name of ["Kim", "Robin"]) {
     await page.getByRole("button", { name: "Lägg till familjemedlem" }).click();
     await page.getByLabel("Medlemmens namn").fill(name);
+    await page
+      .getByRole("radio", {
+        name: name === "Kim" ? "Blå" : "Grön",
+        exact: true,
+      })
+      .check();
     await page.getByRole("button", { name: "Spara familjemedlem" }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
   }
   const members = page.getByRole("list", { name: "Hushållets medlemmar" });
   await expect(members.getByRole("button")).toHaveCount(0);
+  const kimIcon = members
+    .getByRole("listitem")
+    .filter({ hasText: "Kim" })
+    .locator('[data-slot="member-avatar"]');
+  await expect(kimIcon).toHaveText("KI");
+  await expect(kimIcon).toHaveCSS("background-color", "rgb(53, 107, 155)");
+  await page.reload();
+  await expect(kimIcon).toHaveCSS("background-color", "rgb(53, 107, 155)");
   const addButton = page.getByRole("button", {
     name: "Lägg till familjemedlem",
   });
@@ -80,15 +94,50 @@ test("redigerar och tar bort medlemmar med bevarade utgifter", async ({
     "Det finns redan en medlem med det namnet.",
   );
   await page.getByLabel("Medlemmens namn").fill("Kim Ny");
+  await page.getByLabel("Egen färg").fill("#ffff00");
+  const previewIcon = page
+    .getByRole("dialog")
+    .locator('[data-slot="member-avatar"]');
+  await expect(previewIcon).toHaveText("KN");
+  await expect(previewIcon).toHaveCSS("color", "rgb(0, 0, 0)");
+  await page.screenshot({
+    path: testInfo.outputPath("member-color-mobile.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
   await page.getByRole("button", { name: "Spara familjemedlem" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByRole("button", { name: "Ändra Kim Ny", exact: true }).click();
   await expect(page.getByLabel("Medlemmens namn")).toHaveValue("Kim Ny");
+  await expect(page.getByLabel("Egen färg")).toHaveValue("#ffff00");
+  await page.getByRole("radio", { name: "Röd", exact: true }).check();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("alertdialog")).toBeVisible();
+  await page.getByRole("button", { name: "Kasta ändringar" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Ändra Kim Ny", exact: true }).click();
+  await expect(page.getByLabel("Egen färg")).toHaveValue("#ffff00");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.goto("/");
   const expense = page.getByRole("row").filter({ hasText: "Mobil" });
-  await expect(expense).toContainText("Kim Ny");
+  const ownerButton = expense.getByRole("button", {
+    name: "Ägare: Kim Ny",
+    exact: true,
+  });
+  await expect(ownerButton).toBeVisible();
+  await ownerButton.click();
+  await expect(
+    page
+      .getByRole("dialog", { name: "Utgiftens ägare" })
+      .getByText("Kim Ny", { exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(expense.locator('[data-slot="member-avatar"]')).toHaveText("KN");
+  await expect(expense.locator('[data-slot="member-avatar"]')).toHaveCSS(
+    "background-color",
+    "rgb(255, 255, 0)",
+  );
   await page.goto("/settings");
   await page.getByRole("button", { name: "Hantera medlemmar" }).click();
   await page

@@ -181,7 +181,33 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await page.getByRole("button", { name: "Spara utgift" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const rent = page.getByRole("row").filter({ hasText: "Hyra" });
-  await expect(rent).toContainText("Kim, Robin");
+  const owners = rent.getByRole("button", {
+    name: "Ägare: Kim, Robin",
+    exact: true,
+  });
+  await owners.focus();
+  await expect(page.getByRole("tooltip")).toHaveText("Kim, Robin");
+  await page.keyboard.press("Escape");
+  await owners.click();
+  const ownerDetails = page.getByRole("dialog", { name: "Utgiftens ägare" });
+  await expect(ownerDetails.getByText("Kim", { exact: true })).toBeVisible();
+  await expect(ownerDetails.getByText("Robin", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(ownerDetails).toHaveCount(0);
+  await expect(owners).toBeFocused();
+  const avatars = owners.locator('[data-slot="member-avatar"]');
+  const firstAvatar = await avatars.nth(0).boundingBox();
+  const secondAvatar = await avatars.nth(1).boundingBox();
+  expect(secondAvatar!.x).toBeLessThan(firstAvatar!.x + firstAvatar!.width);
+  await page.screenshot({
+    path: testInfo.outputPath("member-stack.png"),
+    fullPage: true,
+    animations: "disabled",
+  });
+
+  await expect(
+    rent.getByRole("button", { name: "Ägare: Kim, Robin", exact: true }),
+  ).toBeVisible();
 
   for (const [name, cycle, date, amount] of [
     ["Bilförsäkring", "Kvartalsvis", `${shiftPeriod(period, 2)}-01`, "3000"],
@@ -207,7 +233,9 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await expect(summary).toContainText("18 400,50".replaceAll(" ", "\u00a0"));
   await expect(summary).toContainText("1 600,00".replaceAll(" ", "\u00a0"));
   await page.reload();
-  await expect(rent).toContainText("Kim, Robin");
+  await expect(
+    rent.getByRole("button", { name: "Ägare: Kim, Robin", exact: true }),
+  ).toBeVisible();
   await expect(
     page.getByRole("row").filter({ hasText: "Bilförsäkring" }),
   ).toContainText(`${shiftPeriod(period, 2)}-01`);
@@ -277,7 +305,9 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await page.getByRole("button", { name: "Spara utgift", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(rent).toContainText("11 000,25 kr");
-  await expect(rent).toContainText("Kim, Robin");
+  await expect(
+    rent.getByRole("button", { name: "Ägare: Kim, Robin", exact: true }),
+  ).toBeVisible();
 
   await page
     .getByRole("button", { name: "Avsluta Besiktning", exact: true })
