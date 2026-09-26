@@ -1,9 +1,6 @@
 import { z } from "zod";
 import { monthlyEquivalent, type CadenceUnit } from "@/domain/budget";
-import {
-  defaultMemberColor,
-  type HouseholdPerson,
-} from "@/features/households/member-appearance";
+import type { HouseholdPerson } from "@/features/households/member-appearance";
 
 export const personSchema = z.object({
   name: z
@@ -15,7 +12,7 @@ export const personSchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Välj en giltig färg.")
     .transform((color) => color.toLowerCase())
-    .default(defaultMemberColor),
+    .optional(),
 });
 
 export const periodSchema = z

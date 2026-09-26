@@ -1,8 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { memberInitials, memberTextColor } from "./member-appearance";
+import {
+  memberInitials,
+  memberTextColor,
+  memberColorForIndex,
+  memberColors,
+} from "./member-appearance";
 import { personSchema } from "@/features/budget/model";
 
 describe("member icons", () => {
+  it("cycles through the palette in member order", () => {
+    expect(memberColorForIndex(0)).toBe("#d5b8ca");
+    expect(memberColorForIndex(1)).toBe("#d6c6e5");
+    expect(memberColorForIndex(memberColors.length)).toBe("#d5b8ca");
+    expect(memberColorForIndex(memberColors.length + 1)).toBe("#d6c6e5");
+  });
   it.each([
     ["Kim", "KI"],
     ["Kim Ny", "KN"],
@@ -26,7 +37,7 @@ describe("member icons", () => {
     expect(personSchema.parse({ name: "Kim", color: "#AABBCC" }).color).toBe(
       "#aabbcc",
     );
-    expect(personSchema.parse({ name: "Kim" }).color).toBe("#85466b");
+    expect(personSchema.parse({ name: "Kim" }).color).toBeUndefined();
     for (const color of ["red", "#fff", "#1234567", "", "url(example)"]) {
       expect(personSchema.safeParse({ name: "Kim", color }).success).toBe(
         false,

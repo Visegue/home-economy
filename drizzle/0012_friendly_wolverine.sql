@@ -1,0 +1,1 @@
+ALTER TABLE "household_people" ALTER COLUMN "color" SET DEFAULT '#d5b8ca';

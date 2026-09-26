@@ -1,7 +1,7 @@
 import "server-only";
-import { defaultMemberColor } from "@/features/households/member-appearance";
+import { memberColorForIndex } from "@/features/households/member-appearance";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import {
   withAuthenticatedDatabase,
@@ -273,15 +273,20 @@ export async function removeIncome(id: number) {
   });
 }
 
-export async function addPerson(
-  name: string,
-  color: string = defaultMemberColor,
-) {
+export async function addPerson(name: string, color?: string) {
   return withAuthenticatedDatabase(async (transaction, user) => {
     const household = await ownedHousehold(transaction, user.id);
+    let resolvedColor = color;
+    if (resolvedColor === undefined) {
+      const [members] = await transaction
+        .select({ total: count() })
+        .from(householdPeople)
+        .where(eq(householdPeople.householdId, household.id));
+      resolvedColor = memberColorForIndex(members.total);
+    }
     const created = await transaction
       .insert(householdPeople)
-      .values({ householdId: household.id, name, color })
+      .values({ householdId: household.id, name, color: resolvedColor })
       .onConflictDoNothing()
       .returning();
     return created.length > 0;

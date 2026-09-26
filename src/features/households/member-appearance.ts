@@ -1,13 +1,23 @@
 export const memberColors = [
-  { name: "Plommon", value: "#85466b" },
-  { name: "Blå", value: "#356b9b" },
-  { name: "Grön", value: "#36735b" },
-  { name: "Gul", value: "#95621c" },
-  { name: "Röd", value: "#ad4556" },
-  { name: "Turkos", value: "#287a80" },
+  { name: "Plommon", value: "#d5b8ca" },
+  { name: "Lavendel", value: "#d6c6e5" },
+  { name: "Skifferblå", value: "#b9c7df" },
+  { name: "Blå", value: "#c2d8ea" },
+  { name: "Turkos", value: "#b8d9d5" },
+  { name: "Salvia", value: "#c5dcc4" },
+  { name: "Oliv", value: "#d5ddba" },
+  { name: "Gul", value: "#eee0ad" },
+  { name: "Sand", value: "#ead4b5" },
+  { name: "Persika", value: "#edc8b3" },
+  { name: "Rosé", value: "#e6bfc5" },
+  { name: "Rosa", value: "#e3cad5" },
 ] as const;
 
 export const defaultMemberColor = memberColors[0].value;
+
+export function memberColorForIndex(index: number) {
+  return memberColors[index % memberColors.length].value;
+}
 
 export interface HouseholdPerson {
   id: number;
