@@ -6,6 +6,6 @@ allowBuilds:
 
 overrides:
   # Update with better-auth: the adapter's core peer must match the runtime.
-  "@better-auth/core": 1.7.4
+  "@better-auth/core": 1.7.5
   esbuild: 0.28.2
   qs: 6.16.0
