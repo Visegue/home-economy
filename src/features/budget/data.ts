@@ -1,6 +1,7 @@
 import "server-only";
+import { memberColorForIndex } from "@/features/households/member-appearance";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import {
   withAuthenticatedDatabase,
@@ -39,7 +40,11 @@ export async function getBudgetData() {
   return withAuthenticatedDatabase(async (transaction, user) => {
     const household = await ownedHousehold(transaction, user.id);
     const people = await transaction
-      .select({ id: householdPeople.id, name: householdPeople.name })
+      .select({
+        id: householdPeople.id,
+        name: householdPeople.name,
+        color: householdPeople.color,
+      })
       .from(householdPeople)
       .where(eq(householdPeople.householdId, household.id))
       .orderBy(asc(householdPeople.name));
@@ -268,19 +273,27 @@ export async function removeIncome(id: number) {
   });
 }
 
-export async function addPerson(name: string) {
+export async function addPerson(name: string, color?: string) {
   return withAuthenticatedDatabase(async (transaction, user) => {
     const household = await ownedHousehold(transaction, user.id);
+    let resolvedColor = color;
+    if (resolvedColor === undefined) {
+      const [members] = await transaction
+        .select({ total: count() })
+        .from(householdPeople)
+        .where(eq(householdPeople.householdId, household.id));
+      resolvedColor = memberColorForIndex(members.total);
+    }
     const created = await transaction
       .insert(householdPeople)
-      .values({ householdId: household.id, name })
+      .values({ householdId: household.id, name, color: resolvedColor })
       .onConflictDoNothing()
       .returning();
     return created.length > 0;
   });
 }
 
-export async function updatePerson(id: number, name: string) {
+export async function updatePerson(id: number, name: string, color?: string) {
   return withAuthenticatedDatabase(async (transaction, user) => {
     const household = await ownedHousehold(transaction, user.id);
     const [duplicate] = await transaction
@@ -295,7 +308,7 @@ export async function updatePerson(id: number, name: string) {
     if (duplicate && duplicate.id !== id) return false;
     const updated = await transaction
       .update(householdPeople)
-      .set({ name })
+      .set({ name, ...(color === undefined ? {} : { color }) })
       .where(
         and(
           eq(householdPeople.id, id),

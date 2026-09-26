@@ -1,0 +1,2 @@
+ALTER TABLE "household_people" ADD COLUMN "color" text DEFAULT '#85466b' NOT NULL;--> statement-breakpoint
+ALTER TABLE "household_people" ADD CONSTRAINT "household_people_color_hex" CHECK ("household_people"."color" ~ '^#[0-9A-Fa-f]{6}$');

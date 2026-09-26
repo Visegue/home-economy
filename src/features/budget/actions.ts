@@ -14,7 +14,12 @@ import {
   removeIncome,
   saveIncome,
 } from "./data";
-import { expenseSchema, incomeSchema, periodSchema } from "./model";
+import {
+  expenseSchema,
+  incomeSchema,
+  periodSchema,
+  personSchema,
+} from "./model";
 
 export interface FormState {
   error?: string;
@@ -109,17 +114,15 @@ export async function savePersonAction(
 ): Promise<FormState> {
   const id = personIdSchema.optional().safeParse(data.get("id") || undefined);
   if (!id.success) return { error: "Medlemmen kunde inte hittas." };
-  const parsed = z
-    .string()
-    .trim()
-    .min(1, "Ange medlemmens namn.")
-    .max(120, "Namnet får vara högst 120 tecken.")
-    .safeParse(data.get("name"));
+  const parsed = personSchema.safeParse({
+    name: data.get("name"),
+    color: data.get("color") ?? undefined,
+  });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   return mutate(async () =>
     (await (id.data
-      ? updatePerson(id.data, parsed.data)
-      : addPerson(parsed.data)))
+      ? updatePerson(id.data, parsed.data.name, parsed.data.color)
+      : addPerson(parsed.data.name, parsed.data.color)))
       ? { success: "Medlemmen har sparats." }
       : { error: "Det finns redan en medlem med det namnet." },
   );

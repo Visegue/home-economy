@@ -20,8 +20,8 @@ const expense: BudgetExpense = {
   endsOn: null,
   nextDueOn: "2027-08-31",
   owners: [
-    { id: 1, name: "Kim" },
-    { id: 2, name: "Robin" },
+    { id: 1, name: "Kim", color: "#85466b" },
+    { id: 2, name: "Robin", color: "#356b9b" },
   ],
 };
 
