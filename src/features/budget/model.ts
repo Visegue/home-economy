@@ -1,5 +1,19 @@
 import { z } from "zod";
 import { monthlyEquivalent, type CadenceUnit } from "@/domain/budget";
+import type { HouseholdPerson } from "@/features/households/member-appearance";
+
+export const personSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Ange medlemmens namn.")
+    .max(120, "Namnet får vara högst 120 tecken."),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Välj en giltig färg.")
+    .transform((color) => color.toLowerCase())
+    .optional(),
+});
 
 export const periodSchema = z
   .string()
@@ -74,7 +88,7 @@ export interface BudgetExpense {
   startsOn: string | null;
   endsOn: string | null;
   nextDueOn: string | null;
-  owners: { id: number; name: string }[];
+  owners: HouseholdPerson[];
 }
 export const incomeSchema = z
   .object({

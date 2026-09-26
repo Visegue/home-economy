@@ -1,6 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { MemberAvatar } from "@/components/member-avatar";
+import {
+  defaultMemberColor,
+  memberColors,
+  type HouseholdPerson,
+} from "@/features/households/member-appearance";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { AddCardButton } from "@/components/add-card-button";
 import {
@@ -52,7 +58,7 @@ export function ExpenseDialog({
   expense,
 }: {
   period: string;
-  people: { id: number; name: string }[];
+  people: HouseholdPerson[];
   expense?: BudgetExpense;
 }) {
   const [open, setOpen] = useState(false);
@@ -127,7 +133,7 @@ function ExpenseForm({
   expense,
 }: {
   period: string;
-  people: { id: number; name: string }[];
+  people: HouseholdPerson[];
   onSaved: () => void;
   expense?: BudgetExpense;
 }) {
@@ -362,6 +368,11 @@ function ExpenseForm({
                       }
                       className="size-4 accent-primary"
                     />
+                    <MemberAvatar
+                      name={person.name}
+                      color={person.color}
+                      className="size-7 text-[10px]"
+                    />
                     {person.name}
                   </label>
                 ))}
@@ -391,9 +402,15 @@ function ExpenseForm({
   );
 }
 
-type Person = { id: number; name: string };
+type Person = HouseholdPerson;
 
-export function PersonDialog({ person }: { person?: Person }) {
+export function PersonDialog({
+  person,
+  defaultColor = defaultMemberColor,
+}: {
+  person?: Person;
+  defaultColor?: string;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <FormDialog open={open} onOpenChange={setOpen}>
@@ -410,7 +427,11 @@ export function PersonDialog({ person }: { person?: Person }) {
         title={person ? "Ändra familjemedlem" : "Lägg till familjemedlem"}
       >
         {open ? (
-          <PersonForm person={person} onSaved={() => setOpen(false)} />
+          <PersonForm
+            person={person}
+            defaultColor={defaultColor}
+            onSaved={() => setOpen(false)}
+          />
         ) : null}
       </FormDialogContent>
     </FormDialog>
@@ -419,12 +440,15 @@ export function PersonDialog({ person }: { person?: Person }) {
 
 function PersonForm({
   person,
+  defaultColor,
   onSaved,
 }: {
   person?: Person;
+  defaultColor: string;
   onSaved: () => void;
 }) {
   const [name, setName] = useState(person?.name ?? "");
+  const [color, setColor] = useState<string>(person?.color ?? defaultColor);
   const notify = useSaveNotice();
   const [state, action, pending] = useActionState(
     async (previous: FormState, data: FormData) => {
@@ -440,7 +464,7 @@ function PersonForm({
   );
 
   useCloseAfterSave(Boolean(state.success), pending, onSaved);
-  useFormGuard({ name }, pending);
+  useFormGuard({ name, color }, pending);
   return (
     <form action={action} className="space-y-5">
       {person ? <input type="hidden" name="id" value={person.id} /> : null}
@@ -463,6 +487,50 @@ function PersonForm({
         disabled={pending}
         placeholder="Till exempel Kim"
       />
+      <fieldset disabled={pending} className="space-y-3">
+        <legend className="mb-3 text-sm font-medium">Ikonfärg</legend>
+        <div className="flex items-center gap-3">
+          <MemberAvatar name={name} color={color} className="size-14 text-lg" />
+          <p className="text-sm text-muted-foreground">
+            Initialerna följer medlemmens namn.
+          </p>
+        </div>
+        <div className="grid w-fit grid-cols-4 gap-2 sm:grid-cols-6">
+          {memberColors.map((preset) => (
+            <label key={preset.value} className="relative cursor-pointer">
+              <input
+                type="radio"
+                name="colorPreset"
+                value={preset.value}
+                aria-label={preset.name}
+                checked={color === preset.value}
+                onChange={() => setColor(preset.value)}
+                className="peer absolute inset-0 z-10 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+              />
+              <span
+                className="flex size-11 items-center justify-center rounded-full border-2 border-transparent peer-checked:border-foreground peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring"
+                title={preset.name}
+              >
+                <span
+                  className="size-8 rounded-full ring-1 ring-black/10 ring-inset"
+                  style={{ backgroundColor: preset.value }}
+                />
+              </span>
+            </label>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <Input
+            id="person-color"
+            name="color"
+            type="color"
+            value={color}
+            onChange={(event) => setColor(event.target.value)}
+            className="h-11 w-14 cursor-pointer p-1"
+          />
+          <Label htmlFor="person-color">Egen färg</Label>
+        </div>
+      </fieldset>
       <Feedback state={state} />
       <div className="flex justify-end">
         <ActionIconButton
