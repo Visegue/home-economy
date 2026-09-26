@@ -85,6 +85,13 @@
       "when": 1790336111133,
       "tag": "0011_romantic_wrecking_crew",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790409564254,
+      "tag": "0012_friendly_wolverine",
+      "breakpoints": true
     }
   ]
 }

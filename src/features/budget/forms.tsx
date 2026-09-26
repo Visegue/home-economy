@@ -404,7 +404,13 @@ function ExpenseForm({
 
 type Person = HouseholdPerson;
 
-export function PersonDialog({ person }: { person?: Person }) {
+export function PersonDialog({
+  person,
+  defaultColor = defaultMemberColor,
+}: {
+  person?: Person;
+  defaultColor?: string;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <FormDialog open={open} onOpenChange={setOpen}>
@@ -421,7 +427,11 @@ export function PersonDialog({ person }: { person?: Person }) {
         title={person ? "Ändra familjemedlem" : "Lägg till familjemedlem"}
       >
         {open ? (
-          <PersonForm person={person} onSaved={() => setOpen(false)} />
+          <PersonForm
+            person={person}
+            defaultColor={defaultColor}
+            onSaved={() => setOpen(false)}
+          />
         ) : null}
       </FormDialogContent>
     </FormDialog>
@@ -430,15 +440,15 @@ export function PersonDialog({ person }: { person?: Person }) {
 
 function PersonForm({
   person,
+  defaultColor,
   onSaved,
 }: {
   person?: Person;
+  defaultColor: string;
   onSaved: () => void;
 }) {
   const [name, setName] = useState(person?.name ?? "");
-  const [color, setColor] = useState<string>(
-    person?.color ?? defaultMemberColor,
-  );
+  const [color, setColor] = useState<string>(person?.color ?? defaultColor);
   const notify = useSaveNotice();
   const [state, action, pending] = useActionState(
     async (previous: FormState, data: FormData) => {
@@ -485,7 +495,7 @@ function PersonForm({
             Initialerna följer medlemmens namn.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid w-fit grid-cols-4 gap-2 sm:grid-cols-6">
           {memberColors.map((preset) => (
             <label key={preset.value} className="relative cursor-pointer">
               <input

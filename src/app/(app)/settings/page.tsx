@@ -1,4 +1,5 @@
 import { MemberAvatar } from "@/components/member-avatar";
+import { memberColorForIndex } from "@/features/households/member-appearance";
 import {
   CardManagement,
   CardManagementButton,
@@ -102,7 +103,7 @@ export default async function SettingsPage({
               {people.length ? (
                 <CardManagementButton label="medlemmar" />
               ) : null}
-              <PersonDialog />
+              <PersonDialog defaultColor={memberColorForIndex(people.length)} />
             </CardAction>
           </CardHeader>
           <CardContent>

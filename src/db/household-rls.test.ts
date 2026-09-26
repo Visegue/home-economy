@@ -347,6 +347,10 @@ describe("budget persistence and isolation", () => {
     expect(await addPerson("Robin")).toBe(true);
     expect(await addPerson("Kim")).toBe(false);
     let data = await getBudgetData();
+    expect(data.people.map((person) => person.color)).toEqual([
+      "#d5b8ca",
+      "#d6c6e5",
+    ]);
     personId = data.people[0].id;
     ownerHouseholdId = data.household.id;
     await addExpense({
@@ -896,7 +900,7 @@ describe("household person management", () => {
     const kim = people.find((person) => person.name === "Kim")!;
     const robin = people.find((person) => person.name === "Robin")!;
     expect(kim.color).toBe("#356b9b");
-    expect(robin.color).toBe("#85466b");
+    expect(robin.color).toBe("#d6c6e5");
     const expenseId = await addExpense({
       name: "Gemensam hyra",
       amount: 123456,

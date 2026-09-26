@@ -297,7 +297,7 @@ export const householdPeople = pgTable(
       .notNull()
       .references(() => households.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
-    color: text("color").default("#85466b").notNull(),
+    color: text("color").default("#d5b8ca").notNull(),
     createdAt: createdAt(),
   },
   (table) => [
