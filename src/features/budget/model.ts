@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { monthlyEquivalent, type CadenceUnit } from "@/domain/budget";
+import {
+  settlementContribution,
+  settlementForecast,
+  type SettlementPlan,
+} from "@/domain/settlement";
 import type { HouseholdPerson } from "@/features/households/member-appearance";
 
 export const personSchema = z.object({
@@ -37,6 +42,21 @@ export const cycles = [
   { months: 24, label: "Vartannat år" },
 ] as const;
 const dateSchema = z.iso.date({ error: "Ange ett giltigt betalningsdatum." });
+const percentageSchema = amountSchema
+  .transform((value) => value / 100)
+  .refine((value) => value <= 100, "Ange en procentsats mellan 0 och 100.");
+export const settlementAdjustmentsSchema = z
+  .object({
+    markupAmountInOre: amountSchema.nullable(),
+    markupPercent: percentageSchema.nullable(),
+    inflationPercent: percentageSchema.nullable(),
+  })
+  .refine(
+    (value) => value.markupAmountInOre === null || value.markupPercent === null,
+    {
+      message: "Välj påslag i kronor eller procent, inte båda.",
+    },
+  );
 export const expenseSchema = z
   .object({
     name: z
@@ -49,7 +69,8 @@ export const expenseSchema = z
       "Beloppet måste vara större än noll.",
     ),
     period: periodSchema,
-    type: z.enum(["direct", "allocated"]),
+    type: z.enum(["direct", "allocated", "settlement"]),
+    settlement: settlementAdjustmentsSchema.optional(),
     months: z.coerce.number(),
     nextDueOn: z.string(),
     ownerIds: z
@@ -57,13 +78,36 @@ export const expenseSchema = z
       .max(100),
   })
   .superRefine((value, context) => {
-    if (value.type !== "allocated") return;
-    if (!cycles.some((cycle) => cycle.months === value.months)) {
+    if (value.type === "direct") return;
+    if (
+      value.type === "allocated" &&
+      !cycles.some((cycle) => cycle.months === value.months)
+    ) {
       context.addIssue({
         code: "custom",
         message: "Välj hur ofta kostnaden uppstår.",
         path: ["months"],
       });
+      return;
+    }
+    if (value.type === "settlement") {
+      try {
+        if (!value.settlement)
+          throw new Error("Ange avräkningens påslag och inflation.");
+        settlementForecast(
+          value.amount,
+          `${value.period}-01`,
+          value.nextDueOn,
+          value.settlement,
+        );
+      } catch (error) {
+        context.addIssue({
+          code: "custom",
+          message:
+            error instanceof Error ? error.message : "Ogiltig avräkning.",
+          path: ["settlement"],
+        });
+      }
     }
     if (
       !dateSchema.safeParse(value.nextDueOn).success ||
@@ -84,7 +128,8 @@ export interface BudgetExpense {
   amountInOre: number;
   unit: CadenceUnit;
   every: number;
-  destination: "direct" | "allocated";
+  destination: "direct" | "allocated" | "settlement";
+  settlement?: SettlementPlan | null;
   startsOn: string | null;
   endsOn: string | null;
   nextDueOn: string | null;
@@ -161,9 +206,11 @@ export function monthlySummary(
   );
   let directInOre = 0;
   let allocatedInOre = 0;
+  let settlementInOre = 0;
   for (const expense of activeExpenses) {
-    const amount = monthlyEquivalent(expense);
-    if (expense.destination === "allocated") allocatedInOre += amount;
+    const amount = monthlyExpenseAmount(period, expense);
+    if (expense.destination === "settlement") settlementInOre += amount;
+    else if (expense.destination === "allocated") allocatedInOre += amount;
     else directInOre += amount;
   }
   const activeIncomes = incomes.filter(
@@ -173,15 +220,29 @@ export function monthlySummary(
   const incomeInOre = activeIncomes.length
     ? activeIncomes.reduce((total, income) => total + income.amountInOre, 0)
     : null;
-  const totalInOre = directInOre + allocatedInOre;
+  const totalInOre = directInOre + allocatedInOre + settlementInOre;
   return {
     expenses: activeExpenses,
     incomeInOre,
     directInOre,
     allocatedInOre,
+    settlementInOre,
     totalInOre,
     savingsInOre,
     remainingInOre:
       incomeInOre === null ? null : incomeInOre - totalInOre - savingsInOre,
   };
+}
+
+export function monthlyExpenseAmount(period: string, expense: BudgetExpense) {
+  if (!isActiveInPeriod(period, expense)) return 0;
+  if (expense.destination !== "settlement") return monthlyEquivalent(expense);
+  if (!expense.settlement || !expense.nextDueOn)
+    throw new Error("Avräkningens beräkningsunderlag saknas.");
+  return settlementContribution(
+    period,
+    expense.amountInOre,
+    expense.nextDueOn,
+    expense.settlement,
+  );
 }

@@ -87,6 +87,14 @@ Poster har startmånad och valfri slutmånad som ingår i perioden. Vid ändring
 
 Migration 0010 lägger till nullable datumfält och constraints. Äldre sparande utan startmånad gäller även tidigare månader fram till en ändring; okänd historik gissas inte. Borttagna poster förblir dolda. Nytt sparande får vald startmånad.
 
+### Avräkningar
+
+Avräkningar lagras i `recurring_items` med destination `settlement` och använder samma ägare, versionshistorik och tvingande RLS som andra utgifter. Migration 0013 lägger till beräkningsstart, påslag i kronor eller procent samt årlig inflation. `null` betyder att respektive justering är avstängd.
+
+Målbeloppet är `(kostnad + påslag) × (1 + inflation / 100)^(månader / 12)`, avrundat till öre. Månader räknas från planens startmånad till nästa utgiftsmånad. Avsättningen fördelas från startmånaden till månaden före utgiften, minst en månad. De sista överföringarna justeras så att summan blir exakt målbeloppet. Standardvärdena i formuläret är 10 procent påslag och 2 procent inflation; båda kan stängas av.
+
+Avsättningen upphör i utgiftsmånaden (efter startmånaden för en plan som betalas samma månad). Posten finns kvar för hantering. Ett nytt utgiftsdatum startar en ny plan från vald ändringsmånad. Om datumet behålls bevaras beräkningsstarten, så en namnändring inte höjer månadsavsättningen. Det är en budgetplan, inte ett kontosaldo: faktiska insättningar, uttag och avkastning räknas inte av. Avräkningar räknas en gång bland utgifterna och visas separat under överföringar.
+
 ## Nästa steg
 
 Månadsöversikten visar inkomster, direkta utgifter och avsättningar. Historisk import och kontosnapshots kan läggas till utan att ändra kärnmodellen.
