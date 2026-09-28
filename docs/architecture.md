@@ -97,4 +97,4 @@ Avsättningen upphör i utgiftsmånaden (efter startmånaden för en plan som be
 
 ## Nästa steg
 
-Månadsöversikten visar inkomster, direkta utgifter och avsättningar. Historisk import och kontosnapshots kan läggas till utan att ändra kärnmodellen.
+Månadsöversikten visar inkomster, direkta utgifter, avsättningar, avräkningar och sparande. Historisk import och kontosnapshots kan läggas till utan att ändra kärnmodellen.

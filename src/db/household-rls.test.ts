@@ -1089,3 +1089,91 @@ describe("settlement persistence and isolation", () => {
     );
   });
 });
+
+it.each(["direct", "allocated"] as const)(
+  "converts %s expenses to settlements and back without stale adjustments or lost history",
+  async (type) => {
+    const userId = `conversion-${type}`;
+    await database.insert(user).values({
+      id: userId,
+      name: "Testägare",
+      email: `${userId}@example.test`,
+      emailVerified: true,
+    });
+    identity.userId = userId;
+    await createPersonalHousehold("Typbyteshushåll");
+    await addPerson("Kim");
+    const people = (await getBudgetData()).people;
+    const regular: ExpenseInput = {
+      name: "Planerad utgift",
+      amount: 120_000,
+      period: "2026-01",
+      type,
+      months: type === "allocated" ? 12 : 1,
+      nextDueOn: type === "allocated" ? "2027-01-01" : "",
+      ownerIds: people.map((person) => person.id),
+    };
+    const originalId = await addExpense(regular);
+    const settlementId = await addExpense(
+      {
+        ...regular,
+        type: "settlement",
+        period: "2026-07",
+        nextDueOn: "2028-07-01",
+        settlement: {
+          markupAmountInOre: null,
+          markupPercent: 10,
+          inflationPercent: null,
+        },
+      },
+      originalId,
+    );
+    let data = await getBudgetData();
+    const regularMonthly = type === "direct" ? 120_000 : 10_000;
+    expect(monthlySummary("2026-06", data.expenses, []).totalInOre).toBe(
+      regularMonthly,
+    );
+    expect(monthlySummary("2026-07", data.expenses, []).settlementInOre).toBe(
+      5_500,
+    );
+    expect(
+      data.expenses.find((expense) => expense.id === settlementId),
+    ).toMatchObject({
+      settlement: { startsOn: "2026-07-01", markupPercent: 10 },
+      owners: people,
+    });
+    const restoredId = await addExpense(
+      {
+        ...regular,
+        period: "2027-01",
+        nextDueOn: type === "allocated" ? "2028-01-01" : "",
+      },
+      settlementId,
+    );
+    data = await getBudgetData();
+    expect(monthlySummary("2026-12", data.expenses, []).settlementInOre).toBe(
+      5_500,
+    );
+    expect(monthlySummary("2027-01", data.expenses, [])).toMatchObject({
+      settlementInOre: 0,
+      totalInOre: regularMonthly,
+    });
+    expect(
+      data.expenses.find((expense) => expense.id === restoredId),
+    ).toMatchObject({
+      destination: type,
+      settlement: null,
+      owners: people,
+    });
+    const [stored] = await database
+      .select()
+      .from(recurringItems)
+      .where(eq(recurringItems.id, restoredId));
+    expect(stored).toMatchObject({
+      settlementStartsOn: null,
+      markupAmount: null,
+      markupPercent: null,
+      inflationPercent: null,
+    });
+  },
+);

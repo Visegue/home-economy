@@ -96,4 +96,39 @@ describe("settlement forecasts", () => {
       0,
     );
   });
+
+  it.each([
+    { amount: 1, months: 24 },
+    { amount: 101, months: 120 },
+    { amount: 10_000, months: 3 },
+    { amount: 1_200_001, months: 121 },
+  ])(
+    "funds exactly $amount öre over $months months across year boundaries",
+    ({ amount, months }) => {
+      const dateAt = (offset: number) =>
+        new Date(Date.UTC(2026, 9 + offset, 1)).toISOString().slice(0, 10);
+      const plain = {
+        startsOn: dateAt(0),
+        markupAmountInOre: null,
+        markupPercent: null,
+        inflationPercent: null,
+      };
+      const due = dateAt(months);
+      const contributions = Array.from({ length: months }, (_, index) =>
+        settlementContribution(dateAt(index).slice(0, 7), amount, due, plain),
+      );
+      expect(
+        contributions.every(
+          (value) => Number.isSafeInteger(value) && value >= 0,
+        ),
+      ).toBe(true);
+      expect(contributions.reduce((sum, value) => sum + value, 0)).toBe(amount);
+      expect(
+        settlementContribution(dateAt(-1).slice(0, 7), amount, due, plain),
+      ).toBe(0);
+      expect(settlementContribution(due.slice(0, 7), amount, due, plain)).toBe(
+        0,
+      );
+    },
+  );
 });
