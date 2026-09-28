@@ -39,6 +39,7 @@ import {
 } from "./actions";
 import { amountSchema, cycles, monthLabel, type BudgetExpense } from "./model";
 import { incomeToInput } from "@/features/income/validation";
+import { SettlementFields, type SettlementDraft } from "./settlement-fields";
 
 function Feedback({ state }: { state: FormState }) {
   return state.error ? (
@@ -56,12 +57,15 @@ export function ExpenseDialog({
   period,
   people,
   expense,
+  defaultType = "direct",
 }: {
   period: string;
   people: HouseholdPerson[];
   expense?: BudgetExpense;
+  defaultType?: BudgetExpense["destination"];
 }) {
   const [open, setOpen] = useState(false);
+  const settlement = (expense?.destination ?? defaultType) === "settlement";
   return (
     <FormDialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -70,11 +74,21 @@ export function ExpenseDialog({
             <Pencil aria-hidden="true" />
           </ActionIconButton>
         ) : (
-          <AddCardButton label="Lägg till utgift" />
+          <AddCardButton
+            label={settlement ? "Lägg till avräkning" : "Lägg till utgift"}
+          />
         )}
       </DialogTrigger>
       <FormDialogContent
-        title={expense ? "Ändra utgift" : "Lägg till utgift"}
+        title={
+          settlement
+            ? expense
+              ? "Ändra avräkning"
+              : "Lägg till avräkning"
+            : expense
+              ? "Ändra utgift"
+              : "Lägg till utgift"
+        }
         description={
           (expense
             ? "Välj månad för ändringen. Tidigare månaders belopp behålls."
@@ -89,6 +103,7 @@ export function ExpenseDialog({
             period={period}
             people={people}
             expense={expense}
+            defaultType={defaultType}
             onSaved={() => setOpen(false)}
           />
         ) : null}
@@ -131,14 +146,32 @@ function ExpenseForm({
   people,
   onSaved,
   expense,
+  defaultType,
 }: {
   period: string;
   people: HouseholdPerson[];
   onSaved: () => void;
   expense?: BudgetExpense;
+  defaultType: BudgetExpense["destination"];
 }) {
   const [effectivePeriod, setEffectivePeriod] = useState(period);
-  const [type, setType] = useState(expense?.destination ?? "direct");
+  const [type, setType] = useState(expense?.destination ?? defaultType);
+  const [settlementDraft, setSettlementDraft] = useState<SettlementDraft>({
+    markupEnabled: expense?.settlement
+      ? expense.settlement.markupAmountInOre !== null ||
+        expense.settlement.markupPercent !== null
+      : true,
+    markupType:
+      expense?.settlement?.markupAmountInOre != null ? "amount" : "percent",
+    markup:
+      expense?.settlement?.markupAmountInOre != null
+        ? incomeToInput(expense.settlement.markupAmountInOre)
+        : String(expense?.settlement?.markupPercent ?? 10),
+    inflationEnabled: expense?.settlement
+      ? expense.settlement.inflationPercent !== null
+      : true,
+    inflation: String(expense?.settlement?.inflationPercent ?? 2),
+  });
   const [name, setName] = useState(expense?.name ?? "");
   const [amount, setAmount] = useState(
     incomeToInput(expense?.amountInOre ?? null),
@@ -157,7 +190,13 @@ function ExpenseForm({
       if (result.success) {
         notify(
           savedMessage(
-            expense ? "Utgiften uppdaterad" : "Utgiften tillagd",
+            type === "settlement"
+              ? expense
+                ? "Avräkningen uppdaterad"
+                : "Avräkningen tillagd"
+              : expense
+                ? "Utgiften uppdaterad"
+                : "Utgiften tillagd",
             String(data.get("period")),
           ),
         );
@@ -176,7 +215,8 @@ function ExpenseForm({
       period: effectivePeriod,
       type,
       months: type === "allocated" ? months : null,
-      nextDueOn: type === "allocated" ? nextDueOn : null,
+      nextDueOn: type !== "direct" ? nextDueOn : null,
+      settlement: type === "settlement" ? settlementDraft : null,
       owners: owners.toSorted((a, b) => a - b),
     },
     pending,
@@ -200,7 +240,7 @@ function ExpenseForm({
             max={expense?.endsOn?.slice(0, 7) ?? "2199-12"}
           />
         </div>
-        <fieldset className="grid grid-cols-2 gap-2">
+        <fieldset className="grid gap-2 sm:grid-cols-3">
           <legend className="mb-2 text-sm font-medium">
             <span className="inline-flex items-center gap-1">
               Typ av utgift
@@ -213,6 +253,11 @@ function ExpenseForm({
                   För avsatta utgifter, som en årsförsäkring, lägger du undan en
                   del varje månad. Den räknas som utgift och ingår i
                   överföringen till avsättningskontot.
+                </p>
+                <p>
+                  Avräkningar är större utgifter långt fram i tiden, som nya
+                  vitvaror. Pengarna avsätts separat med valfritt påslag och
+                  inflation.
                 </p>
               </InfoButton>
             </span>
@@ -228,6 +273,11 @@ function ExpenseForm({
               label: "Avsatt utgift",
               description: "Betalas mer sällan",
             },
+            {
+              value: "settlement",
+              label: "Avräkning",
+              description: "Planeras på lång sikt",
+            },
           ].map((option) => (
             <label
               key={option.value}
@@ -239,7 +289,9 @@ function ExpenseForm({
                 name="type"
                 value={option.value}
                 checked={type === option.value}
-                onChange={() => setType(option.value as "direct" | "allocated")}
+                onChange={() =>
+                  setType(option.value as BudgetExpense["destination"])
+                }
                 className="mt-1 accent-primary"
               />
               <span>
@@ -264,7 +316,11 @@ function ExpenseForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="expense-amount">Belopp per betalning (kr)</Label>
+          <Label htmlFor="expense-amount">
+            {type === "settlement"
+              ? "Kostnad i dag (kr)"
+              : "Belopp per betalning (kr)"}
+          </Label>
           <Input
             id="expense-amount"
             name="amount"
@@ -334,6 +390,21 @@ function ExpenseForm({
             </div>
           </>
         ) : null}
+        {type === "settlement" ? (
+          <SettlementFields
+            amount={amount}
+            effectivePeriod={effectivePeriod}
+            planningPeriod={
+              expense?.settlement && expense.nextDueOn === nextDueOn
+                ? expense.settlement.startsOn.slice(0, 7)
+                : effectivePeriod
+            }
+            nextDueOn={nextDueOn}
+            onDateChange={setNextDueOn}
+            draft={settlementDraft}
+            onDraftChange={setSettlementDraft}
+          />
+        ) : null}
         <fieldset className="space-y-2">
           <legend className="mb-2 text-sm font-medium">
             <span className="inline-flex items-center gap-1">
@@ -391,7 +462,7 @@ function ExpenseForm({
       <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-popover pt-3">
         <ActionIconButton
           type="submit"
-          label="Spara utgift"
+          label={type === "settlement" ? "Spara avräkning" : "Spara utgift"}
           tone="positive"
           pending={pending}
         >

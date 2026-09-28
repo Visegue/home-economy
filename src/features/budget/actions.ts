@@ -65,6 +65,25 @@ export async function addExpenseAction(
     months: data.get("months"),
     nextDueOn: data.get("nextDueOn") ?? "",
     ownerIds: data.getAll("ownerIds"),
+    settlement:
+      data.get("type") === "settlement"
+        ? {
+            markupAmountInOre:
+              data.get("markupEnabled") === "on" &&
+              data.get("markupType") === "amount"
+                ? data.get("markup")
+                : null,
+            markupPercent:
+              data.get("markupEnabled") === "on" &&
+              data.get("markupType") === "percent"
+                ? data.get("markup")
+                : null,
+            inflationPercent:
+              data.get("inflationEnabled") === "on"
+                ? data.get("inflation")
+                : null,
+          }
+        : undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   return mutate(async () => {

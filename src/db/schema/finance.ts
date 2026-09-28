@@ -58,6 +58,7 @@ export const recurringDestination = pgEnum("recurring_destination", [
   "direct",
   "allocated",
   "shared_saving",
+  "settlement",
 ]);
 export const planItemStatus = pgEnum("plan_item_status", [
   "planned",
@@ -243,6 +244,18 @@ export const recurringItems = pgTable(
     endsOn: date("ends_on", { mode: "date" }),
     nextDueOn: date("next_due_on", { mode: "date" }),
     destination: recurringDestination().default("direct").notNull(),
+    settlementStartsOn: date("settlement_starts_on", { mode: "date" }),
+    markupAmount: money("markup_amount"),
+    markupPercent: numeric("markup_percent", {
+      precision: 5,
+      scale: 2,
+      mode: "number",
+    }),
+    inflationPercent: numeric("inflation_percent", {
+      precision: 5,
+      scale: 2,
+      mode: "number",
+    }),
     notes: text("notes"),
     active: boolean().default(true).notNull(),
     createdAt: createdAt(),
@@ -254,6 +267,26 @@ export const recurringItems = pgTable(
       sql`char_length(${table.name}) between 1 and 160`,
     ),
     check("recurring_items_amount_nonnegative", sql`${table.amount} >= 0`),
+    check(
+      "recurring_items_settlement_plan",
+      sql`${table.destination}::text <> 'settlement' or (${table.amount} > 0 and ${table.settlementStartsOn} is not null and extract(day from ${table.settlementStartsOn}) = 1 and ${table.nextDueOn} is not null and ${table.nextDueOn} >= ${table.settlementStartsOn})`,
+    ),
+    check(
+      "recurring_items_markup_nonnegative",
+      sql`${table.markupAmount} is null or ${table.markupAmount} >= 0`,
+    ),
+    check(
+      "recurring_items_markup_percent_range",
+      sql`${table.markupPercent} is null or ${table.markupPercent} between 0 and 100`,
+    ),
+    check(
+      "recurring_items_markup_exclusive",
+      sql`${table.markupAmount} is null or ${table.markupPercent} is null`,
+    ),
+    check(
+      "recurring_items_inflation_percent_range",
+      sql`${table.inflationPercent} is null or ${table.inflationPercent} between 0 and 100`,
+    ),
     check(
       "recurring_items_end_first_day",
       sql`${table.endsOn} is null or extract(day from ${table.endsOn}) = 1`,

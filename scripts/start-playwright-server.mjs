@@ -47,6 +47,9 @@ try {
       "savings-0",
       "savings-1",
       "savings-2",
+      "settlement-0",
+      "settlement-1",
+      "settlement-2",
     ]) {
       await database.query(
         `insert into public."user" (id, name, email, email_verified)

@@ -160,7 +160,11 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
       .locator('[data-slot="card-action"]')
       .getByRole("button", { name: "Lägg till utgift" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: /inkomst/i })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", {
+      name: /^(Lägg till|Registrera|Ändra|Hantera).*inkomst/i,
+    }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("link", { name: "Registrera inkomst" }),
   ).toHaveCount(0);
