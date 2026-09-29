@@ -24,33 +24,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { monthlyEquivalent } from "@/domain/budget";
-import { getBudgetData } from "@/features/budget/data";
 import { ExpenseDialog, RemoveExpenseDialog } from "@/features/budget/forms";
-import {
-  cycles,
-  monthlySummary,
-  isActiveInPeriod,
-  monthLabel,
-} from "@/features/budget/model";
+import { cycles, monthLabel } from "@/features/budget/model";
 import { formatBudgetSek } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import { getSavings } from "@/features/savings/data";
 import { SavingsSection } from "@/features/savings/savings-section";
-import { totalMonthlySavings } from "@/features/savings/validation";
+import { getMonthlyOverview } from "./monthly-overview";
 
 export async function OverviewDashboard({ period }: { period: string }) {
-  const [{ people, expenses, incomes }, savings] = await Promise.all([
-    getBudgetData(),
-    getSavings(),
-  ]);
-  const savingsInOre = totalMonthlySavings(savings, period);
-  const summary = monthlySummary(period, expenses, incomes, savingsInOre);
+  const {
+    people,
+    expenses,
+    savings,
+    totals: summary,
+  } = await getMonthlyOverview(period);
+  const savingsInOre = summary.savingsContributionsInOre;
   const hasIncome = summary.incomeInOre !== null;
-  const deficit = summary.remainingInOre !== null && summary.remainingInOre < 0;
-  const activeSavings = savings.filter((saving) =>
-    isActiveInPeriod(period, saving),
-  );
+  const deficit =
+    summary.monthlyRemainderInOre !== null && summary.monthlyRemainderInOre < 0;
   return (
     <div className="space-y-6">
       <section
@@ -74,25 +65,25 @@ export async function OverviewDashboard({ period }: { period: string }) {
               <div className="flex justify-between gap-4">
                 <dt>Direkta utgifter</dt>
                 <dd className="tabular-nums">
-                  {formatBudgetSek(summary.directInOre)}
+                  {formatBudgetSek(summary.directExpensesInOre)}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt>Avsatta utgifter</dt>
                 <dd className="tabular-nums">
-                  {formatBudgetSek(summary.allocatedInOre)}
+                  {formatBudgetSek(summary.monthlyAllocationsInOre)}
                 </dd>
               </div>
               <div className="flex justify-between gap-4 border-t pt-3 font-semibold">
                 <dt>Utgifter totalt per månad</dt>
                 <dd className="tabular-nums">
-                  {formatBudgetSek(summary.totalInOre)}
+                  {formatBudgetSek(summary.expensesInOre)}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt>Sparande per månad</dt>
                 <dd className="tabular-nums">
-                  {formatBudgetSek(summary.savingsInOre)}
+                  {formatBudgetSek(savingsInOre)}
                 </dd>
               </div>
             </dl>
@@ -117,14 +108,14 @@ export async function OverviewDashboard({ period }: { period: string }) {
                       ? "Kvar efter utgifter och sparande"
                       : "Kvar efter utgifter"}
               </p>
-              {summary.remainingInOre !== null ? (
+              {summary.monthlyRemainderInOre !== null ? (
                 <p
                   className={cn(
                     "mt-1 text-3xl font-semibold tracking-tight tabular-nums",
                     deficit && "text-destructive",
                   )}
                 >
-                  {formatBudgetSek(Math.abs(summary.remainingInOre))}
+                  {formatBudgetSek(Math.abs(summary.monthlyRemainderInOre))}
                 </p>
               ) : (
                 <Link
@@ -152,10 +143,10 @@ export async function OverviewDashboard({ period }: { period: string }) {
                 <div className="flex justify-between gap-4">
                   <dt>Avsättningskonto</dt>
                   <dd className="shrink-0 tabular-nums">
-                    {formatBudgetSek(summary.allocatedInOre)}
+                    {formatBudgetSek(summary.monthlyAllocationsInOre)}
                   </dd>
                 </div>
-                {activeSavings.map((saving) => (
+                {savings.map((saving) => (
                   <div key={saving.id} className="flex justify-between gap-4">
                     <dt className="min-w-0 break-words">{saving.name}</dt>
                     <dd className="shrink-0 tabular-nums">
@@ -170,26 +161,26 @@ export async function OverviewDashboard({ period }: { period: string }) {
                   aria-label="Totalt att föra över"
                   className="mt-1 block text-3xl font-semibold tracking-tight tabular-nums"
                 >
-                  {formatBudgetSek(summary.allocatedInOre + savingsInOre)}
+                  {formatBudgetSek(summary.transfersInOre)}
                 </output>
               </div>
             </CardContent>
           </Card>
         </section>
       </section>
-      <CardManagement key={period} hasItems={summary.expenses.length > 0}>
+      <CardManagement key={period} hasItems={expenses.length > 0}>
         <Card>
           <CardHeader>
             <CardTitle>Utgifter</CardTitle>
             <CardAction className="flex items-center gap-2">
-              {summary.expenses.length ? (
+              {expenses.length ? (
                 <CardManagementButton label="utgifter" />
               ) : null}
               <ExpenseDialog key={period} period={period} people={people} />
             </CardAction>
           </CardHeader>
           <CardContent>
-            {summary.expenses.length ? (
+            {expenses.length ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -207,7 +198,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {summary.expenses.map((expense) => (
+                  {expenses.map((expense) => (
                     <TableRow key={expense.id}>
                       <TableCell className="font-medium">
                         {expense.name}
@@ -224,7 +215,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
                         </span>
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
-                        {formatBudgetSek(monthlyEquivalent(expense))}
+                        {formatBudgetSek(expense.monthlyAmountInOre)}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -274,7 +265,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
                   <TableRow className="bg-muted/50 font-semibold">
                     <TableCell>Totalt per månad</TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatBudgetSek(summary.totalInOre)}
+                      {formatBudgetSek(summary.expensesInOre)}
                     </TableCell>
                     <TableCell colSpan={4} />
                     <ManagementOnly>

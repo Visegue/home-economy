@@ -1,7 +1,10 @@
 import "server-only";
 
 import { and, asc, eq } from "drizzle-orm";
-import { withAuthenticatedDatabase } from "@/db/authorized";
+import {
+  withAuthenticatedDatabase,
+  type AuthorizedTransaction,
+} from "@/db/authorized";
 import { households, savingsGoals } from "@/db/schema";
 import {
   incomeFromDatabase,
@@ -15,29 +18,37 @@ import {
 } from "@/features/budget/validity";
 
 export async function getSavings(): Promise<Saving[]> {
-  return withAuthenticatedDatabase(async (transaction, user) => {
-    const rows = await transaction
-      .select({
-        id: savingsGoals.id,
-        name: savingsGoals.name,
-        amount: savingsGoals.monthlyContribution,
-        startsOn: savingsGoals.startsOn,
-        endsOn: savingsGoals.endsOn,
-      })
-      .from(savingsGoals)
-      .innerJoin(households, eq(households.id, savingsGoals.householdId))
-      .where(
-        and(eq(households.ownerUserId, user.id), eq(savingsGoals.active, true)),
-      )
-      .orderBy(asc(savingsGoals.createdAt), asc(savingsGoals.id));
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      amountInOre: incomeFromDatabase(row.amount)!,
-      startsOn: row.startsOn?.toISOString().slice(0, 7) ?? null,
-      endsOn: row.endsOn?.toISOString().slice(0, 7) ?? null,
-    }));
-  });
+  return withAuthenticatedDatabase((transaction, user) =>
+    readSavings(transaction, user.id),
+  );
+}
+
+// Internal read used only inside an authenticated transaction.
+export async function readSavings(
+  transaction: AuthorizedTransaction,
+  userId: string,
+): Promise<Saving[]> {
+  const rows = await transaction
+    .select({
+      id: savingsGoals.id,
+      name: savingsGoals.name,
+      amount: savingsGoals.monthlyContribution,
+      startsOn: savingsGoals.startsOn,
+      endsOn: savingsGoals.endsOn,
+    })
+    .from(savingsGoals)
+    .innerJoin(households, eq(households.id, savingsGoals.householdId))
+    .where(
+      and(eq(households.ownerUserId, userId), eq(savingsGoals.active, true)),
+    )
+    .orderBy(asc(savingsGoals.createdAt), asc(savingsGoals.id));
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    amountInOre: incomeFromDatabase(row.amount)!,
+    startsOn: row.startsOn?.toISOString().slice(0, 7) ?? null,
+    endsOn: row.endsOn?.toISOString().slice(0, 7) ?? null,
+  }));
 }
 
 export async function saveSaving(

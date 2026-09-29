@@ -37,69 +37,77 @@ async function ownedHousehold(
 }
 
 export async function getBudgetData() {
-  return withAuthenticatedDatabase(async (transaction, user) => {
-    const household = await ownedHousehold(transaction, user.id);
-    const people = await transaction
-      .select({
-        id: householdPeople.id,
-        name: householdPeople.name,
-        color: householdPeople.color,
-      })
-      .from(householdPeople)
-      .where(eq(householdPeople.householdId, household.id))
-      .orderBy(asc(householdPeople.name));
-    const items = await transaction
-      .select()
-      .from(recurringItems)
-      .where(
-        and(
-          eq(recurringItems.householdId, household.id),
-          eq(recurringItems.active, true),
-          inArray(recurringItems.kind, ["expense", "reserve"]),
-          inArray(recurringItems.destination, ["direct", "allocated"]),
-        ),
-      )
-      .orderBy(asc(recurringItems.name));
-    const owners = await transaction
-      .select()
-      .from(recurringItemOwners)
-      .where(eq(recurringItemOwners.householdId, household.id));
-    const incomeRows = await transaction
-      .select()
-      .from(householdIncomes)
-      .where(eq(householdIncomes.householdId, household.id))
-      .orderBy(asc(householdIncomes.name), asc(householdIncomes.startsOn));
-    const peopleById = new Map(people.map((person) => [person.id, person]));
-    const ownersByItem = new Map<number, typeof people>();
-    for (const owner of owners) {
-      const person = peopleById.get(owner.personId);
-      if (person)
-        ownersByItem.set(owner.recurringItemId, [
-          ...(ownersByItem.get(owner.recurringItemId) ?? []),
-          person,
-        ]);
-    }
-    const expenses: BudgetExpense[] = items.map((item) => ({
-      id: item.id,
-      name: item.name,
-      amountInOre: Math.round(item.amount * 100),
-      unit: item.cadenceUnit,
-      every: item.cadenceInterval,
-      destination: item.destination === "allocated" ? "allocated" : "direct",
-      startsOn: item.startsOn?.toISOString().slice(0, 10) ?? null,
-      endsOn: item.endsOn?.toISOString().slice(0, 10) ?? null,
-      nextDueOn: item.nextDueOn?.toISOString().slice(0, 10) ?? null,
-      owners: ownersByItem.get(item.id) ?? [],
-    }));
-    const incomes: BudgetIncome[] = incomeRows.map((income) => ({
-      id: income.id,
-      name: income.name,
-      startsOn: income.startsOn.toISOString().slice(0, 7),
-      endsOn: income.endsOn?.toISOString().slice(0, 7) ?? null,
-      amountInOre: Math.round(income.amount * 100),
-    }));
-    return { household, people, expenses, incomes };
-  });
+  return withAuthenticatedDatabase((transaction, user) =>
+    readBudgetData(transaction, user.id),
+  );
+}
+
+// Internal read used only inside an authenticated transaction.
+export async function readBudgetData(
+  transaction: AuthorizedTransaction,
+  userId: string,
+) {
+  const household = await ownedHousehold(transaction, userId);
+  const people = await transaction
+    .select({
+      id: householdPeople.id,
+      name: householdPeople.name,
+      color: householdPeople.color,
+    })
+    .from(householdPeople)
+    .where(eq(householdPeople.householdId, household.id))
+    .orderBy(asc(householdPeople.name));
+  const items = await transaction
+    .select()
+    .from(recurringItems)
+    .where(
+      and(
+        eq(recurringItems.householdId, household.id),
+        eq(recurringItems.active, true),
+        inArray(recurringItems.kind, ["expense", "reserve"]),
+        inArray(recurringItems.destination, ["direct", "allocated"]),
+      ),
+    )
+    .orderBy(asc(recurringItems.name));
+  const owners = await transaction
+    .select()
+    .from(recurringItemOwners)
+    .where(eq(recurringItemOwners.householdId, household.id));
+  const incomeRows = await transaction
+    .select()
+    .from(householdIncomes)
+    .where(eq(householdIncomes.householdId, household.id))
+    .orderBy(asc(householdIncomes.name), asc(householdIncomes.startsOn));
+  const peopleById = new Map(people.map((person) => [person.id, person]));
+  const ownersByItem = new Map<number, typeof people>();
+  for (const owner of owners) {
+    const person = peopleById.get(owner.personId);
+    if (person)
+      ownersByItem.set(owner.recurringItemId, [
+        ...(ownersByItem.get(owner.recurringItemId) ?? []),
+        person,
+      ]);
+  }
+  const expenses: BudgetExpense[] = items.map((item) => ({
+    id: item.id,
+    name: item.name,
+    amountInOre: Math.round(item.amount * 100),
+    unit: item.cadenceUnit,
+    every: item.cadenceInterval,
+    destination: item.destination === "allocated" ? "allocated" : "direct",
+    startsOn: item.startsOn?.toISOString().slice(0, 10) ?? null,
+    endsOn: item.endsOn?.toISOString().slice(0, 10) ?? null,
+    nextDueOn: item.nextDueOn?.toISOString().slice(0, 10) ?? null,
+    owners: ownersByItem.get(item.id) ?? [],
+  }));
+  const incomes: BudgetIncome[] = incomeRows.map((income) => ({
+    id: income.id,
+    name: income.name,
+    startsOn: income.startsOn.toISOString().slice(0, 7),
+    endsOn: income.endsOn?.toISOString().slice(0, 7) ?? null,
+    amountInOre: Math.round(income.amount * 100),
+  }));
+  return { household, people, expenses, incomes };
 }
 
 export async function addExpense(input: ExpenseInput, id?: number) {

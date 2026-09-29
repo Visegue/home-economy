@@ -156,13 +156,16 @@ export function monthlySummary(
   incomes: BudgetIncome[],
   savingsInOre = 0,
 ) {
-  const activeExpenses = expenses.filter((expense) =>
-    isActiveInPeriod(period, expense),
-  );
+  const activeExpenses = expenses
+    .filter((expense) => isActiveInPeriod(period, expense))
+    .map((expense) => ({
+      ...expense,
+      monthlyAmountInOre: monthlyEquivalent(expense),
+    }));
   let directInOre = 0;
   let allocatedInOre = 0;
   for (const expense of activeExpenses) {
-    const amount = monthlyEquivalent(expense);
+    const amount = expense.monthlyAmountInOre;
     if (expense.destination === "allocated") allocatedInOre += amount;
     else directInOre += amount;
   }

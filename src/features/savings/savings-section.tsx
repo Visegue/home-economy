@@ -12,18 +12,15 @@ import {
 } from "@/components/ui/card";
 import { SavingDialog, RemoveSavingDialog } from "./saving-form";
 import { formatSavingsAmount, type Saving } from "./validation";
-import { isActiveInPeriod, monthLabel } from "@/features/budget/model";
+import { monthLabel } from "@/features/budget/model";
 
 export function SavingsSection({
-  savings: allSavings,
+  savings,
   period,
 }: {
   savings: Saving[];
   period: string;
 }) {
-  const savings = allSavings.filter((saving) =>
-    isActiveInPeriod(period, saving),
-  );
   return (
     <section aria-label="Dina sparmål" className="mt-4">
       <CardManagement key={period} hasItems={savings.length > 0}>
