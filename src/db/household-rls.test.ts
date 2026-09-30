@@ -50,7 +50,11 @@ import {
   removeIncome,
   removeExpense,
 } from "@/features/budget/data";
-import { currentPeriod, monthlySummary } from "@/features/budget/model";
+import {
+  currentPeriod,
+  monthlySummary,
+  type ExpenseInput,
+} from "@/features/budget/model";
 import { getSavings, removeSaving, saveSaving } from "@/features/savings/data";
 import { totalMonthlySavings } from "@/features/savings/validation";
 
@@ -951,3 +955,225 @@ describe("household person management", () => {
     ).toEqual([]);
   });
 });
+
+describe("settlement persistence and isolation", () => {
+  it("preserves forecasts and owners through revisions, isolates households and rolls back invalid changes", async () => {
+    await database.insert(user).values({
+      id: "settlement-owner",
+      name: "Testägare",
+      email: "settlement@example.test",
+      emailVerified: true,
+    });
+    identity.userId = "settlement-owner";
+    await createPersonalHousehold("Avräkningshushåll");
+    await addPerson("Kim");
+    await addPerson("Robin");
+    const people = (await getBudgetData()).people;
+    const input: ExpenseInput = {
+      name: "Vitvaror",
+      amount: 1_200_000,
+      period: "2026-01",
+      type: "settlement",
+      months: 0,
+      nextDueOn: "2028-01-01",
+      ownerIds: people.map((person) => person.id),
+      settlement: {
+        markupAmountInOre: null,
+        markupPercent: 10,
+        inflationPercent: 2,
+      },
+    };
+    const id = await addExpense(input);
+    const first = (await getBudgetData()).expenses[0];
+    expect(first).toMatchObject({
+      destination: "settlement",
+      settlement: { ...input.settlement, startsOn: "2026-01-01" },
+      owners: people,
+    });
+    expect(monthlySummary("2026-01", [first], []).settlementInOre).toBe(57_222);
+
+    identity.userId = "outsider";
+    expect(
+      (await getBudgetData()).expenses.some((expense) => expense.id === id),
+    ).toBe(false);
+    await expect(addExpense({ ...input, ownerIds: [] }, id)).rejects.toThrow(
+      "Utgiften finns inte längre",
+    );
+    await expect(addExpense(input)).rejects.toThrow(
+      "Invalid household participants",
+    );
+    await removeExpense(id, "2026-01");
+    identity.userId = "settlement-owner";
+    expect((await getBudgetData()).expenses).toHaveLength(1);
+
+    const revised = await addExpense(
+      { ...input, name: "Vitvaror uppdaterad", period: "2026-07" },
+      id,
+    );
+    let data = await getBudgetData();
+    expect(data.expenses.find((expense) => expense.id === id)?.endsOn).toBe(
+      "2026-06-01",
+    );
+    expect(
+      data.expenses.find((expense) => expense.id === revised)?.settlement
+        ?.startsOn,
+    ).toBe("2026-01-01");
+    expect(monthlySummary("2026-06", data.expenses, []).settlementInOre).toBe(
+      57_222,
+    );
+    expect(monthlySummary("2026-07", data.expenses, []).settlementInOre).toBe(
+      57_222,
+    );
+    await expect(
+      addExpense(
+        { ...input, period: "2026-08", amount: 99_999_999_999_999 },
+        revised,
+      ),
+    ).rejects.toThrow("för stort");
+    data = await getBudgetData();
+    expect(
+      data.expenses.find((expense) => expense.id === revised)?.endsOn,
+    ).toBeNull();
+
+    await expect(
+      withAuthenticatedDatabase((transaction) =>
+        transaction
+          .update(recurringItems)
+          .set({ markupAmount: 25 })
+          .where(eq(recurringItems.id, revised))
+          .returning(),
+      ),
+    ).rejects.toMatchObject({ cause: { code: "23514" } });
+    await expect(
+      withAuthenticatedDatabase((transaction) =>
+        transaction
+          .update(recurringItems)
+          .set({ settlementStartsOn: null })
+          .where(eq(recurringItems.id, revised))
+          .returning(),
+      ),
+    ).rejects.toMatchObject({ cause: { code: "23514" } });
+
+    const renewed = await addExpense(
+      {
+        ...input,
+        period: "2028-01",
+        nextDueOn: "2030-01-01",
+        settlement: {
+          markupAmountInOre: 20_000,
+          markupPercent: null,
+          inflationPercent: null,
+        },
+      },
+      revised,
+    );
+    data = await getBudgetData();
+    expect(
+      data.expenses.find((expense) => expense.id === renewed)?.settlement,
+    ).toEqual({
+      startsOn: "2028-01-01",
+      markupAmountInOre: 20_000,
+      markupPercent: null,
+      inflationPercent: null,
+    });
+    expect(monthlySummary("2028-01", data.expenses, []).settlementInOre).toBe(
+      50_834,
+    );
+    await removeExpense(renewed, "2028-02");
+    data = await getBudgetData();
+    expect(monthlySummary("2028-01", data.expenses, []).settlementInOre).toBe(
+      50_834,
+    );
+    expect(monthlySummary("2028-02", data.expenses, []).settlementInOre).toBe(
+      0,
+    );
+  });
+});
+
+it.each(["direct", "allocated"] as const)(
+  "converts %s expenses to settlements and back without stale adjustments or lost history",
+  async (type) => {
+    const userId = `conversion-${type}`;
+    await database.insert(user).values({
+      id: userId,
+      name: "Testägare",
+      email: `${userId}@example.test`,
+      emailVerified: true,
+    });
+    identity.userId = userId;
+    await createPersonalHousehold("Typbyteshushåll");
+    await addPerson("Kim");
+    const people = (await getBudgetData()).people;
+    const regular: ExpenseInput = {
+      name: "Planerad utgift",
+      amount: 120_000,
+      period: "2026-01",
+      type,
+      months: type === "allocated" ? 12 : 1,
+      nextDueOn: type === "allocated" ? "2027-01-01" : "",
+      ownerIds: people.map((person) => person.id),
+    };
+    const originalId = await addExpense(regular);
+    const settlementId = await addExpense(
+      {
+        ...regular,
+        type: "settlement",
+        period: "2026-07",
+        nextDueOn: "2028-07-01",
+        settlement: {
+          markupAmountInOre: null,
+          markupPercent: 10,
+          inflationPercent: null,
+        },
+      },
+      originalId,
+    );
+    let data = await getBudgetData();
+    const regularMonthly = type === "direct" ? 120_000 : 10_000;
+    expect(monthlySummary("2026-06", data.expenses, []).totalInOre).toBe(
+      regularMonthly,
+    );
+    expect(monthlySummary("2026-07", data.expenses, []).settlementInOre).toBe(
+      5_500,
+    );
+    expect(
+      data.expenses.find((expense) => expense.id === settlementId),
+    ).toMatchObject({
+      settlement: { startsOn: "2026-07-01", markupPercent: 10 },
+      owners: people,
+    });
+    const restoredId = await addExpense(
+      {
+        ...regular,
+        period: "2027-01",
+        nextDueOn: type === "allocated" ? "2028-01-01" : "",
+      },
+      settlementId,
+    );
+    data = await getBudgetData();
+    expect(monthlySummary("2026-12", data.expenses, []).settlementInOre).toBe(
+      5_500,
+    );
+    expect(monthlySummary("2027-01", data.expenses, [])).toMatchObject({
+      settlementInOre: 0,
+      totalInOre: regularMonthly,
+    });
+    expect(
+      data.expenses.find((expense) => expense.id === restoredId),
+    ).toMatchObject({
+      destination: type,
+      settlement: null,
+      owners: people,
+    });
+    const [stored] = await database
+      .select()
+      .from(recurringItems)
+      .where(eq(recurringItems.id, restoredId));
+    expect(stored).toMatchObject({
+      settlementStartsOn: null,
+      markupAmount: null,
+      markupPercent: null,
+      inflationPercent: null,
+    });
+  },
+);

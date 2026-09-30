@@ -18,9 +18,6 @@ export async function getMonthlyOverview(period: string) {
       // Both reads use the same connection and snapshot, including the RLS context.
       const budget = await readBudgetData(transaction, user.id);
       const allSavings = await readSavings(transaction, user.id);
-      const incomes = budget.incomes.filter((income) =>
-        isActiveInPeriod(period, income),
-      );
       const savings = allSavings.filter((saving) =>
         isActiveInPeriod(period, saving),
       );
@@ -32,7 +29,7 @@ export async function getMonthlyOverview(period: string) {
       const summary = monthlySummary(
         period,
         budget.expenses,
-        incomes,
+        budget.incomes,
         savingsContributionsInOre,
       );
 
@@ -41,15 +38,26 @@ export async function getMonthlyOverview(period: string) {
         household: budget.household,
         people: budget.people,
         expenses: summary.expenses,
-        incomes,
+        regularExpenses: summary.expenses.filter(
+          (expense) => expense.destination !== "settlement",
+        ),
+        replacementReserves: summary.expenses.filter(
+          (expense) => expense.destination === "settlement",
+        ),
+        incomes: summary.incomes,
         savings,
         totals: {
           incomeInOre: summary.incomeInOre,
           directExpensesInOre: summary.directInOre,
           monthlyAllocationsInOre: summary.allocatedInOre,
+          regularExpensesInOre: summary.directInOre + summary.allocatedInOre,
+          replacementContributionsInOre: summary.settlementInOre,
           expensesInOre: summary.totalInOre,
           savingsContributionsInOre,
-          transfersInOre: summary.allocatedInOre + savingsContributionsInOre,
+          transfersInOre:
+            summary.allocatedInOre +
+            summary.settlementInOre +
+            savingsContributionsInOre,
           monthlyRemainderInOre: summary.remainingInOre,
         },
       };

@@ -80,6 +80,11 @@ try {
       const [saving] = await sql`insert into public.savings_goals
         (household_id, name, monthly_contribution, starts_on, ends_on)
         values (${household.id}, 'Synthetic period saving', '50.75', '2026-09-01', '2026-12-01') returning id`;
+      const [settlement] = await sql`insert into public.recurring_items
+        (household_id, name, kind, amount, cadence_unit, destination, starts_on, settlement_starts_on, next_due_on, markup_percent, inflation_percent)
+        values (${household.id}, 'Synthetic settlement', 'expense', '12000.00', 'month', 'settlement', '2026-01-01', '2026-01-01', '2028-01-01', '10.00', '2.00') returning id, markup_percent, inflation_percent`;
+      assert.equal(settlement.markup_percent, "10.00");
+      assert.equal(settlement.inflation_percent, "2.00");
       assert.equal(
         (
           await sql`select ends_on::text from public.recurring_items where id = ${expense.id}`
@@ -98,6 +103,18 @@ try {
         1,
       );
       await sql`select set_config('app.user_id', ${outsider}, true)`;
+      assert.equal(
+        (
+          await sql`select id from public.recurring_items where id = ${settlement.id}`
+        ).length,
+        0,
+      );
+      assert.equal(
+        (
+          await sql`update public.recurring_items set markup_percent = '20.00' where id = ${settlement.id} returning id`
+        ).length,
+        0,
+      );
       assert.equal(
         (
           await sql`select id from public.recurring_items where id = ${expense.id}`

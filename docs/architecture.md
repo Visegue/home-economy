@@ -71,6 +71,16 @@ Använd expand/contract för att hålla föregående appversion kompatibel om pr
 
 Beräkningar använder heltals-öre; Postgres använder `numeric(14,2)`. Månadsperioder lagras som månadens första dag och valideras i databasen. Datum utan tid använder `date`, auditfält `timestamptz`.
 
+### Månadsöversiktens läsmodell
+
+`getMonthlyOverview(period)` i `src/features/dashboard/monthly-overview.ts` är månadssidans gemensamma läsingång. Den validerar `YYYY-MM` och läser inkomster, utgifter, avräkningar, sparande och hushållspersoner i en kort, skrivskyddad `REPEATABLE READ`-transaktion via `withAuthenticatedDatabase()`. Samma databasanslutning, ögonblicksbild och transaktionslokala `app.user_id` gäller för samtliga frågor; tvingande RLS och ägarhushållsfiltret behålls. Inställningarna kan fortsatt använda den fristående budgetläsningen.
+
+Läsmodellen väljer månadens giltiga poster och returnerar oformaterade belopp i heltals-öre, inklusive varje posts månadsbelopp, separata tabellsummor och totalt att föra över. Överföringar är månadsavsättningar för utgifter plus avräkningar och sparande. Kvarvarande belopp är inkomst minus dessa poster och direkta utgifter. Saknad inkomst ger `null`; registrerad nollinkomst är ett känt belopp. En betalning från redan reserverade medel dras inte av igen.
+
+Månaden är en rapporteringsperiod över långlivade poster, inte en separat plan eller ett lagrat kontosaldo. React-komponenterna formaterar beloppen och visar de aktiva posterna; de räknar inte om månadsbelopp eller tabellsummor. Avräkningarnas prognos för hela målbeloppet visas också, utan att den behandlas som månadens kostnad.
+
+Integrationstesterna i `monthly-overview.test.ts` använder PGlite, verkliga frågor och en begränsad RLS-roll. De täcker transaktionsläge, hushållsisolering, historik, avrundning, typbyten och avräkningarnas sista överföring. `pnpm db:check` verifierar runtime-åtkomst och RLS på utvecklingsbranchen eller i staging; PGlite ersätter inte denna kontroll.
+
 ### Inkomster
 
 `household_incomes` lagrar namn, månadsbelopp, startmånad och valfri slutmånad. Båda gränsmånaderna ingår. Inställningarna hanterar flera källor; översikten summerar månadens aktiva inkomster.
@@ -87,6 +97,16 @@ Poster har startmånad och valfri slutmånad som ingår i perioden. Vid ändring
 
 Migration 0010 lägger till nullable datumfält och constraints. Äldre sparande utan startmånad gäller även tidigare månader fram till en ändring; okänd historik gissas inte. Borttagna poster förblir dolda. Nytt sparande får vald startmånad.
 
+### Avräkningar
+
+Domänens engelska namn är **Replacement Reserve** och **Replacement Contribution**, med svenska visningsnamn enligt [CONTEXT.md](../CONTEXT.md). Befintliga identifierare som `settlement`, `settlementInOre` och `SettlementsSection` är tekniska namn för samma område, inte en separat domänbetydelse. Den nya läsmodellen använder `replacementReserves` och `replacementContributionsInOre`. Inga tabeller, enumvärden eller historiska migrationer döps om i denna refaktorering.
+
+Avräkningar lagras i `recurring_items` med destination `settlement` och använder samma ägare, versionshistorik och tvingande RLS som andra utgifter. Migration 0013 lägger till beräkningsstart, påslag i kronor eller procent samt årlig inflation. `null` betyder att respektive justering är avstängd.
+
+Målbeloppet är `(kostnad + påslag) × (1 + inflation / 100)^(månader / 12)`, avrundat till öre. Månader räknas från planens startmånad till nästa utgiftsmånad. Avsättningen fördelas från startmånaden till månaden före utgiften, minst en månad. De sista överföringarna justeras så att summan blir exakt målbeloppet. Standardvärdena i formuläret är 10 procent påslag och 2 procent inflation; båda kan stängas av.
+
+Avsättningen upphör i utgiftsmånaden (efter startmånaden för en plan som betalas samma månad). Posten finns kvar för hantering. Ett nytt utgiftsdatum startar en ny plan från vald ändringsmånad. Om datumet behålls bevaras beräkningsstarten, så en namnändring inte höjer månadsavsättningen. Det är en budgetplan, inte ett kontosaldo: faktiska insättningar, uttag och avkastning räknas inte av. Avräkningar räknas en gång bland utgifterna och visas separat under överföringar.
+
 ## Nästa steg
 
-Månadsöversikten visar inkomster, direkta utgifter och avsättningar. Historisk import och kontosnapshots kan läggas till utan att ändra kärnmodellen.
+Månadsöversikten visar inkomster, direkta utgifter, avsättningar, avräkningar och sparande. Bekräftade överföringar, öronmärkta kontosaldon, förfallna betalningar, investeringsavkastning och beräkning av tillgängliga medel/nettoförmögenhet ingår ännu inte. Begreppen finns i domänglossariet men ska inte tolkas som redan implementerad funktionalitet.

@@ -17,7 +17,7 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
     .fill("5000");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
   await expect(page).toHaveURL(/\/$/);
-  const section = page.getByRole("region", { name: "Dina sparmål" });
+  const section = page.getByRole("region", { name: "Spara" });
   const transfers = page.getByRole("region", {
     name: "Att föra över",
     exact: true,
@@ -28,7 +28,7 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
     .locator('[data-slot="card-title"]')
     .allTextContents();
   expect(cardTitles.indexOf("Utgifter")).toBeLessThan(
-    cardTitles.indexOf("Sparmål"),
+    cardTitles.indexOf("Spara"),
   );
   await expect(page.getByLabel("Välj månad")).toHaveCount(0);
   await expect(
@@ -36,7 +36,7 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   ).toHaveCount(0);
   await expect(page.getByText(/Månad för månad/)).toHaveCount(0);
   await expect(total).toHaveText("0,00 kr");
-  await expect(section).toContainText("Inga sparmål ännu");
+  await expect(section).toContainText("Inget sparande ännu");
   await expect(
     section
       .locator('[data-slot="card-action"]')
@@ -70,6 +70,17 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await amount.fill("500,29");
   await dialog.getByRole("button", { name: "Spara sparande" }).click();
   await expect(total).toHaveText("1 751,04 kr");
+  const table = section.getByRole("table", { name: "Månadssparande" });
+  await expect(
+    table
+      .getByRole("row")
+      .filter({ hasText: "Buffert" })
+      .getByRole("cell")
+      .nth(1),
+  ).toHaveText("1 250,75 kr");
+  await expect(
+    table.getByRole("row").filter({ hasText: "Totalt per månad" }),
+  ).toContainText("1 751,04 kr");
   await expect(summary).toContainText("Kvar efter utgifter och sparande");
   await expect(summary).toContainText("2 998,96 kr");
   await expect(
@@ -78,7 +89,7 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await expect(section.getByRole("button", { name: /^Avsluta / })).toHaveCount(
     0,
   );
-  await section.getByRole("button", { name: "Hantera sparmål" }).click();
+  await section.getByRole("button", { name: "Hantera sparande" }).click();
   await expect(page.getByRole("button", { name: "Ändra Mobil" })).toHaveCount(
     0,
   );
@@ -121,15 +132,15 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await expect(section.getByRole("button", { name: /^Avsluta / })).toHaveCount(
     0,
   );
-  await section.getByRole("button", { name: "Hantera sparmål" }).click();
-  await section.getByRole("button", { name: "Klar med sparmål" }).click();
+  await section.getByRole("button", { name: "Hantera sparande" }).click();
+  await section.getByRole("button", { name: "Klar med sparande" }).click();
   await expect(
     section.getByRole("button", { name: "Ändra Ny buffert" }),
   ).toHaveCount(0);
   await expect(section.getByRole("button", { name: /^Avsluta / })).toHaveCount(
     0,
   );
-  await section.getByRole("button", { name: "Hantera sparmål" }).click();
+  await section.getByRole("button", { name: "Hantera sparande" }).click();
   await section.getByRole("button", { name: "Ändra Ny buffert" }).click();
   await expect(dialog.getByLabel("Ändringen gäller från")).toHaveValue(start);
   await dialog.getByRole("button", { name: "Stäng", exact: true }).click();
@@ -151,11 +162,11 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
     .click();
   await expect(total).toHaveText("0,00 kr");
   await expect(
-    section.getByRole("button", { name: /Hantera sparmål|Klar med sparmål/ }),
+    section.getByRole("button", { name: /Hantera sparande|Klar med sparande/ }),
   ).toHaveCount(0);
   await page.reload();
   await expect(summary).toContainText("4 750,00 kr");
-  await expect(section).toContainText("Inga sparmål ännu");
+  await expect(section).toContainText("Inget sparande ännu");
   await expect(total).toHaveText("0,00 kr");
   // Transfers include reserves and active savings, without counting direct expenses.
   await page.getByRole("button", { name: "Lägg till utgift" }).click();

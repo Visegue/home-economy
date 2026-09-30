@@ -194,6 +194,8 @@ describe("monthly overview", () => {
       incomeInOre: 4_000_000,
       directExpensesInOre: 2_000_000,
       monthlyAllocationsInOre: 300_000,
+      regularExpensesInOre: 2_300_000,
+      replacementContributionsInOre: 0,
       expensesInOre: 2_300_000,
       savingsContributionsInOre: 500_000,
       transfersInOre: 800_000,
@@ -294,6 +296,167 @@ describe("monthly overview", () => {
     });
   });
 
+  it("includes replacement contributions once and preserves the last transfer's rounding", async () => {
+    await expense();
+    await expense({
+      destination: "allocated",
+      amount: 120,
+      cadenceInterval: 12,
+    });
+    await saveIncome({
+      name: "Lön",
+      amount: 100_000,
+      startsOn: "2026-11",
+      endsOn: null,
+    });
+    await saveSaving(
+      { name: "Buffert", amountInOre: 5_000 },
+      undefined,
+      "2026-11",
+    );
+    const id = await addExpense({
+      name: "Vitvaror",
+      amount: 10_000,
+      type: "settlement",
+      period: "2026-11",
+      nextDueOn: "2027-02-15",
+      months: 1,
+      ownerIds: [],
+      settlement: {
+        markupAmountInOre: null,
+        markupPercent: null,
+        inflationPercent: null,
+      },
+    });
+
+    const overviews = [];
+    for (const period of ["2026-11", "2026-12", "2027-01", "2027-02"]) {
+      overviews.push(await getMonthlyOverview(period));
+    }
+    const [first, , last, due] = overviews;
+    expect(first.regularExpenses).toHaveLength(2);
+    expect(first.replacementReserves).toHaveLength(1);
+    expect(first.replacementReserves[0]).toMatchObject({
+      id,
+      monthlyAmountInOre: 3_334,
+    });
+    expect(first.expenses).toHaveLength(3);
+    expect(first.totals).toEqual({
+      incomeInOre: 100_000,
+      directExpensesInOre: 10_000,
+      monthlyAllocationsInOre: 1_000,
+      regularExpensesInOre: 11_000,
+      replacementContributionsInOre: 3_334,
+      expensesInOre: 14_334,
+      savingsContributionsInOre: 5_000,
+      transfersInOre: 9_334,
+      monthlyRemainderInOre: 80_666,
+    });
+    expect(last.replacementReserves[0].monthlyAmountInOre).toBe(3_332);
+    expect(last.totals.transfersInOre).toBe(9_332);
+    expect(
+      overviews.reduce(
+        (sum, overview) => sum + overview.totals.replacementContributionsInOre,
+        0,
+      ),
+    ).toBe(10_000);
+    // Keep the completed item visible for starting the next replacement cycle.
+    expect(due.replacementReserves).toHaveLength(1);
+    expect(due.replacementReserves[0].monthlyAmountInOre).toBe(0);
+    expect(due.totals).toMatchObject({
+      expensesInOre: 11_000,
+      transfersInOre: 6_000,
+      monthlyRemainderInOre: 84_000,
+    });
+  });
+
+  it("retains replacement adjustments and historical contributions after a revision", async () => {
+    const input = {
+      name: "Vitvaror",
+      amount: 100_000,
+      type: "settlement" as const,
+      period: "2026-01",
+      nextDueOn: "2027-01-15",
+      months: 1,
+      ownerIds: [],
+      settlement: {
+        markupAmountInOre: null,
+        markupPercent: 10,
+        inflationPercent: 2,
+      },
+    };
+    const id = await addExpense(input);
+    const revisedId = await addExpense(
+      { ...input, name: "Nya vitvaror", period: "2026-07" },
+      id,
+    );
+    const june = await getMonthlyOverview("2026-06");
+    const july = await getMonthlyOverview("2026-07");
+    // 1000 kr + 10% markup, then 2% annual inflation, split over 12 months.
+    expect(june.replacementReserves).toHaveLength(1);
+    expect(june.replacementReserves[0]).toMatchObject({
+      id,
+      monthlyAmountInOre: 9_350,
+      endsOn: "2026-06-01",
+    });
+    expect(july.replacementReserves).toHaveLength(1);
+    expect(july.replacementReserves[0]).toMatchObject({
+      id: revisedId,
+      monthlyAmountInOre: 9_350,
+      startsOn: "2026-07-01",
+      settlement: {
+        startsOn: "2026-01-01",
+        markupAmountInOre: null,
+        markupPercent: 10,
+        inflationPercent: 2,
+      },
+    });
+    expect(july.totals.replacementContributionsInOre).toBe(9_350);
+    expect(july.totals.monthlyRemainderInOre).toBeNull();
+  });
+
+  it("classifies expense-to-replacement conversions by the selected month", async () => {
+    const input = {
+      name: "Bil",
+      amount: 120_000,
+      type: "direct" as const,
+      period: "2026-01",
+      months: 1,
+      nextDueOn: "",
+      ownerIds: [],
+    };
+    const id = await addExpense(input);
+    await addExpense(
+      {
+        ...input,
+        type: "settlement",
+        period: "2026-07",
+        nextDueOn: "2027-07-01",
+        settlement: {
+          markupAmountInOre: 12_000,
+          markupPercent: null,
+          inflationPercent: null,
+        },
+      },
+      id,
+    );
+    const before = await getMonthlyOverview("2026-06");
+    const after = await getMonthlyOverview("2026-07");
+    expect(before.regularExpenses).toHaveLength(1);
+    expect(before.replacementReserves).toEqual([]);
+    expect(before.totals.directExpensesInOre).toBe(120_000);
+    expect(after.regularExpenses).toEqual([]);
+    expect(after.replacementReserves).toHaveLength(1);
+    expect(after.replacementReserves[0].settlement?.markupAmountInOre).toBe(
+      12_000,
+    );
+    expect(after.totals).toMatchObject({
+      directExpensesInOre: 0,
+      replacementContributionsInOre: 11_000,
+      transfersInOre: 11_000,
+    });
+  });
+
   it("sums rounded monthly amounts and includes legacy open-ended items", async () => {
     await expense({
       name: "Årlig A",
@@ -345,6 +508,13 @@ describe("monthly overview", () => {
       name: "Privat utgift",
       amount: 9000,
     });
+    await expense({
+      householdId: other.id,
+      name: "Privat avräkning",
+      destination: "settlement",
+      settlementStartsOn: new Date("2026-01-01T00:00:00Z"),
+      nextDueOn: new Date("2027-01-01T00:00:00Z"),
+    });
     await database.insert(savingsGoals).values({
       householdId: other.id,
       name: "Privat sparande",
@@ -368,6 +538,7 @@ describe("monthly overview", () => {
       expect(overview.totals.expensesInOre).toBe(12_300);
       expect(overview.incomes).toEqual([]);
       expect(overview.savings).toEqual([]);
+      expect(overview.replacementReserves).toEqual([]);
     }
   });
 

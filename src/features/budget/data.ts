@@ -22,6 +22,7 @@ import type {
 } from "./model";
 import { currentPeriod, periodSchema } from "./model";
 import { validateEffectivePeriod, periodDate } from "./validity";
+import { settlementForecast } from "@/domain/settlement";
 
 async function ownedHousehold(
   transaction: AuthorizedTransaction,
@@ -65,7 +66,11 @@ export async function readBudgetData(
         eq(recurringItems.householdId, household.id),
         eq(recurringItems.active, true),
         inArray(recurringItems.kind, ["expense", "reserve"]),
-        inArray(recurringItems.destination, ["direct", "allocated"]),
+        inArray(recurringItems.destination, [
+          "direct",
+          "allocated",
+          "settlement",
+        ]),
       ),
     )
     .orderBy(asc(recurringItems.name));
@@ -94,7 +99,23 @@ export async function readBudgetData(
     amountInOre: Math.round(item.amount * 100),
     unit: item.cadenceUnit,
     every: item.cadenceInterval,
-    destination: item.destination === "allocated" ? "allocated" : "direct",
+    destination:
+      item.destination === "settlement"
+        ? "settlement"
+        : item.destination === "allocated"
+          ? "allocated"
+          : "direct",
+    settlement: item.settlementStartsOn
+      ? {
+          startsOn: item.settlementStartsOn.toISOString().slice(0, 10),
+          markupAmountInOre:
+            item.markupAmount === null
+              ? null
+              : Math.round(item.markupAmount * 100),
+          markupPercent: item.markupPercent,
+          inflationPercent: item.inflationPercent,
+        }
+      : null,
     startsOn: item.startsOn?.toISOString().slice(0, 10) ?? null,
     endsOn: item.endsOn?.toISOString().slice(0, 10) ?? null,
     nextDueOn: item.nextDueOn?.toISOString().slice(0, 10) ?? null,
@@ -153,6 +174,26 @@ export async function addExpense(input: ExpenseInput, id?: number) {
           .where(eq(recurringItems.id, existing.id));
       }
     }
+    // Keep the planning anchor across revisions; a new payment date starts a new plan.
+    const settlementStartsOn =
+      input.type === "settlement"
+        ? existing?.destination === "settlement" &&
+          existing.nextDueOn?.toISOString().slice(0, 10) === input.nextDueOn
+          ? (existing.settlementStartsOn ?? periodDate(input.period))
+          : periodDate(input.period)
+        : null;
+    if (input.type === "settlement") {
+      if (!input.settlement || !settlementStartsOn)
+        throw new Error("Avräkningens beräkningsunderlag saknas.");
+      settlementForecast(
+        input.amount,
+        settlementStartsOn.toISOString().slice(0, 10),
+        input.nextDueOn,
+        input.settlement,
+      );
+    }
+    const adjustments =
+      input.type === "settlement" ? input.settlement : undefined;
     const values = {
       householdId: household.id,
       name: input.name,
@@ -163,10 +204,17 @@ export async function addExpense(input: ExpenseInput, id?: number) {
       cadenceUnit: "month" as const,
       cadenceInterval: input.type === "allocated" ? input.months : 1,
       destination: input.type,
+      settlementStartsOn,
+      markupAmount:
+        adjustments?.markupAmountInOre == null
+          ? null
+          : adjustments.markupAmountInOre / 100,
+      markupPercent: adjustments?.markupPercent ?? null,
+      inflationPercent: adjustments?.inflationPercent ?? null,
       startsOn: periodDate(input.period),
       endsOn: existing?.endsOn ?? null,
       nextDueOn:
-        input.type === "allocated"
+        input.type !== "direct"
           ? new Date(`${input.nextDueOn}T00:00:00Z`)
           : null,
     };

@@ -92,6 +92,13 @@
       "when": 1790409564254,
       "tag": "0012_friendly_wolverine",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790513827793,
+      "tag": "0013_tricky_hellfire_club",
+      "breakpoints": true
     }
   ]
 }
