@@ -201,21 +201,23 @@ export function monthlySummary(
   incomes: BudgetIncome[],
   savingsInOre = 0,
 ) {
-  const activeExpenses = expenses.filter((expense) =>
-    isActiveInPeriod(period, expense),
-  );
+  const activeExpenses = expenses
+    .filter((expense) => isActiveInPeriod(period, expense))
+    .map((expense) => ({
+      ...expense,
+      monthlyAmountInOre: monthlyExpenseAmount(period, expense),
+    }));
   let directInOre = 0;
   let allocatedInOre = 0;
   let settlementInOre = 0;
   for (const expense of activeExpenses) {
-    const amount = monthlyExpenseAmount(period, expense);
+    const amount = expense.monthlyAmountInOre;
     if (expense.destination === "settlement") settlementInOre += amount;
     else if (expense.destination === "allocated") allocatedInOre += amount;
     else directInOre += amount;
   }
-  const activeIncomes = incomes.filter(
-    (income) =>
-      income.startsOn <= period && (!income.endsOn || income.endsOn >= period),
+  const activeIncomes = incomes.filter((income) =>
+    isActiveInPeriod(period, income),
   );
   const incomeInOre = activeIncomes.length
     ? activeIncomes.reduce((total, income) => total + income.amountInOre, 0)
@@ -223,6 +225,7 @@ export function monthlySummary(
   const totalInOre = directInOre + allocatedInOre + settlementInOre;
   return {
     expenses: activeExpenses,
+    incomes: activeIncomes,
     incomeInOre,
     directInOre,
     allocatedInOre,
@@ -233,6 +236,10 @@ export function monthlySummary(
       incomeInOre === null ? null : incomeInOre - totalInOre - savingsInOre,
   };
 }
+
+export type MonthlyExpense = ReturnType<
+  typeof monthlySummary
+>["expenses"][number];
 
 export function monthlyExpenseAmount(period: string, expense: BudgetExpense) {
   if (!isActiveInPeriod(period, expense)) return 0;

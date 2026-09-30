@@ -1,10 +1,10 @@
 # Hemekonomi
 
-En svensk app för hushållets ekonomi, byggd utifrån en Excel-arbetsbok. Produktområdena är månadsplan, kassaflöde, återkommande utgifter, konton, lån, sparande och investeringar.
+En svensk app för hushållets ekonomi, byggd utifrån en Excel-arbetsbok. Produktområdena är månadsöversikt, kassaflöde, återkommande utgifter, konton, lån, sparande och investeringar.
 
 Gränssnittet använder sand, aubergine, blått, senap och salvia. All demodata i repot är syntetisk.
 
-## Månadsbudget
+## Månadsöversikt
 
 - **Månaden** visar den aktuella månadens inkomster, direkta utgifter, avsättningar, avräkningar och kvarvarande belopp eller underskott. **Utgifter**, **Avräkningar** och **Spara** visas i egna tabeller med månadssummor. Alla fem kort kan minimeras med pilknappen och tangentbordet; de öppnas igen vid omladdning.
 - Lägg till inkomstkällor under **Inställningar → Hushållets inkomster** med namn, månadsbelopp efter skatt, startmånad och valfri slutmånad. Båda gränsmånaderna ingår. Utan slutmånad gäller inkomsten tills vidare. Aktiva källor summeras per månad.
@@ -178,6 +178,7 @@ Under **Inställningar → Konto** visas kopplade inloggningssätt. Befintligt l
 
 ## Dokumentation
 
+- [Domänbegrepp och svenska visningsnamn](CONTEXT.md) – engelska definitioner och svenska namn, även för framtida funktioner.
 - [Arbetsbokens produktkarta](docs/workbook-mapping.md)
 - [Arkitektur och säkerhetsgränser](docs/architecture.md)
 - [ADR 0001: data- och authplattform](docs/adr/0001-data-and-auth-platform.md)

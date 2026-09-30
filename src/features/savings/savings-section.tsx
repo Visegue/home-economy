@@ -13,20 +13,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SavingDialog, RemoveSavingDialog } from "./saving-form";
-import { totalMonthlySavings, type Saving } from "./validation";
-import { isActiveInPeriod, monthLabel } from "@/features/budget/model";
+import type { Saving } from "./validation";
+import { monthLabel } from "@/features/budget/model";
 import { formatBudgetSek } from "@/lib/money";
 
 export function SavingsSection({
-  savings: allSavings,
+  savings,
+  totalInOre,
   period,
 }: {
   savings: Saving[];
+  totalInOre: number;
   period: string;
 }) {
-  const savings = allSavings.filter((saving) =>
-    isActiveInPeriod(period, saving),
-  );
   return (
     <section aria-label="Spara" className="mt-4">
       <CardManagement key={period} hasItems={savings.length > 0}>
@@ -98,7 +97,7 @@ export function SavingsSection({
                 <TableRow className="bg-muted/50 font-semibold">
                   <TableCell>Totalt per månad</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatBudgetSek(totalMonthlySavings(savings, period))}
+                    {formatBudgetSek(totalInOre)}
                   </TableCell>
                   <TableCell colSpan={2} />
                   <ManagementOnly>

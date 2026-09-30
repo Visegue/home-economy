@@ -28,3 +28,17 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Before a PR with app, dependency, migration, release-script or build/deploy changes, raise `package.json`'s SemVer above `main`. Choose patch/minor/major deliberately and explain it in the PR. Docs-only, test-file-only and CI-only changes may keep the version.
 - Prereleases on `main` still deploy to production. Build metadata (`+...`) alone is not a version increase. Compare with the latest `main` and raise again if another PR merges first.
 - Only CI creates release tags and GitHub Releases, after successful production deploy. Never create or move tags manually. Follow `docs/release-runbook.md`. Update `scripts/check-pr-version.mjs` and its tests for new release-affecting paths.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in this repository's GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Triage uses the five default canonical labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Domain documentation uses a single-context layout. See `docs/agents/domain.md`.

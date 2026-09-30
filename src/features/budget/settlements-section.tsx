@@ -17,14 +17,16 @@ import type { HouseholdPerson } from "@/features/households/member-appearance";
 import { settlementForecast } from "@/domain/settlement";
 import { formatBudgetSek } from "@/lib/money";
 import { ExpenseDialog, RemoveExpenseDialog } from "./forms";
-import { monthlyExpenseAmount, type BudgetExpense } from "./model";
+import type { MonthlyExpense } from "./model";
 
 export function SettlementsSection({
   expenses,
+  totalInOre,
   people,
   period,
 }: {
-  expenses: BudgetExpense[];
+  expenses: MonthlyExpense[];
+  totalInOre: number;
   people: HouseholdPerson[];
   period: string;
 }) {
@@ -74,7 +76,7 @@ export function SettlementsSection({
                     expense.nextDueOn,
                     expense.settlement,
                   );
-                  const contribution = monthlyExpenseAmount(period, expense);
+                  const contribution = expense.monthlyAmountInOre;
                   return (
                     <TableRow key={expense.id}>
                       <TableCell className="font-medium">
@@ -138,13 +140,7 @@ export function SettlementsSection({
                 <TableRow className="bg-muted/50 font-semibold">
                   <TableCell>Totalt per månad</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {formatBudgetSek(
-                      expenses.reduce(
-                        (sum, expense) =>
-                          sum + monthlyExpenseAmount(period, expense),
-                        0,
-                      ),
-                    )}
+                    {formatBudgetSek(totalInOre)}
                   </TableCell>
                   <TableCell colSpan={4} />
                   <ManagementOnly>
