@@ -10,13 +10,23 @@ English terms are canonical domain names; **Svenska** records their Swedish disp
 
 **Monthly Overview**:
 **Svenska**: Månadsöversikt.
-A consolidated view of the Household's Income and the amounts to pay as Expenses, allocate for future Expenses, contribute to Savings, and fund for Replacements during one calendar month. The month is a reporting window over underlying items that can remain unchanged for years and have their own payment or contribution schedules.
+A consolidated view of the Household's Income and the amounts to pay as Expenses, allocate for future Expenses, contribute to Savings, and fund for Replacements during one calendar month. The month is a reporting window, not the smallest interval for changes: underlying items can remain unchanged for years or change on a specific calendar date, and have their own payment or contribution schedules.
 _Avoid_: Monthly Plan, Snapshot
 
 **Monthly Remainder**:
 **Svenska**: Kvar efter månadens utgifter och avsättningar.
 The month's Income less Direct Expenses, Monthly Allocations, Savings Contributions, and Replacement Contributions, with payments from previously funded Reserves not deducted again. It is unknown when no Income is configured for the month; configured zero Income is a known value.
 _Avoid_: Available Household Funds, Account Balance
+
+### Effective dates and validity
+
+**Effective Date**:
+**Svenska**: Gäller från.
+The calendar date from which new values for a Household's financial item apply, which need not be the first day of a month. It is distinct from when a payment or transfer occurs.
+
+**Validity Period**:
+**Svenska**: Giltighetsperiod.
+The date interval during which a particular version of a Household's financial item applies, with an optional end date. It is independent of the monthly reporting window and of when money is paid or transferred.
 
 ### Expenses
 

@@ -181,6 +181,7 @@ Under **Inställningar → Konto** visas kopplade inloggningssätt. Befintligt l
 - [Domänbegrepp och svenska visningsnamn](CONTEXT.md) – engelska definitioner och svenska namn, även för framtida funktioner.
 - [Arbetsbokens produktkarta](docs/workbook-mapping.md)
 - [Arkitektur och säkerhetsgränser](docs/architecture.md)
+- [Arkitekturgranskning och status för förbättringsförslag](docs/architecture-review.md)
 - [ADR 0001: data- och authplattform](docs/adr/0001-data-and-auth-platform.md)
 - [ADR 0002: databasmedvetna releaser](docs/adr/0002-database-aware-releases.md)
 - [ADR 0003: appversionering och GitHub Releases](docs/adr/0003-app-versioning-and-github-releases.md)
