@@ -19,12 +19,6 @@ export function memberColorForIndex(index: number) {
   return memberColors[index % memberColors.length].value;
 }
 
-export interface HouseholdPerson {
-  id: number;
-  name: string;
-  color: string;
-}
-
 export function memberInitials(name: string) {
   const words = name.normalize("NFC").match(/[\p{L}\p{N}]+/gu) ?? [];
   const firstWord = words[0];

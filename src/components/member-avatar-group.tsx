@@ -13,7 +13,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { HouseholdPerson } from "@/features/households/member-appearance";
+import type { HouseholdPerson } from "@/features/households/members/model";
 
 export function MemberAvatarGroup({ people }: { people: HouseholdPerson[] }) {
   const [open, setOpen] = useState(false);

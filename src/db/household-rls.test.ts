@@ -39,12 +39,14 @@ vi.mock("@/db", () => ({
 }));
 
 import { withAuthenticatedDatabase } from "./authorized";
+import {
+  saveMember,
+  removeMember,
+  getHouseholdMembers,
+} from "@/features/households/members/data";
 import { createPersonalHousehold } from "@/features/households/data";
 import {
   addExpense,
-  addPerson,
-  updatePerson,
-  removePerson,
   getBudgetData,
   saveIncome,
   removeIncome,
@@ -789,9 +791,9 @@ describe("budget persistence and isolation", () => {
   let incomeId: number;
   it("saves members, multiple owners and monthly income without duplicates", async () => {
     identity.userId = "owner";
-    expect(await addPerson("Kim")).toBe(true);
-    expect(await addPerson("Robin")).toBe(true);
-    expect(await addPerson("Kim")).toBe(false);
+    expect(await saveMember({ name: "Kim" })).toBe(true);
+    expect(await saveMember({ name: "Robin" })).toBe(true);
+    expect(await saveMember({ name: "Kim" })).toBe(false);
     let data = await getBudgetData();
     expect(data.people.map((person) => person.color)).toEqual([
       "#d5b8ca",
@@ -974,7 +976,7 @@ describe("budget persistence and isolation", () => {
   });
   it("rejects cross-household links even for a user with access to both", async () => {
     identity.userId = "outsider";
-    await addPerson("Annan medlem");
+    await saveMember({ name: "Annan medlem" });
     const other = await getBudgetData();
     identity.userId = "member";
     await expect(
@@ -1246,7 +1248,7 @@ describe("expense and saving validity", () => {
 
   it("splits expenses atomically, retains owners and ends without changing earlier months", async () => {
     identity.userId = "history-owner";
-    await addPerson("Kim");
+    await saveMember({ name: "Kim" });
     const person = (await getBudgetData()).people[0];
     const input = {
       name: "Hyra",
@@ -1333,7 +1335,33 @@ describe("expense and saving validity", () => {
   });
 });
 
-describe("household person management", () => {
+describe("household member management", () => {
+  it("validates direct writes and derives defaults from saved members", async () => {
+    await effectiveFixture();
+    await expect(saveMember({ name: "   " })).rejects.toThrow(
+      "Ange medlemmens namn.",
+    );
+    await expect(saveMember({ id: 0, name: "Kim" })).rejects.toThrow(
+      "Too small",
+    );
+    await expect(removeMember(0)).rejects.toThrow("Too small");
+    expect(await getHouseholdMembers()).toEqual({
+      people: [],
+      defaultColor: "#d5b8ca",
+    });
+    expect(await saveMember({ name: "  Robin  ", color: "#AABBCC" })).toBe(
+      true,
+    );
+    expect(await saveMember({ name: "Robin" })).toBe(false);
+    expect(await saveMember({ name: "Kim" })).toBe(true);
+    const members = await getHouseholdMembers();
+    expect(members.people).toEqual([
+      expect.objectContaining({ name: "Kim", color: "#d6c6e5" }),
+      expect.objectContaining({ name: "Robin", color: "#aabbcc" }),
+    ]);
+    expect(members.defaultColor).toBe("#b9c7df");
+  });
+
   it("renames and removes owners without deleting expenses, and isolates other households", async () => {
     await database.insert(user).values({
       id: "people-owner",
@@ -1343,9 +1371,9 @@ describe("household person management", () => {
     });
     identity.userId = "people-owner";
     await createPersonalHousehold("Medlemstest");
-    await addPerson("Kim", "#356b9b");
-    await addPerson("Robin");
-    const people = (await getBudgetData()).people;
+    await saveMember({ name: "Kim", color: "#356b9b" });
+    await saveMember({ name: "Robin" });
+    const people = (await getHouseholdMembers()).people;
     const kim = people.find((person) => person.name === "Kim")!;
     const robin = people.find((person) => person.name === "Robin")!;
     expect(kim.color).toBe("#356b9b");
@@ -1359,9 +1387,11 @@ describe("household person management", () => {
       nextDueOn: "",
       ownerIds: [kim.id, robin.id],
     });
-    expect(await updatePerson(kim.id, "Robin")).toBe(false);
-    expect(await updatePerson(kim.id, "Kim Ny", "#36735b")).toBe(true);
-    expect(await updatePerson(kim.id, "Kim Ny")).toBe(true);
+    expect(await saveMember({ id: kim.id, name: "Robin" })).toBe(false);
+    expect(
+      await saveMember({ id: kim.id, name: "Kim Ny", color: "#36735b" }),
+    ).toBe(true);
+    expect(await saveMember({ id: kim.id, name: "Kim Ny" })).toBe(true);
     let expense = (await getBudgetData()).expenses.find(
       (item) => item.id === expenseId,
     )!;
@@ -1372,10 +1402,11 @@ describe("household person management", () => {
     });
 
     identity.userId = "owner";
-    await expect(updatePerson(kim.id, "Intrång", "#ffffff")).rejects.toThrow(
-      "Household person not found",
-    );
-    await expect(removePerson(kim.id)).rejects.toThrow(
+    expect((await getHouseholdMembers()).people).not.toContainEqual(kim);
+    await expect(
+      saveMember({ id: kim.id, name: "Intrång", color: "#ffffff" }),
+    ).rejects.toThrow("Household person not found");
+    await expect(removeMember(kim.id)).rejects.toThrow(
       "Household person not found",
     );
 
@@ -1384,16 +1415,16 @@ describe("household person management", () => {
       (await getBudgetData()).people.find((person) => person.id === kim.id)
         ?.color,
     ).toBe("#36735b");
-    await expect(updatePerson(kim.id, "Kim Ny", "invalid")).rejects.toThrow(
-      /Failed query/,
-    );
-    await removePerson(kim.id);
+    await expect(
+      saveMember({ id: kim.id, name: "Kim Ny", color: "invalid" }),
+    ).rejects.toThrow("Välj en giltig färg.");
+    await removeMember(kim.id);
     const budget = await getBudgetData();
     expect(budget.people).toEqual([robin]);
     expense = budget.expenses.find((item) => item.id === expenseId)!;
     expect(expense.amountInOre).toBe(123456);
     expect(expense.owners).toEqual([robin]);
-    await removePerson(robin.id);
+    await removeMember(robin.id);
     expect(
       (await getBudgetData()).expenses.find((item) => item.id === expenseId)
         ?.owners,
@@ -1411,9 +1442,9 @@ describe("settlement persistence and isolation", () => {
     });
     identity.userId = "settlement-owner";
     await createPersonalHousehold("Avräkningshushåll");
-    await addPerson("Kim");
-    await addPerson("Robin");
-    const people = (await getBudgetData()).people;
+    await saveMember({ name: "Kim" });
+    await saveMember({ name: "Robin" });
+    const people = (await getHouseholdMembers()).people;
     const input: ExpenseInput = {
       name: "Vitvaror",
       amount: 1_200_000,
@@ -1547,8 +1578,8 @@ it.each(["direct", "allocated"] as const)(
     });
     identity.userId = userId;
     await createPersonalHousehold("Typbyteshushåll");
-    await addPerson("Kim");
-    const people = (await getBudgetData()).people;
+    await saveMember({ name: "Kim" });
+    const people = (await getHouseholdMembers()).people;
     const regular: ExpenseInput = {
       name: "Planerad utgift",
       amount: 120_000,

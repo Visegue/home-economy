@@ -1,19 +1,19 @@
 # Architecture review
 
-Original review: 2026-09-28. Status updated: 2026-09-30.
+Original review: 2026-09-28. Status updated: 2026-10-01.
 
-This document preserves the four improvement candidates from the original HTML architecture review, with implementation status recorded separately. Candidate 1 is merged. Candidate 2 is implemented in the current working branch, including the agreed effective-date and manual-funding behavior; it is not yet merged or deployed. Candidates 3–4 remain optional future work.
+This document preserves the four improvement candidates from the original HTML architecture review, with implementation status recorded separately. Candidates 1–2 are merged. Candidate 3 is implemented on the feature branch and is awaiting merge. Candidate 4 remains optional future work.
 
 The original review recommended starting with the monthly household view because it combined cross-domain correctness rules in its callers. The domain discussion subsequently established **Monthly Overview** as the correct name: a monthly projection of longer-lived definitions, not a separate monthly plan. See [the domain glossary](../CONTEXT.md) for canonical English terms and Swedish display names, and [the architecture documentation](architecture.md) for current behavior.
 
 ## Status
 
-| Candidate                  | Original assessment          | Status as of 2026-09-30                                                          |
-| -------------------------- | ---------------------------- | -------------------------------------------------------------------------------- |
-| 1. Monthly Overview        | Strong; first recommendation | Completed and merged in [PR 55](https://github.com/Visegue/home-economy/pull/55) |
-| 2. Effective period writes | Worth exploring              | Implemented locally; migration and Neon verification required before deployment  |
-| 3. Household member module | Strong                       | Not implemented; revisit alongside member functionality                          |
-| 4. Settings data assembly  | Speculative                  | Not implemented; defer until the need is clearer                                 |
+| Candidate                  | Original assessment          | Status as of 2026-10-01                                                                                           |
+| -------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 1. Monthly Overview        | Strong; first recommendation | Completed and merged in [PR 55](https://github.com/Visegue/home-economy/pull/55)                                  |
+| 2. Effective period writes | Worth exploring              | Merged in [PR 58](https://github.com/Visegue/home-economy/pull/58); production deployment and release jobs passed |
+| 3. Household member module | Strong                       | Implemented; review, quality, browser checks and dependency audit passed; live Neon check pending                 |
+| 4. Settings data assembly  | Speculative                  | Not implemented; defer until the need is clearer                                                                  |
 
 ## Candidate 1 Monthly Overview
 
@@ -95,7 +95,17 @@ Expected benefits are keeping member rules together, a shared interface for Sett
 
 ### Follow up
 
-Not implemented by PR 55. Revisit when extending household member functionality. The original assessment remains strong, but there is no need to bundle it with period-write changes. Reassess its overlap with candidate 4 before introducing separate modules for both.
+Implemented locally on 2026-10-01 in `src/features/households/members/`. The module owns member input validation, appearance, palette defaults, household-scoped name uniqueness, authenticated lifecycle writes, and expense-owner validation and projections. Member writes serialize on the household row so duplicate checks and default-color selection agree across concurrent writes. Existing account-access membership is unchanged: these members remain names for expense ownership, not login accounts.
+
+Settings consumes `getHouseholdMembers()` and the narrow `getIncomeData()` read instead of loading all expenses and owner links. Budget uses member transaction readers within the Monthly Overview's existing authenticated snapshot. Renaming updates owner displays; removing a member cascades owner links, including historical versions, while preserving financial definitions. The existing lifecycle/RLS and browser tests exercise the new interface; direct-write coverage also checks validation, name/color normalization and saved-member defaults. No schema migration is required.
+
+Validation on Node.js 24: `pnpm check` passed, including 252 tests and the production build. The full `pnpm test:e2e` rerun passed all 17 browser tests. An initial transfer-dialog timeout did not recur in either the isolated transfer tests or the full rerun; the parallel test server also logged PGlite abort messages. `pnpm db:check` could not run because this worktree has no `DATABASE_URL`; verification against `dev/alexander` remains pending.
+
+The user confirmed the existing member semantics on 2026-10-01: names represent expense owners independently of login access, renames affect historical owner displays, and removal clears historical owner links while preserving expenses. A subsequent review against both the project standards and candidate 3's requirements found no implementation, authentication/RLS or scope issues. The remaining standards item is live Neon verification.
+
+The dependency audit reported zero known vulnerabilities across production and development dependencies. GitHub CodeQL default setup is enabled and there were no open code-scanning alerts at review time. This records repository state before submission; CI analyzes candidate 3's changes. The planned version is `0.9.1`, a patch for the behavior-preserving refactor and member-write validation/concurrency hardening, above the confirmed `main` version `0.9.0`.
+
+Candidate 4 remains deferred: narrower reads address the known unused-data problem without adding a settings assembly module.
 
 ## Candidate 4 Settings data assembly
 
@@ -120,8 +130,8 @@ Not implemented by PR 55. Defer this speculative candidate until the need is cle
 
 ## Next steps
 
-Finish environment verification and review of candidate 2 before deployment. Candidates 3 and 4 should be reassessed when their affected functionality changes. Previously identified dependency security alerts should be checked separately; they are not findings from the original architecture report.
+Run `pnpm db:check` against `dev/alexander` once its runtime connection is configured. Candidate 3 has passed implementation review and local checks; no migration is required. Before opening a PR, recheck that version `0.9.1` remains above the latest `main` as required by the release policy. Candidate 2 was merged on 2026-10-01 and its production deployment and release jobs passed. Candidate 4 should be reassessed only when coordinated settings behavior justifies a separate module. Previously identified dependency security alerts should be checked separately; they are not findings from the original architecture report.
 
-### Pre-review follow-up
+### Candidate 2 pre-review follow-up (historical)
 
 The local follow-up protects pending transfer confirmations from dialog close/reopen, excludes inactive definitions from expected withdrawals and uses the shared Select primitives. Regression coverage includes slow confirmations, inactive allocated expenses, and both allocated/replacement reserves retaining confirmed values through a conversion to direct expense. The planned release is 0.9.0 (new functionality). ADR 0004 and the release runbook define the first-write compatibility boundary: older month-only applications must not resume editing after exact-date writes. Migration/RLS verification against Neon remains required before merge; no external deployment or access restriction has been performed locally.

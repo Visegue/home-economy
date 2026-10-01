@@ -11,20 +11,7 @@ import {
   settlementForecast,
   type SettlementPlan,
 } from "@/domain/settlement";
-import type { HouseholdPerson } from "@/features/households/member-appearance";
-
-export const personSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Ange medlemmens namn.")
-    .max(120, "Namnet får vara högst 120 tecken."),
-  color: z
-    .string()
-    .regex(/^#[0-9a-fA-F]{6}$/, "Välj en giltig färg.")
-    .transform((color) => color.toLowerCase())
-    .optional(),
-});
+import type { HouseholdPerson } from "@/features/households/members/model";
 
 export const periodSchema = z
   .string()

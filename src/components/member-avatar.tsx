@@ -3,7 +3,7 @@ import {
   defaultMemberColor,
   memberInitials,
   memberTextColor,
-} from "@/features/households/member-appearance";
+} from "@/features/households/members/appearance";
 
 export function MemberAvatar({
   name,
