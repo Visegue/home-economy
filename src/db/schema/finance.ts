@@ -17,6 +17,8 @@ import {
   timestamp,
   unique,
   uniqueIndex,
+  uuid,
+  integer,
 } from "drizzle-orm/pg-core";
 
 import { user } from "./auth";
@@ -80,6 +82,11 @@ export const households = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "restrict" }),
     createdAt: createdAt(),
+    incomeDay: smallint("income_day").default(25).notNull(),
+    directDay: smallint("direct_day").default(25).notNull(),
+    allocatedDay: smallint("allocated_day").default(25).notNull(),
+    replacementDay: smallint("replacement_day").default(25).notNull(),
+    savingDay: smallint("saving_day").default(25).notNull(),
   },
   (table) => [
     check(
@@ -87,6 +94,10 @@ export const households = pgTable(
       sql`char_length(${table.name}) between 1 and 120`,
     ),
     uniqueIndex("households_owner_user_id_uidx").on(table.ownerUserId),
+    check(
+      "households_scheduled_days",
+      sql`${table.incomeDay} between 1 and 31 and ${table.directDay} between 1 and 31 and ${table.allocatedDay} between 1 and 31 and ${table.replacementDay} between 1 and 31 and ${table.savingDay} between 1 and 31`,
+    ),
   ],
 );
 
@@ -221,9 +232,99 @@ export const accounts = pgTable(
   ],
 );
 
+export const financialItems = pgTable(
+  "financial_items",
+  {
+    id: uuid().defaultRandom().primaryKey(),
+    householdId: bigint("household_id", { mode: "number" })
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    kind: text().notNull(),
+  },
+  (table) => [
+    unique("financial_items_id_household_unique").on(
+      table.id,
+      table.householdId,
+    ),
+    check(
+      "financial_items_kind",
+      sql`${table.kind} in ('expense', 'income', 'saving')`,
+    ),
+    index("financial_items_household_idx").on(table.householdId),
+    pgPolicy("financial_items_access", {
+      for: "all",
+      using: sql`(select private.has_household_access(${table.householdId}))`,
+      withCheck: sql`(select private.has_household_access(${table.householdId}))`,
+    }),
+  ],
+).enableRLS();
+
+// Legacy month columns remain for compatible deployment and unknown historical starts.
+const versionColumns = () => ({
+  itemId: uuid("item_id"),
+  effectiveFrom: date("effective_from", { mode: "date" }),
+  effectiveThrough: date("effective_through", { mode: "date" }),
+  scheduledDay: smallint("scheduled_day"),
+  revision: integer().default(1).notNull(),
+});
+
+export const confirmedTransfers = pgTable(
+  "confirmed_transfers",
+  {
+    id: uuid().primaryKey(),
+    householdId: bigint("household_id", { mode: "number" })
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    itemId: uuid("item_id").notNull(),
+    kind: text().notNull(),
+    amount: money("amount").notNull(),
+    occurredOn: date("occurred_on", { mode: "date" }).notNull(),
+    attributionMonth: date("attribution_month", { mode: "date" }).notNull(),
+    note: text().default("").notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.itemId, table.householdId],
+      foreignColumns: [financialItems.id, financialItems.householdId],
+      name: "confirmed_transfers_item_household_fk",
+    }).onDelete("restrict"),
+    check(
+      "confirmed_transfers_kind",
+      sql`${table.kind} in ('deposit', 'withdrawal', 'opening')`,
+    ),
+    check(
+      "confirmed_transfers_amount",
+      sql`${table.amount} >= 0 and (${table.kind} = 'opening' or ${table.amount} > 0)`,
+    ),
+    check(
+      "confirmed_transfers_month",
+      sql`extract(day from ${table.attributionMonth}) = 1`,
+    ),
+    check("confirmed_transfers_note", sql`char_length(${table.note}) <= 500`),
+    uniqueIndex("confirmed_transfers_one_opening")
+      .on(table.itemId)
+      .where(sql`${table.kind} = 'opening'`),
+    index("confirmed_transfers_household_date_idx").on(
+      table.householdId,
+      table.occurredOn,
+    ),
+    index("confirmed_transfers_item_month_idx").on(
+      table.itemId,
+      table.attributionMonth,
+    ),
+    pgPolicy("confirmed_transfers_access", {
+      for: "all",
+      using: sql`(select private.has_household_access(${table.householdId}))`,
+      withCheck: sql`(select private.has_household_access(${table.householdId}))`,
+    }),
+  ],
+).enableRLS();
+
 export const recurringItems = pgTable(
   "recurring_items",
   {
+    ...versionColumns(),
     id: id(),
     householdId: bigint("household_id", { mode: "number" })
       .notNull()
@@ -262,6 +363,17 @@ export const recurringItems = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
+    foreignKey({
+      columns: [table.itemId, table.householdId],
+      foreignColumns: [financialItems.id, financialItems.householdId],
+      name: "recurring_items_identity_fk",
+    }),
+    check(
+      "recurring_items_effective_order",
+      sql`${table.effectiveThrough} is null or ${table.effectiveFrom} is null or ${table.effectiveThrough} >= ${table.effectiveFrom}`,
+    ),
+    check("recurring_items_day", sql`${table.scheduledDay} between 1 and 31`),
+    index("recurring_items_identity_idx").on(table.itemId),
     check(
       "recurring_items_name_length",
       sql`char_length(${table.name}) between 1 and 160`,
@@ -554,6 +666,7 @@ export const balanceSnapshots = pgTable(
 export const savingsGoals = pgTable(
   "savings_goals",
   {
+    ...versionColumns(),
     id: id(),
     householdId: bigint("household_id", { mode: "number" })
       .notNull()
@@ -576,6 +689,17 @@ export const savingsGoals = pgTable(
     createdAt: createdAt(),
   },
   (table) => [
+    foreignKey({
+      columns: [table.itemId, table.householdId],
+      foreignColumns: [financialItems.id, financialItems.householdId],
+      name: "savings_goals_identity_fk",
+    }),
+    check(
+      "savings_goals_effective_order",
+      sql`${table.effectiveThrough} is null or ${table.effectiveFrom} is null or ${table.effectiveThrough} >= ${table.effectiveFrom}`,
+    ),
+    check("savings_goals_day", sql`${table.scheduledDay} between 1 and 31`),
+    index("savings_goals_identity_idx").on(table.itemId),
     check(
       "savings_goals_name_length",
       sql`char_length(${table.name}) between 1 and 160`,
@@ -659,6 +783,8 @@ export const monthlyLiquiditySnapshots = pgTable(
 export const householdIncomes = pgTable(
   "household_incomes",
   {
+    ...versionColumns(),
+    active: boolean().default(true).notNull(),
     id: id(),
     householdId: bigint("household_id", { mode: "number" })
       .notNull()
@@ -671,6 +797,17 @@ export const householdIncomes = pgTable(
     updatedAt: updatedAt(),
   },
   (table) => [
+    foreignKey({
+      columns: [table.itemId, table.householdId],
+      foreignColumns: [financialItems.id, financialItems.householdId],
+      name: "household_incomes_identity_fk",
+    }),
+    check(
+      "household_incomes_effective_order",
+      sql`${table.effectiveThrough} is null or ${table.effectiveFrom} is null or ${table.effectiveThrough} >= ${table.effectiveFrom}`,
+    ),
+    check("household_incomes_day", sql`${table.scheduledDay} between 1 and 31`),
+    index("household_incomes_identity_idx").on(table.itemId),
     check(
       "household_incomes_name_length",
       sql`char_length(${table.name}) between 1 and 160`,

@@ -20,8 +20,10 @@ import type {
   ExpenseInput,
   IncomeInput,
 } from "./model";
-import { currentPeriod, periodSchema } from "./model";
-import { validateEffectivePeriod, periodDate } from "./validity";
+import { currentPeriod } from "./model";
+import { periodDate } from "./validity";
+import { writeVersion } from "@/features/periods/write";
+import { storedMetadata, type WriteOptions } from "@/features/periods/model";
 import { settlementForecast } from "@/domain/settlement";
 
 async function ownedHousehold(
@@ -29,7 +31,7 @@ async function ownedHousehold(
   userId: string,
 ) {
   const [household] = await transaction
-    .select({ id: households.id, name: households.name })
+    .select()
     .from(households)
     .where(eq(households.ownerUserId, userId))
     .limit(1);
@@ -47,6 +49,7 @@ export async function getBudgetData() {
 export async function readBudgetData(
   transaction: AuthorizedTransaction,
   userId: string,
+  includeInactive = false,
 ) {
   const household = await ownedHousehold(transaction, userId);
   const people = await transaction
@@ -64,7 +67,7 @@ export async function readBudgetData(
     .where(
       and(
         eq(recurringItems.householdId, household.id),
-        eq(recurringItems.active, true),
+        includeInactive ? undefined : eq(recurringItems.active, true),
         inArray(recurringItems.kind, ["expense", "reserve"]),
         inArray(recurringItems.destination, [
           "direct",
@@ -81,7 +84,12 @@ export async function readBudgetData(
   const incomeRows = await transaction
     .select()
     .from(householdIncomes)
-    .where(eq(householdIncomes.householdId, household.id))
+    .where(
+      and(
+        eq(householdIncomes.householdId, household.id),
+        eq(householdIncomes.active, true),
+      ),
+    )
     .orderBy(asc(householdIncomes.name), asc(householdIncomes.startsOn));
   const peopleById = new Map(people.map((person) => [person.id, person]));
   const ownersByItem = new Map<number, typeof people>();
@@ -94,6 +102,7 @@ export async function readBudgetData(
       ]);
   }
   const expenses: BudgetExpense[] = items.map((item) => ({
+    ...storedMetadata(item),
     id: item.id,
     name: item.name,
     amountInOre: Math.round(item.amount * 100),
@@ -122,6 +131,7 @@ export async function readBudgetData(
     owners: ownersByItem.get(item.id) ?? [],
   }));
   const incomes: BudgetIncome[] = incomeRows.map((income) => ({
+    ...storedMetadata(income),
     id: income.id,
     name: income.name,
     startsOn: income.startsOn.toISOString().slice(0, 7),
@@ -132,7 +142,6 @@ export async function readBudgetData(
 }
 
 export async function addExpense(input: ExpenseInput, id?: number) {
-  periodSchema.parse(input.period);
   return withAuthenticatedDatabase(async (transaction, user) => {
     const household = await ownedHousehold(transaction, user.id);
     const ownerIds = [...new Set(input.ownerIds)];
@@ -149,183 +158,250 @@ export async function addExpense(input: ExpenseInput, id?: number) {
       if (owners.length !== ownerIds.length)
         throw new Error("Invalid household participants");
     }
-    let existing: typeof recurringItems.$inferSelect | undefined;
-    let replacesWholePeriod = false;
-    if (id !== undefined) {
-      [existing] = await transaction
-        .select()
-        .from(recurringItems)
-        .where(
-          and(
-            eq(recurringItems.id, id),
-            eq(recurringItems.householdId, household.id),
-            eq(recurringItems.active, true),
-            inArray(recurringItems.kind, ["expense", "reserve"]),
-          ),
-        )
-        .for("update");
-      if (!existing) throw new Error("Utgiften finns inte längre.");
-      const validity = validateEffectivePeriod(input.period, existing);
-      replacesWholePeriod = validity.replacesWholePeriod;
-      if (!replacesWholePeriod) {
-        await transaction
-          .update(recurringItems)
-          .set({ endsOn: validity.previousEndsOn })
-          .where(eq(recurringItems.id, existing.id));
-      }
-    }
-    // Keep the planning anchor across revisions; a new payment date starts a new plan.
-    const settlementStartsOn =
-      input.type === "settlement"
-        ? existing?.destination === "settlement" &&
-          existing.nextDueOn?.toISOString().slice(0, 10) === input.nextDueOn
-          ? (existing.settlementStartsOn ?? periodDate(input.period))
-          : periodDate(input.period)
-        : null;
-    if (input.type === "settlement") {
-      if (!input.settlement || !settlementStartsOn)
-        throw new Error("Avräkningens beräkningsunderlag saknas.");
-      settlementForecast(
-        input.amount,
-        settlementStartsOn.toISOString().slice(0, 10),
-        input.nextDueOn,
-        input.settlement,
-      );
-    }
-    const adjustments =
-      input.type === "settlement" ? input.settlement : undefined;
-    const values = {
-      householdId: household.id,
-      name: input.name,
-      kind: existing?.kind ?? ("expense" as const),
-      categoryId: existing?.categoryId,
-      notes: existing?.notes,
-      amount: input.amount / 100,
-      cadenceUnit: "month" as const,
-      cadenceInterval: input.type === "allocated" ? input.months : 1,
-      destination: input.type,
-      settlementStartsOn,
-      markupAmount:
-        adjustments?.markupAmountInOre == null
-          ? null
-          : adjustments.markupAmountInOre / 100,
-      markupPercent: adjustments?.markupPercent ?? null,
-      inflationPercent: adjustments?.inflationPercent ?? null,
-      startsOn: periodDate(input.period),
-      endsOn: existing?.endsOn ?? null,
-      nextDueOn:
-        input.type !== "direct"
-          ? new Date(`${input.nextDueOn}T00:00:00Z`)
-          : null,
-    };
-    const [expense] =
-      existing && replacesWholePeriod
-        ? await transaction
+    return writeVersion(
+      transaction,
+      household.id,
+      "expense",
+      { ...input, id, date: input.period },
+      {
+        lock: async (versionId) =>
+          (
+            await transaction
+              .select()
+              .from(recurringItems)
+              .where(
+                and(
+                  eq(recurringItems.id, versionId),
+                  eq(recurringItems.householdId, household.id),
+                  eq(recurringItems.active, true),
+                  inArray(recurringItems.kind, ["expense", "reserve"]),
+                ),
+              )
+              .for("update")
+          )[0],
+        close: async (existing, values) => {
+          await transaction
             .update(recurringItems)
             .set(values)
-            .where(eq(recurringItems.id, existing.id))
-            .returning()
-        : await transaction.insert(recurringItems).values(values).returning();
-    if (existing && replacesWholePeriod) {
-      await transaction
-        .delete(recurringItemOwners)
-        .where(eq(recurringItemOwners.recurringItemId, existing.id));
-    }
-    if (ownerIds.length)
-      await transaction.insert(recurringItemOwners).values(
-        ownerIds.map((personId) => ({
-          householdId: household.id,
-          recurringItemId: expense.id,
-          personId,
-        })),
-      );
-    return expense.id;
+            .where(eq(recurringItems.id, existing.id));
+        },
+        save: async (existing, version, replacesWholePeriod) => {
+          // Keep the planning anchor across revisions; a new payment date starts a new plan.
+          const settlementStartsOn =
+            input.type === "settlement"
+              ? existing?.destination === "settlement" &&
+                existing.nextDueOn?.toISOString().slice(0, 10) ===
+                  input.nextDueOn
+                ? (existing.settlementStartsOn ??
+                  periodDate(input.period.slice(0, 7)))
+                : periodDate(input.period.slice(0, 7))
+              : null;
+          if (input.type === "settlement") {
+            if (!input.settlement || !settlementStartsOn)
+              throw new Error("Avräkningens beräkningsunderlag saknas.");
+            settlementForecast(
+              input.amount,
+              settlementStartsOn.toISOString().slice(0, 10),
+              input.nextDueOn,
+              input.settlement,
+            );
+          }
+          const adjustments =
+            input.type === "settlement" ? input.settlement : undefined;
+          const values = {
+            householdId: household.id,
+            name: input.name,
+            kind: existing?.kind ?? ("expense" as const),
+            categoryId: existing?.categoryId,
+            notes: existing?.notes,
+            amount: input.amount / 100,
+            cadenceUnit: "month" as const,
+            cadenceInterval: input.type === "allocated" ? input.months : 1,
+            destination: input.type,
+            settlementStartsOn,
+            markupAmount:
+              adjustments?.markupAmountInOre == null
+                ? null
+                : adjustments.markupAmountInOre / 100,
+            markupPercent: adjustments?.markupPercent ?? null,
+            inflationPercent: adjustments?.inflationPercent ?? null,
+            ...version,
+            nextDueOn:
+              input.type !== "direct"
+                ? new Date(`${input.nextDueOn}T00:00:00Z`)
+                : null,
+          };
+          const [expense] =
+            existing && replacesWholePeriod
+              ? await transaction
+                  .update(recurringItems)
+                  .set(values)
+                  .where(eq(recurringItems.id, existing.id))
+                  .returning()
+              : await transaction
+                  .insert(recurringItems)
+                  .values(values)
+                  .returning();
+          if (existing && replacesWholePeriod) {
+            await transaction
+              .delete(recurringItemOwners)
+              .where(eq(recurringItemOwners.recurringItemId, existing.id));
+          }
+          if (ownerIds.length)
+            await transaction.insert(recurringItemOwners).values(
+              ownerIds.map((personId) => ({
+                householdId: household.id,
+                recurringItemId: expense.id,
+                personId,
+              })),
+            );
+          return expense.id;
+        },
+      },
+    );
   });
 }
 
-export async function removeExpense(id: number, period = currentPeriod()) {
-  periodSchema.parse(period);
+export async function removeExpense(
+  id: number,
+  period = currentPeriod(),
+  options: WriteOptions = {},
+) {
   return withAuthenticatedDatabase(async (transaction, user) => {
     const household = await ownedHousehold(transaction, user.id);
-    const [existing] = await transaction
-      .select()
-      .from(recurringItems)
-      .where(
-        and(
-          eq(recurringItems.id, id),
-          eq(recurringItems.householdId, household.id),
-          eq(recurringItems.active, true),
-          inArray(recurringItems.kind, ["expense", "reserve"]),
-        ),
-      )
-      .for("update");
-    if (!existing) return;
-    const validity = validateEffectivePeriod(period, existing);
-    await transaction
-      .update(recurringItems)
-      .set(
-        validity.replacesWholePeriod
-          ? { active: false }
-          : { endsOn: validity.previousEndsOn },
-      )
-      .where(eq(recurringItems.id, id));
+    return writeVersion(
+      transaction,
+      household.id,
+      "expense",
+      { ...options, id, date: period, stop: true },
+      {
+        lock: async (versionId) =>
+          (
+            await transaction
+              .select()
+              .from(recurringItems)
+              .where(
+                and(
+                  eq(recurringItems.id, versionId),
+                  eq(recurringItems.householdId, household.id),
+                  eq(recurringItems.active, true),
+                  inArray(recurringItems.kind, ["expense", "reserve"]),
+                ),
+              )
+              .for("update")
+          )[0],
+        close: async (existing, values) => {
+          await transaction
+            .update(recurringItems)
+            .set(values)
+            .where(eq(recurringItems.id, existing.id));
+        },
+        save: async () => {
+          throw new Error("Invalid stop operation");
+        },
+      },
+    );
   });
 }
 
 export async function saveIncome(input: IncomeInput) {
   return withAuthenticatedDatabase(async (transaction, user) => {
     const household = await ownedHousehold(transaction, user.id);
-    const values = {
-      name: input.name,
-      amount: input.amount / 100,
-      startsOn: new Date(`${input.startsOn}-01T00:00:00Z`),
-      endsOn: input.endsOn ? new Date(`${input.endsOn}-01T00:00:00Z`) : null,
-    };
-    if (input.id) {
-      const [existing] = await transaction
-        .select()
-        .from(householdIncomes)
-        .where(
-          and(
-            eq(householdIncomes.id, input.id),
-            eq(householdIncomes.householdId, household.id),
-          ),
-        )
-        .for("update");
-      if (!existing) throw new Error("Income not found in household");
-      const validity = validateEffectivePeriod(input.startsOn, existing);
-      if (validity.replacesWholePeriod) {
-        const [updated] = await transaction
-          .update(householdIncomes)
-          .set(values)
-          .where(eq(householdIncomes.id, existing.id))
-          .returning();
-        return updated.id;
-      }
-      await transaction
-        .update(householdIncomes)
-        .set({ endsOn: validity.previousEndsOn })
-        .where(eq(householdIncomes.id, existing.id));
-    }
-    const [income] = await transaction
-      .insert(householdIncomes)
-      .values({ ...values, householdId: household.id })
-      .returning();
-    return income.id;
+    return writeVersion(
+      transaction,
+      household.id,
+      "income",
+      { ...input, date: input.startsOn, end: input.endsOn },
+      {
+        lock: async (id) =>
+          (
+            await transaction
+              .select()
+              .from(householdIncomes)
+              .where(
+                and(
+                  eq(householdIncomes.id, id),
+                  eq(householdIncomes.householdId, household.id),
+                  eq(householdIncomes.active, true),
+                ),
+              )
+              .for("update")
+          )[0],
+        close: async (existing, values) => {
+          await transaction
+            .update(householdIncomes)
+            .set({ ...values, startsOn: values.startsOn ?? undefined })
+            .where(eq(householdIncomes.id, existing.id));
+        },
+        save: async (existing, version, replace) => {
+          const values = {
+            ...version,
+            startsOn: version.startsOn!,
+            householdId: household.id,
+            name: input.name,
+            amount: input.amount / 100,
+          };
+          const [income] = replace
+            ? await transaction
+                .update(householdIncomes)
+                .set(values)
+                .where(eq(householdIncomes.id, existing!.id))
+                .returning()
+            : await transaction
+                .insert(householdIncomes)
+                .values(values)
+                .returning();
+          return income.id;
+        },
+      },
+    );
   });
 }
 
-export async function removeIncome(id: number) {
+export async function removeIncome(
+  id: number,
+  date?: string,
+  options: WriteOptions = {},
+) {
   return withAuthenticatedDatabase(async (transaction, user) => {
     const household = await ownedHousehold(transaction, user.id);
-    await transaction
-      .delete(householdIncomes)
-      .where(
-        and(
-          eq(householdIncomes.id, id),
-          eq(householdIncomes.householdId, household.id),
-        ),
-      );
+    return writeVersion(
+      transaction,
+      household.id,
+      "income",
+      {
+        ...options,
+        id,
+        date: date ?? currentPeriod(),
+        stop: true,
+        ...(date ? {} : { mode: "correct" }),
+      },
+      {
+        lock: async (versionId) =>
+          (
+            await transaction
+              .select()
+              .from(householdIncomes)
+              .where(
+                and(
+                  eq(householdIncomes.id, versionId),
+                  eq(householdIncomes.householdId, household.id),
+                  eq(householdIncomes.active, true),
+                ),
+              )
+              .for("update")
+          )[0],
+        close: async (existing, values) => {
+          await transaction
+            .update(householdIncomes)
+            .set({ ...values, startsOn: values.startsOn ?? undefined })
+            .where(eq(householdIncomes.id, existing.id));
+        },
+        save: async () => {
+          throw new Error("Invalid stop operation");
+        },
+      },
+    );
   });
 }
 

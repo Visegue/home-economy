@@ -25,6 +25,8 @@ import {
   type SavingState,
 } from "./actions";
 import type { Saving } from "./validation";
+import { VersionFields, useVersionFields } from "@/features/periods/fields";
+import { formDate, versionBounds } from "@/features/periods/model";
 
 function SavingForm({
   saving,
@@ -36,7 +38,10 @@ function SavingForm({
   period: string;
 }) {
   const fieldId = useId();
-  const [effectivePeriod, setEffectivePeriod] = useState(period);
+  const versionFields = useVersionFields("saving", saving);
+  const [effectivePeriod, setEffectivePeriod] = useState(
+    formDate(period, saving),
+  );
   const [name, setName] = useState(saving?.name ?? "");
   const [amount, setAmount] = useState(
     incomeToInput(saving?.amountInOre ?? null),
@@ -65,12 +70,17 @@ function SavingForm({
       name,
       amount: parsedAmount.success ? parsedAmount.data : amount,
       period: effectivePeriod,
+      mode: versionFields.mode,
+      scheduledDay: versionFields.scheduledDay,
     },
     pending,
   );
 
   return (
     <form action={action} className="space-y-5">
+      <fieldset disabled={pending}>
+        <VersionFields version={saving} fields={versionFields} />
+      </fieldset>
       <div className="space-y-2">
         <Label htmlFor={`${fieldId}-period`}>
           {saving ? "Ändringen gäller från" : "Från och med"}
@@ -78,12 +88,18 @@ function SavingForm({
         <Input
           id={`${fieldId}-period`}
           name="period"
-          type="month"
+          type="date"
           required
           value={effectivePeriod}
           onChange={(event) => setEffectivePeriod(event.target.value)}
-          min={saving?.startsOn ?? "1900-01"}
-          max={saving?.endsOn ?? "2199-12"}
+          min={
+            saving
+              ? (versionBounds(saving).start ?? "1900-01-01")
+              : "1900-01-01"
+          }
+          max={
+            saving ? (versionBounds(saving).end ?? "2199-12-31") : "2199-12-31"
+          }
           disabled={pending}
         />
       </div>
@@ -122,7 +138,7 @@ function SavingForm({
               har kvar efter utgifter.
             </p>
             <p>
-              Ändring och avslut gäller från vald månad. Tidigare månaders
+              Ändring och avslut gäller från valt datum. Tidigare perioders
               belopp behålls.
             </p>
           </InfoButton>
@@ -248,7 +264,9 @@ function RemoveSavingForm({
   useEffect(() => {
     cancelRef.current?.focus();
   }, []);
-  const [effectivePeriod, setEffectivePeriod] = useState(period);
+  const [effectivePeriod, setEffectivePeriod] = useState(
+    formDate(period, saving),
+  );
   const [state, action, pending] = useActionState(
     async (previous: SavingState, data: FormData) => {
       const result = await removeSavingAction(saving.id, previous, data);
@@ -259,17 +277,21 @@ function RemoveSavingForm({
   );
   return (
     <form action={action} className="space-y-4">
-      <p>Avsluta {saving.name} från vald månad? Tidigare månader behålls.</p>
+      <input type="hidden" name="revision" value={saving.revision} />
+      <p>
+        Avsluta {saving.name} från valt datum? Tidigare värden och kommande
+        versioner behålls.
+      </p>
       <Label htmlFor={`saving-end-${saving.id}`}>Avsluta från</Label>
       <Input
         id={`saving-end-${saving.id}`}
         name="period"
-        type="month"
+        type="date"
         required
         value={effectivePeriod}
         onChange={(event) => setEffectivePeriod(event.target.value)}
-        min={saving.startsOn ?? "1900-01"}
-        max={saving.endsOn ?? "2199-12"}
+        min={versionBounds(saving).start ?? "1900-01-01"}
+        max={versionBounds(saving).end ?? "2199-12-31"}
         disabled={pending}
       />
       {state.error ? (

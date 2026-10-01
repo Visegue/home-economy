@@ -83,7 +83,7 @@ Integrationstesterna i `monthly-overview.test.ts` använder PGlite, verkliga fr�
 
 ### Inkomster
 
-`household_incomes` lagrar namn, månadsbelopp, startmånad och valfri slutmånad. Båda gränsmånaderna ingår. Inställningarna hanterar flera källor; översikten summerar månadens aktiva inkomster.
+`household_incomes` lagrar namn, månadsbelopp och inkluderande giltighetsdatum. Inställningarna hanterar flera källor; översikten summerar beloppen som gäller på respektive planerad dag. Inkomster är budgetunderlag, inte bekräftade insättningar eller ett bankkontosaldo.
 
 Valfri inkomst vid hushållsskapande gäller från aktuell månad i Sverige, utan slutdatum. Upprepad onboarding skapar inga nya inkomster.
 
@@ -91,11 +91,17 @@ Valfri inkomst vid hushållsskapande gäller från aktuell månad i Sverige, uta
 
 ### Utgifter och sparande
 
-Poster har startmånad och valfri slutmånad som ingår i perioden. Vid ändring från en senare månad avslutas gamla raden månaden före och en ny skapas i samma autentiserade transaktion. Raden låses för att undvika överlapp vid samtidiga anrop.
+Inkomster, utgifter och sparande använder det gemensamma skrivprotokollet `features/periods/write.ts`. Det låser vald rad och dess stabila identitet, kontrollerar revision, skiljer rättelse från en ny version och bevarar senare versioner. Vid en ny ändring avslutas den tidigare versionen dagen före. Domänadaptrarna behåller utgiftsägare, avräkningsunderlag och sparandets övriga fält.
 
-Ändring i en avslutad period påverkar bara den perioden, inte senare versioner. Avslut från startmånaden döljer hela perioden; annars behålls tidigare månader. Länkad planhistorik och tidigare utgiftsägare bevaras. Månads- och årsöversikten summerar bara månadens giltiga poster.
+Månadsöversikten skiljer versionen vid månadsslutet från beloppet på den planerade dagen. Datumet är individuellt, med hushållets standarddag per typ för nya poster. Korta månader använder sista dagen. Ingen dagsproportionering görs. Datum, tidigare/nytt värde och avslut visas i månaden; `/history` ger åtkomst till tidigare och kommande versioner. Avslut från versionens start döljer hela versionen; senare avslut bevarar tidigare dagar. Framtida versioner och registrerade överföringar påverkas inte.
 
-Migration 0010 lägger till nullable datumfält och constraints. Äldre sparande utan startmånad gäller även tidigare månader fram till en ändring; okänd historik gissas inte. Borttagna poster förblir dolda. Nytt sparande får vald startmånad.
+Migration 0014 lägger till exakta datum, revision, planerad dag, `financial_items` och `confirmed_transfers`. Äldre månadsgränser bevaras som fallback (slutmånad till månadens sista dag). Äldre versioner saknar tillförlitliga länkar och kopplas därför inte ihop efter namn; identitet tilldelas vid första ändring eller överföring. Okänt startdatum förblir okänt. Borttagna poster förblir dolda.
+
+### Bekräftade överföringar
+
+`features/funding` äger registrering och uppföljning av manuellt bekräftade insättningar, uttag och ingående värde per ändamål. `/transfers` visar planerat, insatt och kvar/över plan samt öronmärkt värde idag och vid vald månads slut. Förväntningar beräknas utan att skapa väntande transaktionsrader. Inga pengar flyttas automatiskt.
+
+Utfört datum styr historiskt värde; separat ”avser månad” styr endast planuppföljning. Flera överföringar och valfria faktiska belopp stöds. Ingående värde och uttag räknas inte som månadens insättning. Saknat ingående värde betyder noll, aldrig summerad historisk plan. Negativt värde kräver explicit bekräftelse. Gemensam identitetslåsning och idempotenta registrerings-id skyddar mot samtidiga/dubbla bekräftelser. Nya tabeller har tvingande RLS och sammansatta hushållsreferenser. Se [ADR 0004](adr/0004-effective-dates-and-confirmed-transfers.md).
 
 ### Avräkningar
 
@@ -109,4 +115,4 @@ Avsättningen upphör i utgiftsmånaden (efter startmånaden för en plan som be
 
 ## Nästa steg
 
-Månadsöversikten visar inkomster, direkta utgifter, avsättningar, avräkningar och sparande. Bekräftade överföringar, öronmärkta kontosaldon, förfallna betalningar, investeringsavkastning och beräkning av tillgängliga medel/nettoförmögenhet ingår ännu inte. Begreppen finns i domänglossariet men ska inte tolkas som redan implementerad funktionalitet.
+Månadsöversikten och manuell uppföljning finns. Verkliga bankkontosaldon, automatisk bankintegration, förfallna betalningar, investeringsavkastning och nettoförmögenhet ingår inte. Migration 0014 måste appliceras före drift; lokal PGlite-verifiering ersätter inte `pnpm db:check` med miljöns runtime-roll.

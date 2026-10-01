@@ -63,7 +63,7 @@ export function useSaveNotice() {
 }
 
 export function savedMessage(message: string, period?: string) {
-  return period && period > currentPeriod()
-    ? `${message} från ${monthLabel(period)}`
+  return period && period.slice(0, 7) > currentPeriod()
+    ? `${message} från ${monthLabel(period.slice(0, 7))}`
     : message;
 }

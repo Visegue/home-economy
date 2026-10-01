@@ -28,6 +28,10 @@ The calendar date from which new values for a Household's financial item apply, 
 **Svenska**: Giltighetsperiod.
 The date interval during which a particular version of a Household's financial item applies, with an optional end date. It is independent of the monthly reporting window and of when money is paid or transferred.
 
+**Scheduled Day**:
+**Svenska**: Planerad dag.
+The day of the month on which an Income, Direct Expense or contribution is expected. It is a planning guideline, not an instruction to move money.
+
 ### Expenses
 
 **Expense**:
@@ -82,6 +86,18 @@ _Avoid_: Savings Purpose, Reserve
 **Earmark**:
 **Svenska**: Öronmärkning.
 A logical assignment of money held in an Account to an Expense Reserve, Savings Purpose, or Replacement Reserve. Expense Reserve earmarks represent commitments, while Savings Purpose and Replacement Reserve earmarks express intentions that the Household can reconsider.
+
+**Confirmed Transfer**:
+**Svenska**: Registrerad överföring.
+A manually confirmed deposit into or withdrawal from an Earmark, with its actual date and amount. Several transfers may occur in a month, independently of the expected contributions.
+
+**Attribution Month**:
+**Svenska**: Avser månad.
+The reporting month against whose expected contribution a Confirmed Transfer is counted. It does not change when the transfer affects the Earmark's value.
+
+**Opening Value**:
+**Svenska**: Ingående värde.
+The known value belonging to an Earmark at a specified date before its recorded transfers. Expected contributions do not establish an Opening Value.
 
 **Available Household Funds**:
 **Svenska**: Tillgängliga medel.

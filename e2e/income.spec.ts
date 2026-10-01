@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { setSession } from "./helpers/session";
+import { dateLabel, monthEnd } from "../src/features/periods/model";
 import {
   currentPeriod,
   monthLabel,
@@ -74,10 +75,10 @@ test("sparar valfri nettoinkomst vid onboarding och i inställningarna", async (
     .getByRole("button", { name: "Ändra Månadsinkomst", exact: true })
     .click();
   const nextMonth = shiftPeriod(currentPeriod(), 1);
-  await page.getByLabel("Ändringen gäller från").fill(nextMonth);
+  await page.getByLabel("Ändringen gäller från").fill(`${nextMonth}-01`);
   await amount.fill("36000,50");
   await expect(page.getByRole("dialog")).toContainText(
-    `Det gamla beloppet behålls till och med ${monthLabel(currentPeriod())}`,
+    "Tidigare värden bevaras",
   );
   await page.getByRole("button", { name: "Spara inkomst" }).click();
   await expect(page.getByRole("status")).toContainText(
@@ -88,10 +89,10 @@ test("sparar valfri nettoinkomst vid onboarding och i inställningarna", async (
     .getByRole("listitem");
   await expect(rows).toHaveCount(2);
   await expect(rows.filter({ hasText: "34\u00a0000,29" })).toContainText(
-    monthLabel(currentPeriod()),
+    dateLabel(monthEnd(currentPeriod())),
   );
   await expect(rows.filter({ hasText: "36\u00a0000,50" })).toContainText(
-    monthLabel(nextMonth),
+    dateLabel(`${nextMonth}-01`),
   );
   await page.reload();
   await expect(rows).toHaveCount(2);

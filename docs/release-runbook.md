@@ -67,6 +67,28 @@ Dela destruktiva ändringar i flera releaser (expand/contract):
 
 När giltighetsperioder för utgifter/sparande används får en äldre app som ignorerar slutmånad inte återinföras: den kan summera både gamla och nya perioder. Migration 0010 är additiv, men appen måste förstå perioderna. Äldre previews med samma stagingdatabas måste också uppdateras innan de redigerar posterna.
 
+### Införande av 0.9.0 / migration 0014
+
+Migrationen ändrar inte äldre raders värden. Gamla bygget kan därför ligga kvar om promotion misslyckas innan den nya appen har skrivit data. **Efter nya skrivningar är 0.8.x inte ett säkert återgångsmål:** två versioner inom samma månad dubbelräknas, inaktiverade inkomster kan räknas med och överföringshistorik saknar stöd. Se ADR 0004.
+
+1. Kontrollera senaste `main` och migrationshistoriken. Version 0.9.0 är en minorhöjning eftersom giltighetsdatum och manuell överföringsuppföljning är nya funktioner.
+2. Innan den nya previewn används: identifiera äldre previews som delar `development`; uppdatera dem eller stäng deras åtkomst via hostens åtkomstskydd/avpublicering. En stängd PR räcker inte. Begränsa även direktåtkomst till äldre produktionsdeploymenter; bara det promoverade bygget får användas för skrivningar. Verifiera begränsningen från ett separat webbläsarfönster. Fortsätt inte till funktionsprov om en gammal app fortfarande kan redigera samma databas.
+3. Låt CI migrera med ägaranslutningen och köra `db:check` med runtime-rollen. Kontrollera även datumändring mitt i en månad, framtida version, avslut och en manuellt registrerad överföring i den nya previewn med syntetiska data.
+4. Vid produktionsrelease: exponera inte det nya bygget för ekonomiskrivningar före promotion. Om releasen avbryts efter migration men före nya skrivningar kan det gamla bygget fortsätta utan schemaåterställning.
+5. Efter första nya skrivningen: stoppa vid fel ytterligare skrivningar genom att begränsa åtkomst och släpp en rättande version som förstår 0014. Byt inte tillbaka till 0.8.x och radera inte överföringar eller versioner. Databasåterställning kräver fortfarande separat beslut och plan för senare användarändringar.
+
+Inför eventuell återgång kan följande skrivskyddade kontroll köras med ägarrollen på rätt miljö (runtime-RLS visar inte alla hushåll). Ett `true` blockerar äldre app. Ett `false` är inte ensamt ett godkännande: kontrollera även deployhistorik och att ingen ny app kan skriva under beslutet. Frågan visar inga personuppgifter.
+
+```sql
+SELECT
+  EXISTS (SELECT 1 FROM financial_items)
+  OR EXISTS (SELECT 1 FROM confirmed_transfers)
+  OR EXISTS (SELECT 1 FROM recurring_items WHERE effective_from IS NOT NULL OR effective_through IS NOT NULL OR revision > 1)
+  OR EXISTS (SELECT 1 FROM savings_goals WHERE effective_from IS NOT NULL OR effective_through IS NOT NULL OR revision > 1)
+  OR EXISTS (SELECT 1 FROM household_incomes WHERE effective_from IS NOT NULL OR effective_through IS NOT NULL OR revision > 1 OR NOT active)
+  AS requires_date_aware_app;
+```
+
 ## Staging och PR:er
 
 Previews delar `development`. En PR:s migration påverkar därför andra previews och finns kvar efter stängning. Samordna motstridiga schemaändringar eller kör dem i turordning.

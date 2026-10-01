@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { OverviewDashboard } from "@/features/dashboard/overview-dashboard";
-import { currentPeriod } from "@/features/budget/model";
+import { currentPeriod, periodSchema } from "@/features/budget/model";
 
 export const metadata = { title: "Månaden" };
 
@@ -10,7 +10,12 @@ export default async function MonthPage({
   searchParams: Promise<{ month?: string | string[] }>;
 }) {
   const { month } = await searchParams;
-  if (month !== undefined) redirect("/");
+  if (month !== undefined && !periodSchema.safeParse(month).success)
+    redirect("/");
 
-  return <OverviewDashboard period={currentPeriod()} />;
+  return (
+    <OverviewDashboard
+      period={typeof month === "string" ? month : currentPeriod()}
+    />
+  );
 }

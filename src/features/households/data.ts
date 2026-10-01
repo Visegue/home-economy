@@ -115,6 +115,8 @@ export async function createPersonalHousehold(
             name: "Månadsinkomst",
             amount: monthlyNetIncomeInOre / 100,
             startsOn: new Date(`${currentPeriod()}-01T00:00:00Z`),
+            effectiveFrom: new Date(`${currentPeriod()}-01T00:00:00Z`),
+            scheduledDay: 25,
           })
           .onConflictDoNothing();
       }

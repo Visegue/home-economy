@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  effectiveDateSchema,
+  writeOptionsSchema,
+  selectMonthlyVersions,
+  type VersionMetadata,
+} from "@/features/periods/model";
 import { monthlyEquivalent, type CadenceUnit } from "@/domain/budget";
 import {
   settlementContribution,
@@ -59,6 +65,7 @@ export const settlementAdjustmentsSchema = z
   );
 export const expenseSchema = z
   .object({
+    ...writeOptionsSchema.shape,
     name: z
       .string()
       .trim()
@@ -68,7 +75,7 @@ export const expenseSchema = z
       (amount) => amount > 0,
       "Beloppet måste vara större än noll.",
     ),
-    period: periodSchema,
+    period: effectiveDateSchema,
     type: z.enum(["direct", "allocated", "settlement"]),
     settlement: settlementAdjustmentsSchema.optional(),
     months: z.coerce.number(),
@@ -96,7 +103,7 @@ export const expenseSchema = z
           throw new Error("Ange avräkningens påslag och inflation.");
         settlementForecast(
           value.amount,
-          `${value.period}-01`,
+          `${value.period.slice(0, 7)}-01`,
           value.nextDueOn,
           value.settlement,
         );
@@ -111,7 +118,7 @@ export const expenseSchema = z
     }
     if (
       !dateSchema.safeParse(value.nextDueOn).success ||
-      value.nextDueOn < `${value.period}-01`
+      value.nextDueOn < `${value.period.slice(0, 7)}-01`
     ) {
       context.addIssue({
         code: "custom",
@@ -122,7 +129,7 @@ export const expenseSchema = z
     }
   });
 export type ExpenseInput = z.infer<typeof expenseSchema>;
-export interface BudgetExpense {
+export interface BudgetExpense extends VersionMetadata {
   id: number;
   name: string;
   amountInOre: number;
@@ -137,6 +144,7 @@ export interface BudgetExpense {
 }
 export const incomeSchema = z
   .object({
+    ...writeOptionsSchema.shape,
     id: z.coerce
       .number()
       .int()
@@ -149,9 +157,9 @@ export const incomeSchema = z
       .min(1, "Ange ett namn på inkomsten.")
       .max(160, "Namnet får vara högst 160 tecken."),
     amount: amountSchema,
-    startsOn: periodSchema,
+    startsOn: effectiveDateSchema,
     endsOn: z
-      .union([periodSchema, z.literal("")])
+      .union([effectiveDateSchema, z.literal("")])
       .transform((value) => value || null),
   })
   .refine((income) => !income.endsOn || income.endsOn >= income.startsOn, {
@@ -159,7 +167,7 @@ export const incomeSchema = z
     path: ["endsOn"],
   });
 export type IncomeInput = z.infer<typeof incomeSchema>;
-export interface BudgetIncome {
+export interface BudgetIncome extends VersionMetadata {
   id: number;
   name: string;
   startsOn: string;
@@ -201,26 +209,39 @@ export function monthlySummary(
   incomes: BudgetIncome[],
   savingsInOre = 0,
 ) {
-  const activeExpenses = expenses
-    .filter((expense) => isActiveInPeriod(period, expense))
-    .map((expense) => ({
-      ...expense,
-      monthlyAmountInOre: monthlyExpenseAmount(period, expense),
-    }));
+  const activeExpenses = selectMonthlyVersions(period, expenses).map(
+    ({ display, basis, changes, ended }) => ({
+      ...display,
+      monthlyAmountInOre: basis ? monthlyExpenseAmount(period, basis) : 0,
+      contributionDestination: basis?.destination ?? display.destination,
+      changes,
+      ended,
+    }),
+  );
   let directInOre = 0;
   let allocatedInOre = 0;
   let settlementInOre = 0;
   for (const expense of activeExpenses) {
     const amount = expense.monthlyAmountInOre;
-    if (expense.destination === "settlement") settlementInOre += amount;
-    else if (expense.destination === "allocated") allocatedInOre += amount;
+    if (expense.contributionDestination === "settlement")
+      settlementInOre += amount;
+    else if (expense.contributionDestination === "allocated")
+      allocatedInOre += amount;
     else directInOre += amount;
   }
-  const activeIncomes = incomes.filter((income) =>
-    isActiveInPeriod(period, income),
+  const activeIncomes = selectMonthlyVersions(period, incomes).map(
+    ({ display, basis, changes, ended }) => ({
+      ...display,
+      monthlyAmountInOre: basis?.amountInOre ?? 0,
+      changes,
+      ended,
+    }),
   );
   const incomeInOre = activeIncomes.length
-    ? activeIncomes.reduce((total, income) => total + income.amountInOre, 0)
+    ? activeIncomes.reduce(
+        (total, income) => total + income.monthlyAmountInOre,
+        0,
+      )
     : null;
   const totalInOre = directInOre + allocatedInOre + settlementInOre;
   return {

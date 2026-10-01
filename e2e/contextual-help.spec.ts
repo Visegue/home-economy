@@ -82,7 +82,7 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
   await page.getByRole("button", { name: "Information om inkomster" }).click();
   await expect(
     page.getByRole("dialog", { name: "Inkomster", exact: true }),
-  ).toContainText("tidigare månaders belopp");
+  ).toContainText("tidigare perioders belopp");
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Stäng", exact: true }).click();
   const memberTrigger = page.getByRole("button", {

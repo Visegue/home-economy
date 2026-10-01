@@ -2,7 +2,7 @@
 
 Original review: 2026-09-28. Status updated: 2026-09-30.
 
-This document preserves the four improvement candidates from the original HTML architecture review, with implementation status recorded separately. Candidate 1 is completed and merged; the remaining candidates are opportunities for separate work, not a mandatory checklist.
+This document preserves the four improvement candidates from the original HTML architecture review, with implementation status recorded separately. Candidate 1 is merged. Candidate 2 is implemented in the current working branch, including the agreed effective-date and manual-funding behavior; it is not yet merged or deployed. Candidates 3–4 remain optional future work.
 
 The original review recommended starting with the monthly household view because it combined cross-domain correctness rules in its callers. The domain discussion subsequently established **Monthly Overview** as the correct name: a monthly projection of longer-lived definitions, not a separate monthly plan. See [the domain glossary](../CONTEXT.md) for canonical English terms and Swedish display names, and [the architecture documentation](architecture.md) for current behavior.
 
@@ -11,7 +11,7 @@ The original review recommended starting with the monthly household view because
 | Candidate                  | Original assessment          | Status as of 2026-09-30                                                          |
 | -------------------------- | ---------------------------- | -------------------------------------------------------------------------------- |
 | 1. Monthly Overview        | Strong; first recommendation | Completed and merged in [PR 55](https://github.com/Visegue/home-economy/pull/55) |
-| 2. Effective period writes | Worth exploring              | Not implemented; recommended next architecture task                              |
+| 2. Effective period writes | Worth exploring              | Implemented locally; migration and Neon verification required before deployment  |
 | 3. Household member module | Strong                       | Not implemented; revisit alongside member functionality                          |
 | 4. Settings data assembly  | Speculative                  | Not implemented; defer until the need is clearer                                 |
 
@@ -63,19 +63,19 @@ Expected benefits are a single place to maintain shared rules and tests that exe
 
 ### Follow up
 
-Not implemented by PR 55. This is the recommended next architecture task, in a separate PR. The original proposal was a behavior-preserving refactor; the subsequent discussion below adds a functional requirement that must be considered before designing the shared interface. Verify period boundaries, historical edits, preserved fields and ownership, stale or concurrent changes, and household isolation. The main expected benefit of consolidating the write protocol is correctness and maintainability; no performance or cost improvement has been measured.
+Implemented after PR 55 through `features/periods/write.ts`: one protocol owns row/identity locks, revision checks, exact-date splitting, correction and ending. Expense, income and savings adapters retain their domain-specific fields. `features/periods/model.ts` owns monthly version selection; `features/funding` separates plans from manually confirmed movements. Migration 0014 is additive and preserves legacy month-based history without guessing identity links. No performance or cost improvement has been measured.
 
 ### Agreed direction for changes within a month
 
-Agreed on 2026-09-30; not yet implemented. Items must be able to change on a specific calendar date, rather than only at month boundaries. Preserve the values that apply before and after that date. This is effective-date history, not a complete audit log of every edit or a record of actual payments.
+Agreed on 2026-09-30 and implemented locally. Items change on specific calendar dates, preserving preceding and future versions. This is effective-date history, not a complete audit log. Confirmed transfers are stored separately. The final decisions are recorded in [ADR 0004](adr/0004-effective-dates-and-confirmed-transfers.md).
 
 The Monthly Overview should display the item's state at the end of the selected month, using the changes known at the time of viewing. Show a notice when the item changes during that month, including the change date and the previous and new values. Item details can distinguish what applies today from future changes and history.
 
 Confirmed example: a Savings Contribution increases from SEK 1,000 to SEK 1,500 on 20 October, with the month's transfer scheduled for 25 October. October contains one expected contribution of SEK 1,500, not both amounts and not a daily prorated amount. The overview displays SEK 1,500 with a notice such as “Ändras 20 okt: 1 000 → 1 500 kr”. This does not confirm that the transfer occurred.
 
-Keep the month-end display value separate from the amount included in monthly totals. The example does not establish a universal calculation rule for all items: a payment due before a price change can use the earlier value. Rules for transfers before a change, multiple payments or changes in one month, and any item-specific proration still need to be resolved when implementing this functionality. Do not infer those amounts solely from the month-end display value.
+The month-end display value is separate from the monthly contribution at the scheduled date. All types use the same effective-date rules, without daily proration. Each item has its own scheduled day, initially taken from household defaults by type. Confirmed transfers can occur multiple times in a month with arbitrary amounts; actual date affects value, attribution month affects plan progress.
 
-The current implementation selects versions by month and has month-boundary date constraints. Supporting exact effective dates therefore requires coordinated changes to validation, persistence, period selection, calculations, and UI; extracting the existing write protocol alone does not provide it. Existing month-based history must remain intact. Implementation remains separate from saving this report.
+Validation, persistence, monthly selection, calculations and forms now support exact dates. History and transfer pages expose these rules. Database tests cover future-version preservation, stale revisions, legacy history, RLS, idempotent transfers and independent attribution. Before deployment, apply migration 0014 and run `pnpm db:check` against the intended Neon environment; no external migration was performed during local implementation.
 
 ## Candidate 3 Household member module
 
@@ -120,4 +120,8 @@ Not implemented by PR 55. Defer this speculative candidate until the need is cle
 
 ## Next steps
 
-Keep subsequent changes separate from the completed Monthly Overview work. Candidate 2 is the next architecture recommendation; candidates 3 and 4 should be reassessed when their affected functionality changes. Previously identified dependency security alerts should be checked and addressed separately before another substantial refactor; they are not findings from the original architecture report.
+Finish environment verification and review of candidate 2 before deployment. Candidates 3 and 4 should be reassessed when their affected functionality changes. Previously identified dependency security alerts should be checked separately; they are not findings from the original architecture report.
+
+### Pre-review follow-up
+
+The local follow-up protects pending transfer confirmations from dialog close/reopen, excludes inactive definitions from expected withdrawals and uses the shared Select primitives. Regression coverage includes slow confirmations, inactive allocated expenses, and both allocated/replacement reserves retaining confirmed values through a conversion to direct expense. The planned release is 0.9.0 (new functionality). ADR 0004 and the release runbook define the first-write compatibility boundary: older month-only applications must not resume editing after exact-date writes. Migration/RLS verification against Neon remains required before merge; no external deployment or access restriction has been performed locally.
