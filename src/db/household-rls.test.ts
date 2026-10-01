@@ -109,6 +109,65 @@ async function effectiveFixture() {
 }
 
 describe("effective dates and confirmed transfers", () => {
+  it.each(["saving", "allocated", "settlement"] as const)(
+    "labels %s transfers with the selected display version and period-aware inactive fallback",
+    async (type) => {
+      await effectiveFixture();
+      const save = (name: string, date: string, id?: number) =>
+        type === "saving"
+          ? saveSaving({ name, amountInOre: 100_000 }, id, date, {
+              scheduledDay: 15,
+            })
+          : addExpense(
+              {
+                name,
+                amount: 120_000,
+                type,
+                months: 12,
+                period: date,
+                nextDueOn: "2027-08-01",
+                ownerIds: [],
+                scheduledDay: 15,
+                settlement:
+                  type === "settlement"
+                    ? {
+                        markupAmountInOre: null,
+                        markupPercent: null,
+                        inflationPercent: null,
+                      }
+                    : undefined,
+              },
+              id,
+            );
+      const original = await save("Ursprungligt ändamål", "2026-08-01");
+      const changed = await save("Septemberändamål", "2026-09-20", original);
+      await save("Framtida ändamål", "2026-11-01", changed);
+
+      expect((await getFundingData("2026-07")).purposes[0].name).toBe(
+        "Ursprungligt ändamål",
+      );
+      expect((await getFundingData("2026-08")).purposes[0].name).toBe(
+        "Ursprungligt ändamål",
+      );
+      // September's contribution uses the old version on the 15th, but its label
+      // must use the display version introduced on the 20th.
+      expect((await getFundingData("2026-09")).purposes[0].name).toBe(
+        "Septemberändamål",
+      );
+      expect((await getFundingData("2026-11")).purposes[0].name).toBe(
+        "Framtida ändamål",
+      );
+
+      if (type === "saving") await removeSaving(changed, "2026-10-01");
+      else await removeExpense(changed, "2026-10-01");
+      const inactive = (await getFundingData("2026-10")).purposes[0];
+      expect(inactive.name).toBe("Septemberändamål");
+      expect(inactive.progress.plannedInOre).toBe(0);
+      expect((await getFundingData("2026-11")).purposes[0].name).toBe(
+        "Framtida ändamål",
+      );
+    },
+  );
   it.each(["allocated", "settlement"] as const)(
     "keeps %s earmarks and confirmed values available after conversion to a direct expense",
     async (type) => {

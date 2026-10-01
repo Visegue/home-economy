@@ -165,6 +165,7 @@ test("bekräftade överföringar är skilda från planen och hänförs till valf
     .getByRole("button", { name: "Ändra Buffert", exact: true })
     .click();
   await dialog.getByLabel("Ändringen gäller från").fill(`${next}-10`);
+  await dialog.getByLabel("Namn på sparandet").fill("Framtida buffert");
   await dialog.getByLabel(/Belopp/).fill("1500");
   await dialog.getByRole("button", { name: "Spara sparande" }).click();
   await expect(dialog).toHaveCount(0);
@@ -187,4 +188,15 @@ test("bekräftade överföringar är skilda från planen och hänförs till valf
   await expect(card).toContainText("Överföringshistorik (3)");
   await expect(card.locator("dd").nth(1)).toHaveText("700,00 kr");
   await expect(card.locator("dd").nth(3)).toHaveText("−300,00 kr");
+  await card.getByRole("button", { name: "Registrera för Buffert" }).click();
+  await expect(dialog).toHaveAccessibleName("Registrera för Buffert");
+  await dialog.getByRole("button", { name: "Stäng", exact: true }).click();
+  await page.goto(`/transfers?month=${period}`);
+  await expect(card).toContainText("Överföringshistorik (3)");
+  await page.goto(`/transfers?month=${next}`);
+  await page
+    .getByRole("button", { name: "Registrera för Framtida buffert" })
+    .click();
+  await expect(dialog).toHaveAccessibleName("Registrera för Framtida buffert");
+  await dialog.getByRole("button", { name: "Stäng", exact: true }).click();
 });

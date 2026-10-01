@@ -120,6 +120,15 @@ export async function getFundingData(period: string) {
                   : p.display.id === latest.id,
               )
             : undefined;
+        const display =
+          expensePlan?.display ??
+          savingPlan?.display ??
+          // Inactive purposes retain their last known label, not a future rename.
+          versions.findLast((v) => {
+            const start = versionBounds(v).start;
+            return !start || start <= monthEnd(period);
+          }) ??
+          versions[0]!;
         const basis = expensePlan?.basis ?? savingPlan?.basis;
         const amount = expensePlan?.basis
           ? expensePlan.basis.destination === "direct"
@@ -137,7 +146,7 @@ export async function getFundingData(period: string) {
             source,
             id: recordVersion.id,
             itemId: latest.itemId ?? null,
-            name: latest.name,
+            name: display.name,
             versions,
             transfers: movements,
             progress: fundingProgress(movements, period, amount),
