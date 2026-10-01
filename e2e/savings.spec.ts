@@ -30,7 +30,7 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   expect(cardTitles.indexOf("Utgifter")).toBeLessThan(
     cardTitles.indexOf("Spara"),
   );
-  await expect(page.getByLabel("Välj månad")).toHaveCount(0);
+  await expect(page.getByLabel("Välj månad")).toHaveValue(start);
   await expect(
     page.getByRole("link", { name: /föregående|nästa månad/i }),
   ).toHaveCount(0);
@@ -112,7 +112,9 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
     animations: "disabled",
   });
   await section.getByRole("button", { name: "Ändra Buffert" }).click();
-  await expect(dialog.getByLabel("Ändringen gäller från")).toHaveValue(start);
+  await expect(dialog.getByLabel("Ändringen gäller från")).toHaveValue(
+    `${start}-01`,
+  );
   await expect(amount).toHaveValue("1250,75");
   await name.fill("Ny buffert");
   await amount.fill("2000,99");
@@ -123,7 +125,7 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await expect(section).toContainText("Ny buffert");
   await expect(total).toHaveText("2 501,28 kr");
 
-  await page.goto("/?month=1900-01");
+  await page.goto("/");
   await expect(page).toHaveURL(/\/$/);
   await expect(total).toHaveText("2 501,28 kr");
   await expect(
@@ -142,7 +144,9 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   );
   await section.getByRole("button", { name: "Hantera sparande" }).click();
   await section.getByRole("button", { name: "Ändra Ny buffert" }).click();
-  await expect(dialog.getByLabel("Ändringen gäller från")).toHaveValue(start);
+  await expect(dialog.getByLabel("Ändringen gäller från")).toHaveValue(
+    `${start}-01`,
+  );
   await dialog.getByRole("button", { name: "Stäng", exact: true }).click();
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -185,7 +189,9 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
     await section.getByRole("button", { name: "Lägg till sparande" }).click();
     await name.fill(savingName);
     await amount.fill("50,50");
-    await dialog.getByLabel("Från och med", { exact: true }).fill(savingStart);
+    await dialog
+      .getByLabel("Från och med", { exact: true })
+      .fill(`${savingStart}-01`);
     await dialog.getByRole("button", { name: "Spara sparande" }).click();
     await expect(dialog).toHaveCount(0);
   }

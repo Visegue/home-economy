@@ -13,16 +13,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SavingDialog, RemoveSavingDialog } from "./saving-form";
-import type { Saving } from "./validation";
-import { monthLabel } from "@/features/budget/model";
 import { formatBudgetSek } from "@/lib/money";
+import { ChangeNotice } from "@/features/periods/change-notice";
+import { dateLabel, versionBounds } from "@/features/periods/model";
+import type { getMonthlyOverview } from "@/features/dashboard/monthly-overview";
 
 export function SavingsSection({
   savings,
   totalInOre,
   period,
 }: {
-  savings: Saving[];
+  savings: Awaited<ReturnType<typeof getMonthlyOverview>>["savings"];
   totalInOre: number;
   period: string;
 }) {
@@ -62,18 +63,27 @@ export function SavingsSection({
               <TableBody>
                 {savings.map((saving) => (
                   <TableRow key={saving.id}>
-                    <TableCell className="font-medium">{saving.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {saving.name}
+                      <ChangeNotice item={saving} />
+                      {saving.displayAmountInOre !== saving.amountInOre ? (
+                        <p className="text-xs font-normal">
+                          Värde vid månadsslut:{" "}
+                          {formatBudgetSek(saving.displayAmountInOre)}
+                        </p>
+                      ) : null}
+                    </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
                       {formatBudgetSek(saving.amountInOre)}
                     </TableCell>
                     <TableCell>
-                      {saving.startsOn
-                        ? monthLabel(saving.startsOn)
+                      {versionBounds(saving).start
+                        ? dateLabel(versionBounds(saving).start!)
                         : "Sedan tidigare"}
                     </TableCell>
                     <TableCell>
-                      {saving.endsOn
-                        ? monthLabel(saving.endsOn)
+                      {versionBounds(saving).end
+                        ? dateLabel(versionBounds(saving).end!)
                         : "Tills vidare"}
                     </TableCell>
                     <ManagementOnly>
@@ -81,7 +91,10 @@ export function SavingsSection({
                         <div className="flex justify-end gap-2">
                           <SavingDialog
                             key={`${saving.id}-${period}`}
-                            saving={saving}
+                            saving={{
+                              ...saving,
+                              amountInOre: saving.displayAmountInOre,
+                            }}
                             period={period}
                           />
                           <RemoveSavingDialog

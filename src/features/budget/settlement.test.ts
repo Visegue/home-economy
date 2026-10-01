@@ -114,4 +114,34 @@ describe("settlement budget integration", () => {
       monthlySummary("2026-07", [ended, revised], []).settlementInOre,
     ).toBe(57_222);
   });
+  it("retains the earlier contribution when the purpose becomes a direct expense after the scheduled day", () => {
+    const versions = [
+      {
+        ...expense,
+        itemId: "same",
+        scheduledDay: 15,
+        effectiveThrough: "2026-09-19",
+      },
+      {
+        ...expense,
+        id: 2,
+        itemId: "same",
+        scheduledDay: 15,
+        effectiveFrom: "2026-09-20",
+        destination: "direct" as const,
+        settlement: null,
+        nextDueOn: null,
+        amountInOre: 100_000,
+      },
+    ];
+    const summary = monthlySummary("2026-09", versions, []);
+    expect(summary.expenses).toHaveLength(1);
+    expect(summary.expenses[0]).toMatchObject({
+      destination: "direct",
+      contributionDestination: "settlement",
+      monthlyAmountInOre: 57_222,
+    });
+    expect(summary.settlementInOre).toBe(57_222);
+    expect(summary.directInOre).toBe(0);
+  });
 });

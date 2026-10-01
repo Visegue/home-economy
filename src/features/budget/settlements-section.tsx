@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { MemberAvatarGroup } from "@/components/member-avatar-group";
 import type { HouseholdPerson } from "@/features/households/member-appearance";
+import { ChangeNotice } from "@/features/periods/change-notice";
 import { settlementForecast } from "@/domain/settlement";
 import { formatBudgetSek } from "@/lib/money";
 import { ExpenseDialog, RemoveExpenseDialog } from "./forms";
@@ -69,30 +70,47 @@ export function SettlementsSection({
               </TableHeader>
               <TableBody>
                 {expenses.map((expense) => {
-                  if (!expense.settlement || !expense.nextDueOn) return null;
-                  const forecast = settlementForecast(
-                    expense.amountInOre,
-                    expense.settlement.startsOn,
-                    expense.nextDueOn,
-                    expense.settlement,
-                  );
+                  const forecast =
+                    expense.settlement && expense.nextDueOn
+                      ? settlementForecast(
+                          expense.amountInOre,
+                          expense.settlement.startsOn,
+                          expense.nextDueOn,
+                          expense.settlement,
+                        )
+                      : null;
                   const contribution = expense.monthlyAmountInOre;
                   return (
                     <TableRow key={expense.id}>
                       <TableCell className="font-medium">
                         {expense.name}
-                        <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                          {expense.settlement.markupAmountInOre !== null
-                            ? `Påslag ${formatBudgetSek(expense.settlement.markupAmountInOre)}`
-                            : expense.settlement.markupPercent !== null
-                              ? `Påslag ${expense.settlement.markupPercent.toLocaleString("sv-SE")} %`
-                              : "Utan påslag"}
-                        </span>
-                        <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                          {expense.settlement.inflationPercent !== null
-                            ? `Inflation ${expense.settlement.inflationPercent.toLocaleString("sv-SE")} % per år`
-                            : "Utan inflation"}
-                        </span>
+                        <ChangeNotice item={expense} />
+                        {!expense.settlement ? (
+                          <p className="text-xs font-normal">
+                            Månadens avsättning gäller en tidigare
+                            avräkningsversion. Typ vid månadsslut:{" "}
+                            {expense.destination === "direct"
+                              ? "Direkt"
+                              : "Avsatt utgift"}
+                            .
+                          </p>
+                        ) : null}
+                        {expense.settlement ? (
+                          <>
+                            <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                              {expense.settlement.markupAmountInOre !== null
+                                ? `Påslag ${formatBudgetSek(expense.settlement.markupAmountInOre)}`
+                                : expense.settlement.markupPercent !== null
+                                  ? `Påslag ${expense.settlement.markupPercent.toLocaleString("sv-SE")} %`
+                                  : "Utan påslag"}
+                            </span>
+                            <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                              {expense.settlement.inflationPercent !== null
+                                ? `Inflation ${expense.settlement.inflationPercent.toLocaleString("sv-SE")} % per år`
+                                : "Utan inflation"}
+                            </span>
+                          </>
+                        ) : null}
                         {contribution === 0 ? (
                           <p className="mt-1 max-w-64 text-xs font-normal whitespace-normal text-muted-foreground">
                             Ingen månadsavsättning. Ange nästa utgiftsdatum för
@@ -112,12 +130,12 @@ export function SettlementsSection({
                           </span>
                         )}
                       </TableCell>
-                      <TableCell>{expense.nextDueOn}</TableCell>
+                      <TableCell>{expense.nextDueOn ?? "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatBudgetSek(expense.amountInOre)}
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
-                        {formatBudgetSek(forecast.targetInOre)}
+                        {forecast ? formatBudgetSek(forecast.targetInOre) : "—"}
                       </TableCell>
                       <ManagementOnly>
                         <TableCell className="text-right">

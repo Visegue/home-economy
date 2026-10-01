@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { isActiveInPeriod } from "@/features/budget/model";
+import {
+  selectMonthlyVersions,
+  type VersionMetadata,
+} from "@/features/periods/model";
 import {
   monthlyIncomeInputSchema,
   monthlyIncomeInOreSchema,
@@ -28,7 +31,7 @@ export const savingSchema = z.object({
   amountInOre: monthlyIncomeInOreSchema.unwrap(),
 });
 
-export interface Saving {
+export interface Saving extends VersionMetadata {
   id: number;
   name: string;
   amountInOre: number;
@@ -37,9 +40,8 @@ export interface Saving {
 }
 
 export function totalMonthlySavings(savings: Saving[], period: string): number {
-  return savings.reduce(
-    (total, saving) =>
-      total + (isActiveInPeriod(period, saving) ? saving.amountInOre : 0),
+  return selectMonthlyVersions(period, savings).reduce(
+    (total, { basis }) => total + (basis?.amountInOre ?? 0),
     0,
   );
 }

@@ -40,6 +40,8 @@ import {
 import { amountSchema, cycles, monthLabel, type BudgetExpense } from "./model";
 import { incomeToInput } from "@/features/income/validation";
 import { SettlementFields, type SettlementDraft } from "./settlement-fields";
+import { VersionFields, useVersionFields } from "@/features/periods/fields";
+import { formDate, versionBounds } from "@/features/periods/model";
 
 function Feedback({ state }: { state: FormState }) {
   return state.error ? (
@@ -91,7 +93,7 @@ export function ExpenseDialog({
         }
         description={
           (expense
-            ? "Välj månad för ändringen. Tidigare månaders belopp behålls."
+            ? "Välj datum för ändringen. Tidigare värden och framtida ändringar behålls."
             : `Gäller från ${monthLabel(period)} och framåt.`) +
           (expense?.endsOn
             ? ` Perioden slutar ${monthLabel(expense.endsOn.slice(0, 7))}.`
@@ -154,8 +156,11 @@ function ExpenseForm({
   expense?: BudgetExpense;
   defaultType: BudgetExpense["destination"];
 }) {
-  const [effectivePeriod, setEffectivePeriod] = useState(period);
+  const [effectivePeriod, setEffectivePeriod] = useState(
+    formDate(period, expense),
+  );
   const [type, setType] = useState(expense?.destination ?? defaultType);
+  const versionFields = useVersionFields(type, expense);
   const [settlementDraft, setSettlementDraft] = useState<SettlementDraft>({
     markupEnabled: expense?.settlement
       ? expense.settlement.markupAmountInOre !== null ||
@@ -213,6 +218,8 @@ function ExpenseForm({
       name,
       amount: parsedAmount.success ? parsedAmount.data : amount,
       period: effectivePeriod,
+      mode: versionFields.mode,
+      scheduledDay: versionFields.scheduledDay,
       type,
       months: type === "allocated" ? months : null,
       nextDueOn: type !== "direct" ? nextDueOn : null,
@@ -225,6 +232,7 @@ function ExpenseForm({
     <form action={action} className="space-y-5">
       {expense ? <input type="hidden" name="id" value={expense.id} /> : null}
       <fieldset disabled={pending} className="space-y-5">
+        <VersionFields version={expense} fields={versionFields} />
         <div className="space-y-2">
           <Label htmlFor="expense-period">
             {expense ? "Ändringen gäller från" : "Från och med"}
@@ -232,12 +240,20 @@ function ExpenseForm({
           <Input
             id="expense-period"
             name="period"
-            type="month"
+            type="date"
             required
             value={effectivePeriod}
             onChange={(event) => setEffectivePeriod(event.target.value)}
-            min={expense?.startsOn?.slice(0, 7) ?? "1900-01"}
-            max={expense?.endsOn?.slice(0, 7) ?? "2199-12"}
+            min={
+              expense
+                ? (versionBounds(expense).start ?? "1900-01-01")
+                : "1900-01-01"
+            }
+            max={
+              expense
+                ? (versionBounds(expense).end ?? "2199-12-31")
+                : "2199-12-31"
+            }
           />
         </div>
         <fieldset className="grid gap-2 sm:grid-cols-3">
@@ -358,7 +374,7 @@ function ExpenseForm({
                   id="expense-due"
                   name="nextDueOn"
                   type="date"
-                  min={`${effectivePeriod}-01`}
+                  min={`${effectivePeriod.slice(0, 7)}-01`}
                   value={nextDueOn}
                   onChange={(event) => setNextDueOn(event.target.value)}
                   required
@@ -393,11 +409,11 @@ function ExpenseForm({
         {type === "settlement" ? (
           <SettlementFields
             amount={amount}
-            effectivePeriod={effectivePeriod}
+            effectivePeriod={effectivePeriod.slice(0, 7)}
             planningPeriod={
               expense?.settlement && expense.nextDueOn === nextDueOn
                 ? expense.settlement.startsOn.slice(0, 7)
-                : effectivePeriod
+                : effectivePeriod.slice(0, 7)
             }
             nextDueOn={nextDueOn}
             onDateChange={setNextDueOn}
@@ -702,7 +718,9 @@ function RemoveExpenseForm({
   useEffect(() => {
     cancelRef.current?.focus();
   }, []);
-  const [effectivePeriod, setEffectivePeriod] = useState(period);
+  const [effectivePeriod, setEffectivePeriod] = useState(
+    formDate(period, expense),
+  );
   const [state, action, pending] = useActionState(
     async (previous: FormState, data: FormData) => {
       const result = await removeExpenseAction(previous, data);
@@ -714,17 +732,21 @@ function RemoveExpenseForm({
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="id" value={expense.id} />
-      <p>Avsluta {expense.name} från vald månad? Tidigare månader behålls.</p>
+      <input type="hidden" name="revision" value={expense.revision} />
+      <p>
+        Avsluta {expense.name} från valt datum? Tidigare värden och kommande
+        versioner behålls.
+      </p>
       <Label htmlFor={`expense-end-${expense.id}`}>Avsluta från</Label>
       <Input
         id={`expense-end-${expense.id}`}
         name="period"
-        type="month"
+        type="date"
         value={effectivePeriod}
         onChange={(event) => setEffectivePeriod(event.target.value)}
         required
-        min={expense.startsOn?.slice(0, 7) ?? "1900-01"}
-        max={expense.endsOn?.slice(0, 7) ?? "2199-12"}
+        min={versionBounds(expense).start ?? "1900-01-01"}
+        max={versionBounds(expense).end ?? "2199-12-31"}
         disabled={pending}
       />
       <Feedback state={state} />

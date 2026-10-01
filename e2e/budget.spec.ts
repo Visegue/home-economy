@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { setSession } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
+import { monthEnd } from "../src/features/periods/model";
 
 test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   page,
@@ -74,7 +75,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
       .click();
     await page.getByLabel("Namn på inkomsten").fill(name);
     await page.getByLabel("Belopp per månad efter skatt (kr)").fill(amount);
-    await page.getByLabel("Från och med", { exact: true }).fill(start);
+    await page.getByLabel("Från och med", { exact: true }).fill(`${start}-01`);
     await expect(
       page.getByRole("checkbox", { name: "Gäller tills vidare" }),
     ).toBeChecked();
@@ -85,7 +86,9 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
       await page
         .getByRole("checkbox", { name: "Gäller tills vidare" })
         .uncheck();
-      await page.getByLabel("Till och med", { exact: true }).fill(end);
+      await page
+        .getByLabel("Till och med", { exact: true })
+        .fill(monthEnd(end));
     }
     await page
       .getByRole("button", { name: "Spara inkomst", exact: true })
@@ -105,7 +108,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     page.getByRole("checkbox", { name: "Gäller tills vidare" }),
   ).toBeChecked();
   await page.getByRole("checkbox", { name: "Gäller tills vidare" }).uncheck();
-  await page.getByLabel("Till och med").fill(period);
+  await page.getByLabel("Till och med").fill(monthEnd(period));
   await page
     .getByRole("button", { name: "Spara inkomst", exact: true })
     .click();
@@ -137,7 +140,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   ).toBeChecked();
   await page.getByRole("checkbox", { name: "Gäller tills vidare" }).uncheck();
   await expect(page.getByLabel("Till och med", { exact: true })).toBeEmpty();
-  await page.getByLabel("Till och med", { exact: true }).fill(period);
+  await page.getByLabel("Till och med", { exact: true }).fill(monthEnd(period));
   await page
     .getByRole("button", { name: "Spara inkomst", exact: true })
     .click();
@@ -149,7 +152,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
       .getByRole("list", { name: "Hushållets inkomster" })
       .getByRole("listitem"),
   ).toHaveCount(3);
-  await page.goto("/?month=1900-01");
+  await page.goto("/");
   await expect(page).toHaveURL(/\/$/);
   await expect(
     page
@@ -168,7 +171,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await expect(
     page.getByRole("link", { name: "Registrera inkomst" }),
   ).toHaveCount(0);
-  await expect(page.getByLabel("Välj månad")).toHaveCount(0);
+  await expect(page.getByLabel("Välj månad")).toHaveValue(period);
   await expect(
     page.getByRole("link", { name: /föregående|nästa månad/i }),
   ).toHaveCount(0);
@@ -176,7 +179,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
 
   await page.getByRole("button", { name: "Lägg till utgift" }).click();
   await expect(page.getByLabel("Från och med", { exact: true })).toHaveValue(
-    period,
+    `${period}-01`,
   );
   await page.getByLabel("Namn på utgiften").fill("Hyra");
   await page.getByLabel("Belopp per betalning (kr)").fill("10000");
@@ -184,12 +187,19 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await page.getByRole("checkbox", { name: "Robin", exact: true }).check();
   await page.getByRole("button", { name: "Spara utgift" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Lägg till utgift", exact: true }),
+  ).toBeFocused();
   const rent = page.getByRole("row").filter({ hasText: "Hyra" });
   const owners = rent.getByRole("button", {
     name: "Ägare: Kim, Robin",
     exact: true,
   });
-  await owners.focus();
+  await owners.scrollIntoViewIfNeeded();
+  // Navigate back by keyboard after scrolling; a queued scroll closes Radix tooltips.
+  await owners.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(owners).toBeFocused();
   await expect(page.getByRole("tooltip")).toHaveText("Kim, Robin");
   await page.keyboard.press("Escape");
   await owners.click();
@@ -304,7 +314,9 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     page.getByRole("button", { name: "Avsluta Besiktning", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Ändra Hyra", exact: true }).click();
-  await expect(page.getByLabel("Ändringen gäller från")).toHaveValue(period);
+  await expect(page.getByLabel("Ändringen gäller från")).toHaveValue(
+    `${period}-01`,
+  );
   await page.getByLabel("Belopp per betalning (kr)").fill("11000,25");
   await page.getByRole("button", { name: "Spara utgift", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -346,26 +358,30 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     .click();
   await page.getByRole("button", { name: "Ändra Ny lön", exact: true }).click();
   await page.getByRole("checkbox", { name: "Gäller tills vidare" }).uncheck();
-  await page.getByLabel("Till och med").fill(period);
+  await page.getByLabel("Till och med").fill(monthEnd(period));
   await page
     .getByRole("button", { name: "Spara inkomst", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await page.getByLabel("Till och med").fill(shiftPeriod(period, 3));
+  await page.getByLabel("Till och med").fill(monthEnd(shiftPeriod(period, 3)));
   await page
     .getByRole("button", { name: "Spara inkomst", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Ta bort Bidrag", exact: true })
+    .getByRole("button", { name: "Avsluta Bidrag", exact: true })
     .click();
-  await page.getByRole("button", { name: "Bekräfta borttagning" }).click();
+  await page
+    .getByRole("dialog")
+    .getByLabel("Avsluta från")
+    .fill(`${period}-01`);
+  await page.getByRole("button", { name: "Bekräfta avslut" }).click();
   await expect(
     page
       .getByRole("list", { name: "Hushållets inkomster" })
       .getByRole("listitem"),
   ).toHaveCount(2);
-  await page.goto(`/?month=${nextPeriod}`);
+  await page.goto("/");
   await expect(page).toHaveURL(/\/$/);
   await expect(summary).toContainText("29 000,00".replaceAll(" ", "\u00a0"));
   await expect(

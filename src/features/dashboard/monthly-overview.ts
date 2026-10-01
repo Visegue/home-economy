@@ -2,12 +2,9 @@ import "server-only";
 
 import { withAuthenticatedDatabase } from "@/db/authorized";
 import { readBudgetData } from "@/features/budget/data";
-import {
-  isActiveInPeriod,
-  monthlySummary,
-  periodSchema,
-} from "@/features/budget/model";
+import { monthlySummary, periodSchema } from "@/features/budget/model";
 import { readSavings } from "@/features/savings/data";
+import { selectMonthlyVersions } from "@/features/periods/model";
 
 /** Expected monthly amounts, not recorded payments or account balances. */
 export async function getMonthlyOverview(period: string) {
@@ -18,8 +15,14 @@ export async function getMonthlyOverview(period: string) {
       // Both reads use the same connection and snapshot, including the RLS context.
       const budget = await readBudgetData(transaction, user.id);
       const allSavings = await readSavings(transaction, user.id);
-      const savings = allSavings.filter((saving) =>
-        isActiveInPeriod(period, saving),
+      const savings = selectMonthlyVersions(period, allSavings).map(
+        ({ display, basis, changes, ended }) => ({
+          ...display,
+          displayAmountInOre: display.amountInOre,
+          amountInOre: basis?.amountInOre ?? 0,
+          changes,
+          ended,
+        }),
       );
 
       const savingsContributionsInOre = savings.reduce(
@@ -39,10 +42,10 @@ export async function getMonthlyOverview(period: string) {
         people: budget.people,
         expenses: summary.expenses,
         regularExpenses: summary.expenses.filter(
-          (expense) => expense.destination !== "settlement",
+          (expense) => expense.contributionDestination !== "settlement",
         ),
         replacementReserves: summary.expenses.filter(
-          (expense) => expense.destination === "settlement",
+          (expense) => expense.contributionDestination === "settlement",
         ),
         incomes: summary.incomes,
         savings,

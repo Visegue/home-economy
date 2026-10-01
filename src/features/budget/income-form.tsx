@@ -15,18 +15,14 @@ import { ActionIconButton } from "@/components/action-icon-button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { VersionFields, useVersionFields } from "@/features/periods/fields";
+import { formDate, versionBounds, currentDate } from "@/features/periods/model";
 import {
   removeIncomeAction,
   saveIncomeAction,
   type FormState,
 } from "./actions";
-import {
-  amountSchema,
-  monthLabel,
-  periodSchema,
-  shiftPeriod,
-  type BudgetIncome,
-} from "./model";
+import { amountSchema, type BudgetIncome } from "./model";
 
 export function IncomeDialog({
   income,
@@ -65,11 +61,11 @@ export function RemoveIncomeDialog({ income }: { income: BudgetIncome }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <ActionIconButton label={`Ta bort ${income.name}`} tone="danger">
+        <ActionIconButton label={`Avsluta ${income.name}`} tone="danger">
           <Trash2 aria-hidden="true" />
         </ActionIconButton>
       </DialogTrigger>
-      <FormDialogContent title="Ta bort inkomst">
+      <FormDialogContent title="Avsluta inkomst">
         {open ? (
           <RemoveIncomeForm
             income={income}
@@ -92,19 +88,14 @@ function IncomeForm({
   onSaved: () => void;
 }) {
   const [name, setName] = useState(income?.name ?? "");
+  const versionFields = useVersionFields("income", income);
   const [amount, setAmount] = useState(
     income ? (income.amountInOre / 100).toFixed(2).replace(".", ",") : "",
   );
-  const [startsOn, setStartsOn] = useState(
-    income
-      ? defaultStart < income.startsOn
-        ? income.startsOn
-        : income.endsOn && defaultStart > income.endsOn
-          ? income.endsOn
-          : defaultStart
-      : defaultStart,
+  const [startsOn, setStartsOn] = useState(formDate(defaultStart, income));
+  const [endsOn, setEndsOn] = useState(
+    income ? (versionBounds(income).end ?? "") : "",
   );
-  const [endsOn, setEndsOn] = useState(income?.endsOn ?? "");
   const [ongoing, setOngoing] = useState(income?.endsOn == null);
   const notify = useSaveNotice();
   const [state, action, pending] = useActionState(
@@ -130,6 +121,8 @@ function IncomeForm({
       name,
       amount: parsedAmount.success ? parsedAmount.data : amount,
       startsOn,
+      mode: versionFields.mode,
+      scheduledDay: versionFields.scheduledDay,
       endsOn: ongoing ? "" : endsOn,
     },
     pending,
@@ -157,13 +150,12 @@ function IncomeForm({
             </Label>
             <InfoButton title="Inkomster">
               <p>
-                Inkomsten räknas varje månad, inklusive start- och slutmånad.
-                Välj tills vidare om den saknar slutdatum.
+                Beloppet vid den planerade dagen räknas i månadsbudgeten. Välj
+                tills vidare om den saknar slutdatum.
               </p>
               <p>
-                Välj vilken månad ändringen börjar gälla. Det gamla beloppet
-                avslutas automatiskt månaden före. Då behålls tidigare månaders
-                belopp.
+                Välj vilket datum ändringen börjar gälla. Det gamla beloppet
+                avslutas dagen före. Då behålls tidigare perioders belopp.
               </p>
             </InfoButton>
           </div>
@@ -194,9 +186,17 @@ function IncomeForm({
             <Input
               id="income-start"
               name="startsOn"
-              type="month"
-              min={income?.startsOn ?? "1900-01"}
-              max={income?.endsOn ?? "2199-12"}
+              type="date"
+              min={
+                income
+                  ? (versionBounds(income).start ?? "1900-01-01")
+                  : "1900-01-01"
+              }
+              max={
+                income
+                  ? (versionBounds(income).end ?? "2199-12-31")
+                  : "2199-12-31"
+              }
               value={startsOn}
               onChange={(event) => setStartsOn(event.target.value)}
               required
@@ -210,9 +210,9 @@ function IncomeForm({
               <Input
                 id="income-end"
                 name="endsOn"
-                type="month"
-                min={startsOn || "1900-01"}
-                max="2199-12"
+                type="date"
+                min={startsOn || "1900-01-01"}
+                max="2199-12-31"
                 value={endsOn}
                 onChange={(event) => setEndsOn(event.target.value)}
                 required
@@ -220,12 +220,11 @@ function IncomeForm({
             </div>
           )}
         </div>
+        <VersionFields version={income} fields={versionFields} />
         {income ? (
           <p className="text-sm text-muted-foreground">
-            {periodSchema.safeParse(startsOn).success &&
-            startsOn > income.startsOn
-              ? `Det gamla beloppet behålls till och med ${monthLabel(shiftPeriod(startsOn, -1))}. Ändringen gäller från ${monthLabel(startsOn)}.`
-              : "Ändringen gäller från inkomstens startmånad och ersätter hela perioden."}
+            Tidigare värden bevaras vid en ny ändring. En rättelse uppdaterar
+            den valda versionen.
           </p>
         ) : null}
       </fieldset>
@@ -272,9 +271,20 @@ function RemoveIncomeForm({
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="id" value={income.id} />
+      <input type="hidden" name="revision" value={income.revision} />
+      <Label htmlFor={`income-stop-${income.id}`}>Avsluta från</Label>
+      <Input
+        id={`income-stop-${income.id}`}
+        name="period"
+        type="date"
+        required
+        defaultValue={formDate(currentDate(), income)}
+        min={versionBounds(income).start ?? "1900-01-01"}
+        max={versionBounds(income).end ?? "2199-12-31"}
+      />
       <p>
-        Ta bort {income.name} för hela perioden? Ange slutmånad för att behålla
-        historiken.
+        Avsluta {income.name} från valt datum. Tidigare värden och kommande
+        versioner behålls.
       </p>
       {state.error ? (
         <p role="alert" className="text-sm text-destructive">
@@ -292,7 +302,7 @@ function RemoveIncomeForm({
         </ActionIconButton>
         <ActionIconButton
           type="submit"
-          label="Bekräfta borttagning"
+          label="Bekräfta avslut"
           tone="danger"
           pending={pending}
         >

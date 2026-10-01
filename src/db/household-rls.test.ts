@@ -56,6 +56,10 @@ import {
   type ExpenseInput,
 } from "@/features/budget/model";
 import { getSavings, removeSaving, saveSaving } from "@/features/savings/data";
+import { getMonthlyOverview } from "@/features/dashboard/monthly-overview";
+import { confirmTransfer, getFundingData } from "@/features/funding/data";
+import { financialItems, confirmedTransfers } from "./schema";
+import { randomUUID } from "node:crypto";
 import { totalMonthlySavings } from "@/features/savings/validation";
 
 const client = new PGlite("memory://");
@@ -93,6 +97,444 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await client.close();
+});
+
+async function effectiveFixture() {
+  const id = randomUUID();
+  await database
+    .insert(user)
+    .values({ id, name: "Syntetisk historik", email: `${id}@example.test` });
+  identity.userId = id;
+  return createPersonalHousehold("Datum och överföringar");
+}
+
+describe("effective dates and confirmed transfers", () => {
+  it.each(["saving", "allocated", "settlement"] as const)(
+    "labels %s transfers with the selected display version and period-aware inactive fallback",
+    async (type) => {
+      await effectiveFixture();
+      const save = (name: string, date: string, id?: number) =>
+        type === "saving"
+          ? saveSaving({ name, amountInOre: 100_000 }, id, date, {
+              scheduledDay: 15,
+            })
+          : addExpense(
+              {
+                name,
+                amount: 120_000,
+                type,
+                months: 12,
+                period: date,
+                nextDueOn: "2027-08-01",
+                ownerIds: [],
+                scheduledDay: 15,
+                settlement:
+                  type === "settlement"
+                    ? {
+                        markupAmountInOre: null,
+                        markupPercent: null,
+                        inflationPercent: null,
+                      }
+                    : undefined,
+              },
+              id,
+            );
+      const original = await save("Ursprungligt ändamål", "2026-08-01");
+      const changed = await save("Septemberändamål", "2026-09-20", original);
+      await save("Framtida ändamål", "2026-11-01", changed);
+
+      expect((await getFundingData("2026-07")).purposes[0].name).toBe(
+        "Ursprungligt ändamål",
+      );
+      expect((await getFundingData("2026-08")).purposes[0].name).toBe(
+        "Ursprungligt ändamål",
+      );
+      // September's contribution uses the old version on the 15th, but its label
+      // must use the display version introduced on the 20th.
+      expect((await getFundingData("2026-09")).purposes[0].name).toBe(
+        "Septemberändamål",
+      );
+      expect((await getFundingData("2026-11")).purposes[0].name).toBe(
+        "Framtida ändamål",
+      );
+
+      if (type === "saving") await removeSaving(changed, "2026-10-01");
+      else await removeExpense(changed, "2026-10-01");
+      const inactive = (await getFundingData("2026-10")).purposes[0];
+      expect(inactive.name).toBe("Septemberändamål");
+      expect(inactive.progress.plannedInOre).toBe(0);
+      expect((await getFundingData("2026-11")).purposes[0].name).toBe(
+        "Framtida ändamål",
+      );
+    },
+  );
+  it.each(["allocated", "settlement"] as const)(
+    "keeps %s earmarks and confirmed values available after conversion to a direct expense",
+    async (type) => {
+      await effectiveFixture();
+      const input: ExpenseInput = {
+        name: "Försäkring eller ersättning",
+        amount: 120_000,
+        type,
+        months: 12,
+        period: "2026-07-01",
+        nextDueOn: "2027-07-01",
+        ownerIds: [],
+        scheduledDay: 25,
+        settlement:
+          type === "settlement"
+            ? {
+                markupAmountInOre: null,
+                markupPercent: null,
+                inflationPercent: null,
+              }
+            : undefined,
+      };
+      const id = await addExpense(input);
+      const record = (
+        kind: "opening" | "deposit" | "withdrawal",
+        amount: string,
+        date: string,
+      ) => ({
+        id: randomUUID(),
+        source: "expense",
+        versionId: id,
+        kind,
+        amount,
+        occurredOn: date,
+        attributionMonth: "2026-07",
+        note: "Syntetiskt test",
+      });
+      expect(
+        (await getFundingData("2026-08")).purposes[0].progress.plannedInOre,
+      ).toBe(10_000);
+      await confirmTransfer(record("opening", "1000", "2026-07-01"));
+      const deposit = record("deposit", "250", "2026-08-02");
+      await confirmTransfer(deposit);
+      await confirmTransfer(deposit);
+      await confirmTransfer(record("withdrawal", "100", "2026-08-03"));
+      let purpose = (await getFundingData("2026-07")).purposes[0];
+      expect(purpose.progress).toEqual({
+        plannedInOre: 10_000,
+        depositedInOre: 25_000,
+        remainingInOre: 0,
+        excessInOre: 15_000,
+      });
+      expect(purpose.monthEndValueInOre).toBe(100_000);
+      expect(purpose.valueInOre).toBe(115_000);
+      expect(purpose.transfers).toHaveLength(3);
+      expect((await getMonthlyOverview("2026-08")).totals.expensesInOre).toBe(
+        10_000,
+      );
+      await addExpense(
+        { ...input, name: "Rättat namn", mode: "correct", revision: 1 },
+        id,
+      );
+      expect((await getFundingData("2026-08")).purposes[0].transfers).toEqual(
+        purpose.transfers,
+      );
+      await addExpense(
+        {
+          ...input,
+          type: "direct",
+          amount: 10_000,
+          period: "2026-09-01",
+          nextDueOn: "",
+          revision: 2,
+        },
+        id,
+      );
+      purpose = (await getFundingData("2026-09")).purposes[0];
+      expect(purpose.progress.plannedInOre).toBe(0);
+      expect(purpose.valueInOre).toBe(115_000);
+      // The old reserve remains withdrawable; a type change must not strand its value.
+      await confirmTransfer({
+        ...record("withdrawal", "150", "2026-09-03"),
+        versionId: purpose.id,
+        itemId: purpose.itemId,
+        attributionMonth: "2026-09",
+      });
+      purpose = (await getFundingData("2026-09")).purposes[0];
+      expect(purpose.valueInOre).toBe(100_000);
+      expect(purpose.transfers).toHaveLength(4);
+      expect(purpose.progress.depositedInOre).toBe(0);
+    },
+  );
+  it("can extend the final income version but cannot overwrite a future version", async () => {
+    await effectiveFixture();
+    const base = {
+      name: "Lön",
+      amount: 100_000,
+      startsOn: "2026-09-01",
+      endsOn: "2026-09-30",
+      scheduledDay: 25,
+    };
+    const id = await saveIncome(base);
+    await saveIncome({ ...base, id, endsOn: null, revision: 1 });
+    expect(
+      (await getBudgetData()).incomes.find((i) => i.id === id)
+        ?.effectiveThrough,
+    ).toBeNull();
+    const future = await saveIncome({
+      ...base,
+      id,
+      startsOn: "2026-11-01",
+      endsOn: null,
+      amount: 200_000,
+      revision: 2,
+    });
+    await saveIncome({
+      ...base,
+      id,
+      endsOn: null,
+      mode: "correct",
+      revision: 3,
+    });
+    const rows = (await getBudgetData()).incomes;
+    expect(rows.find((i) => i.id === id)?.effectiveThrough).toBe("2026-10-31");
+    expect(rows.find((i) => i.id === future)?.amountInOre).toBe(200_000);
+  });
+  it("preserves future versions and selects amounts on scheduled dates separately from month-end values", async () => {
+    await effectiveFixture();
+    const id = await saveSaving(
+      { name: "Buffert", amountInOre: 100_000 },
+      undefined,
+      "2026-07-01",
+      { scheduledDay: 15 },
+    );
+    const future = await saveSaving(
+      { name: "Buffert", amountInOre: 200_000 },
+      id,
+      "2027-01-01",
+      { revision: 1 },
+    );
+    const middle = await saveSaving(
+      { name: "Buffert", amountInOre: 150_000 },
+      id,
+      "2026-09-20",
+      { revision: 2 },
+    );
+    const rows = await getSavings();
+    expect(new Set(rows.map((r) => r.itemId)).size).toBe(1);
+    expect(rows.find((r) => r.id === middle)).toMatchObject({
+      effectiveFrom: "2026-09-20",
+      effectiveThrough: "2026-12-31",
+    });
+    expect(rows.find((r) => r.id === future)).toMatchObject({
+      effectiveFrom: "2027-01-01",
+      amountInOre: 200_000,
+    });
+    const september = await getMonthlyOverview("2026-09");
+    expect(september.savings).toHaveLength(1);
+    expect(september.savings[0]).toMatchObject({
+      amountInOre: 100_000,
+      displayAmountInOre: 150_000,
+      changes: [{ date: "2026-09-20" }],
+    });
+    expect(
+      (await getMonthlyOverview("2027-01")).totals.savingsContributionsInOre,
+    ).toBe(200_000);
+    await expect(
+      saveSaving({ name: "Stale", amountInOre: 1 }, middle, "2026-10-01", {
+        revision: 99,
+      }),
+    ).rejects.toThrow("har ändrats");
+    await saveSaving(
+      { name: "Buffert rättad", amountInOre: 160_000 },
+      middle,
+      "2026-12-01",
+      { mode: "correct", revision: 1 },
+    );
+    expect(
+      (await getSavings()).find((r) => r.id === middle)?.effectiveFrom,
+    ).toBe("2026-09-20");
+    expect(
+      (await getMonthlyOverview("2026-10")).totals.savingsContributionsInOre,
+    ).toBe(160_000);
+    await removeSaving(middle, "2026-10-20", { revision: 2 });
+    const october = await getMonthlyOverview("2026-10");
+    expect(october.savings[0]).toMatchObject({
+      ended: true,
+      amountInOre: 160_000,
+    });
+    expect((await getMonthlyOverview("2026-11")).savings).toEqual([]);
+    expect(
+      (await getMonthlyOverview("2027-01")).totals.savingsContributionsInOre,
+    ).toBe(200_000);
+  });
+
+  it("uses the increased amount after an effective date and preserves unknown legacy history", async () => {
+    const household = await effectiveFixture();
+    const [legacy] = await database
+      .insert(savingsGoals)
+      .values({
+        householdId: household.id,
+        name: "Äldre",
+        monthlyContribution: "1000",
+      })
+      .returning();
+    await expect(
+      saveSaving(
+        { name: "Äldre", amountInOre: 150_000 },
+        legacy.id,
+        "2026-09-20",
+      ),
+    ).rejects.toThrow("Välj planerad dag");
+    const revised = await saveSaving(
+      { name: "Äldre", amountInOre: 150_000 },
+      legacy.id,
+      "2026-09-20",
+      { scheduledDay: 25 },
+    );
+    expect(
+      (await getMonthlyOverview("2020-01")).totals.savingsContributionsInOre,
+    ).toBe(100_000);
+    expect(
+      (await getMonthlyOverview("2026-09")).totals.savingsContributionsInOre,
+    ).toBe(150_000);
+    await removeSaving(revised, "2026-09-24");
+    // No contribution from the new dated version after it ends before the scheduled day.
+    expect((await getMonthlyOverview("2026-09")).savings).toHaveLength(1);
+    expect(
+      (await getMonthlyOverview("2026-09")).totals.savingsContributionsInOre,
+    ).toBe(0);
+  });
+
+  it("separates attribution from actual value, permits multiple transfers, and keeps confirmations unchanged by corrections", async () => {
+    await effectiveFixture();
+    const id = await saveSaving(
+      { name: "Resa", amountInOre: 150_000 },
+      undefined,
+      "2026-08-01",
+      { scheduledDay: 25 },
+    );
+    const record = (
+      kind: "deposit" | "withdrawal" | "opening",
+      amount: string,
+      occurredOn: string,
+      attributionMonth: string,
+      confirmNegative = false,
+    ) => ({
+      id: randomUUID(),
+      source: "saving",
+      versionId: id,
+      kind,
+      amount,
+      occurredOn,
+      attributionMonth,
+      note: "",
+      confirmNegative,
+    });
+    await confirmTransfer(record("opening", "8000", "2026-08-01", "2026-08"));
+    const late = record("deposit", "500", "2026-09-02", "2026-08");
+    await confirmTransfer(late);
+    await confirmTransfer(late); // retry is idempotent
+    await expect(confirmTransfer({ ...late, amount: "600" })).rejects.toThrow(
+      "redan sparats",
+    );
+    await confirmTransfer(record("deposit", "1000", "2026-09-03", "2026-08"));
+    let purpose = (await getFundingData("2026-08")).purposes[0];
+    expect(purpose.progress).toMatchObject({
+      plannedInOre: 150_000,
+      depositedInOre: 150_000,
+      remainingInOre: 0,
+    });
+    expect(purpose.monthEndValueInOre).toBe(800_000);
+    expect(purpose.valueInOre).toBe(950_000);
+    expect(purpose.transfers).toHaveLength(3);
+    await saveSaving(
+      { name: "Resa rättad", amountInOre: 170_000 },
+      id,
+      "2026-08-01",
+      { mode: "correct", revision: 1 },
+    );
+    purpose = (await getFundingData("2026-08")).purposes[0];
+    expect(purpose.progress.remainingInOre).toBe(20_000);
+    expect(purpose.transfers).toHaveLength(3);
+    const withdrawal = record("withdrawal", "10000", "2026-09-04", "2026-09");
+    expect(await confirmTransfer(withdrawal)).toHaveProperty("warning");
+    expect(
+      (await getFundingData("2026-09")).purposes[0].transfers,
+    ).toHaveLength(3);
+    await confirmTransfer({ ...withdrawal, confirmNegative: true });
+    expect((await getFundingData("2026-09")).purposes[0].valueInOre).toBe(
+      -50_000,
+    );
+    await expect(
+      confirmTransfer(record("opening", "1", "2026-08-01", "2026-08")),
+    ).rejects.toThrow("redan registrerat");
+    await expect(
+      confirmTransfer(record("deposit", "1", "2199-01-01", "2199-01")),
+    ).rejects.toThrow("framtiden");
+  });
+
+  it("forces RLS and composite household references for both identities and confirmed transfers", async () => {
+    const household = await effectiveFixture();
+    const id = await saveSaving(
+      { name: "Isolerat", amountInOre: 100 },
+      undefined,
+      "2026-08-01",
+    );
+    await confirmTransfer({
+      id: randomUUID(),
+      source: "saving",
+      versionId: id,
+      kind: "deposit",
+      amount: "1",
+      occurredOn: "2026-08-01",
+      attributionMonth: "2026-08",
+      note: "",
+    });
+    const [saving] = await getSavings();
+    const flags = await database.execute<{
+      relname: string;
+      relforcerowsecurity: boolean;
+    }>(
+      sql`select relname, relforcerowsecurity from pg_class where relname in ('financial_items', 'confirmed_transfers')`,
+    );
+    expect(flags.rows).toHaveLength(2);
+    expect(flags.rows.every((r) => r.relforcerowsecurity)).toBe(true);
+    identity.userId = "outsider";
+    await withAuthenticatedDatabase(async (transaction) => {
+      expect(
+        await transaction
+          .select()
+          .from(financialItems)
+          .where(eq(financialItems.householdId, household.id)),
+      ).toEqual([]);
+      expect(
+        await transaction
+          .select()
+          .from(confirmedTransfers)
+          .where(eq(confirmedTransfers.itemId, saving.itemId!)),
+      ).toEqual([]);
+    });
+    await expect(
+      confirmTransfer({
+        id: randomUUID(),
+        source: "saving",
+        versionId: id,
+        kind: "withdrawal",
+        amount: "1",
+        occurredOn: "2026-08-01",
+        attributionMonth: "2026-08",
+        note: "",
+      }),
+    ).rejects.toThrow("Hushållet kunde inte hittas.");
+    await expect(
+      withAuthenticatedDatabase(async (transaction) => {
+        await transaction.insert(confirmedTransfers).values({
+          id: randomUUID(),
+          householdId: household.id,
+          itemId: saving.itemId!,
+          kind: "deposit",
+          amount: 1,
+          occurredOn: new Date("2026-08-01"),
+          attributionMonth: new Date("2026-08-01"),
+        });
+      }),
+    ).rejects.toThrow(/insert into/);
+  });
 });
 
 describe("household row-level security", () => {
@@ -478,7 +920,7 @@ describe("budget persistence and isolation", () => {
         startsOn: "2026-09",
         endsOn: null,
       }),
-    ).rejects.toThrow("Income not found in household");
+    ).rejects.toThrow("Inkomsten finns inte längre.");
     await removeIncome(incomeId);
     await withAuthenticatedDatabase(async (transaction) => {
       expect(await transaction.select().from(householdIncomes)).toHaveLength(0);
@@ -592,7 +1034,7 @@ describe("income changes with history", () => {
 
     identity.userId = "outsider";
     await expect(saveIncome(change)).rejects.toThrow(
-      "Income not found in household",
+      "Inkomsten finns inte längre.",
     );
     identity.userId = "owner";
     await expect(
@@ -658,6 +1100,9 @@ describe("initial household income", () => {
       await createPersonalHousehold("Nytt hushåll", amount);
       await createPersonalHousehold("Upprepning", 100);
       const data = await getBudgetData();
+      expect(data.incomes.map((income) => income.scheduledDay)).toEqual(
+        amount === null ? [] : [25],
+      );
       const expected =
         amount === null
           ? []
@@ -712,7 +1157,7 @@ describe("monthly savings persistence and household isolation", () => {
     expect(second).toMatchObject({ name: "Semester", amountInOre: 50029 });
     await saveSaving({ name: "Ny buffert", amountInOre: 200099 }, first.id);
     expect(await getSavings()).toEqual([
-      { ...first, name: "Ny buffert", amountInOre: 200099 },
+      { ...first, name: "Ny buffert", amountInOre: 200099, revision: 2 },
       second,
     ]);
     await removeSaving(first.id);

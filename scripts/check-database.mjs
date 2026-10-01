@@ -26,10 +26,10 @@ try {
       'households', 'household_members', 'household_member_income', 'categories', 'accounts',
       'recurring_items', 'monthly_plans', 'monthly_plan_items', 'transactions',
       'balance_snapshots', 'savings_goals', 'monthly_liquidity_snapshots',
-      'household_people', 'recurring_item_owners', 'household_incomes'
+      'household_people', 'recurring_item_owners', 'household_incomes', 'financial_items', 'confirmed_transfers'
     )
   `;
-  assert.equal(tables.length, 15);
+  assert.equal(tables.length, 17);
   for (const table of tables) {
     assert.ok(table.relrowsecurity && table.relforcerowsecurity, table.relname);
   }
@@ -102,7 +102,36 @@ try {
           .length,
         1,
       );
+      const [item] =
+        await sql`insert into public.financial_items (household_id, kind) values (${household.id}, 'saving') returning id`;
+      await sql`update public.savings_goals set item_id = ${item.id}, effective_from = '2026-09-20', scheduled_day = 25 where id = ${saving.id}`;
+      const transferId = randomUUID();
+      await sql`insert into public.confirmed_transfers (id, household_id, item_id, kind, amount, occurred_on, attribution_month)
+        values (${transferId}, ${household.id}, ${item.id}, 'deposit', '50.75', '2026-10-02', '2026-09-01')`;
+      assert.equal(
+        (
+          await sql`select amount from public.confirmed_transfers where id = ${transferId}`
+        )[0].amount,
+        "50.75",
+      );
       await sql`select set_config('app.user_id', ${outsider}, true)`;
+      assert.equal(
+        (await sql`select id from public.financial_items where id = ${item.id}`)
+          .length,
+        0,
+      );
+      assert.equal(
+        (
+          await sql`select id from public.confirmed_transfers where id = ${transferId}`
+        ).length,
+        0,
+      );
+      assert.equal(
+        (
+          await sql`update public.confirmed_transfers set amount = '1.00' where id = ${transferId} returning id`
+        ).length,
+        0,
+      );
       assert.equal(
         (
           await sql`select id from public.recurring_items where id = ${settlement.id}`

@@ -23,7 +23,7 @@ Alla previews delar Neons långlivade `development`-branch för att hålla proje
 
 ## Följder
 
-- Migrationer måste stödja föregående appversion. Dela destruktiva ändringar enligt expand/contract.
+- Migrationer måste stödja föregående appversion. Dela destruktiva ändringar enligt expand/contract. ADR 0004 preciserar gränsen för exakta datum: migration 0014 i sig är bakåtkompatibel, men efter den nya appens skrivningar krävs rättande release eller ett verifierat kompatibelt bygge, inte återgång till en månadsbaserad app.
 - Previews delar schema och data. Samordna motstridiga migrationer; stängd PR återställer inget.
 - Fel efter migration lämnar gamla produktionsbygget kvar men återställer inte databasen. Följ [release-runbooken](../release-runbook.md).
 - CI och kontroller i drift använder gratiskvoter. Smoketestet täcker inte Google OAuth eller mejlleverans; testa dem manuellt vid behov.

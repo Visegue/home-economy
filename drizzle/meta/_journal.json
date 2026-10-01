@@ -99,6 +99,13 @@
       "when": 1790513827793,
       "tag": "0013_tricky_hellfire_club",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790799361947,
+      "tag": "0014_redundant_omega_red",
+      "breakpoints": true
     }
   ]
 }

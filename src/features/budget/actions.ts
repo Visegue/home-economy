@@ -6,6 +6,11 @@ import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { logServerError } from "@/lib/server-error-log";
 import {
+  effectiveDateSchema,
+  writeOptionsSchema,
+} from "@/features/periods/model";
+import { PeriodWriteError } from "@/features/periods/write";
+import {
   addExpense,
   addPerson,
   updatePerson,
@@ -14,12 +19,7 @@ import {
   removeIncome,
   saveIncome,
 } from "./data";
-import {
-  expenseSchema,
-  incomeSchema,
-  periodSchema,
-  personSchema,
-} from "./model";
+import { expenseSchema, incomeSchema, personSchema } from "./model";
 
 export interface FormState {
   error?: string;
@@ -33,9 +33,12 @@ async function mutate(
     revalidatePath("/");
     revalidatePath("/salary");
     revalidatePath("/settings");
+    revalidatePath("/history");
+    revalidatePath("/transfers");
     return result ?? { success: "Sparat." };
   } catch (error) {
     unstable_rethrow(error);
+    if (error instanceof PeriodWriteError) return { error: error.message };
     logServerError({
       error,
       event: "budget.write.failed",
@@ -58,6 +61,9 @@ export async function addExpenseAction(
     .safeParse(id || undefined);
   if (!parsedId.success) return { error: "Utgiften kunde inte hittas." };
   const parsed = expenseSchema.safeParse({
+    mode: data.get("mode") ?? undefined,
+    revision: data.get("revision") ?? undefined,
+    scheduledDay: data.get("scheduledDay") ?? undefined,
     name: data.get("name"),
     amount: data.get("amount"),
     period: data.get("period"),
@@ -96,6 +102,9 @@ export async function saveIncomeAction(
   data: FormData,
 ): Promise<FormState> {
   const parsed = incomeSchema.safeParse({
+    mode: data.get("mode") ?? undefined,
+    revision: data.get("revision") ?? undefined,
+    scheduledDay: data.get("scheduledDay") ?? undefined,
     id: data.get("id") || undefined,
     name: data.get("name"),
     amount: data.get("amount"),
@@ -119,7 +128,15 @@ export async function removeIncomeAction(
     .max(Number.MAX_SAFE_INTEGER)
     .safeParse(data.get("id"));
   if (!parsed.success) return { error: "Inkomsten kunde inte hittas." };
-  return mutate(() => removeIncome(parsed.data));
+  const date = effectiveDateSchema.safeParse(data.get("period"));
+  const options = writeOptionsSchema.safeParse({
+    revision: data.get("revision") ?? undefined,
+  });
+  if (!date.success || !options.success)
+    return { error: "Välj ett giltigt avslutsdatum." };
+  return mutate(async () => {
+    await removeIncome(parsed.data, date.data, options.data);
+  });
 }
 const personIdSchema = z.coerce
   .number()
@@ -169,7 +186,13 @@ export async function removeExpenseAction(
     .max(Number.MAX_SAFE_INTEGER)
     .safeParse(data.get("id"));
   if (!parsed.success) return { error: "Utgiften kunde inte hittas." };
-  const period = periodSchema.safeParse(data.get("period"));
+  const period = effectiveDateSchema.safeParse(data.get("period"));
   if (!period.success) return { error: "Välj en giltig månad." };
-  return mutate(() => removeExpense(parsed.data, period.data));
+  const options = writeOptionsSchema.safeParse({
+    revision: data.get("revision") ?? undefined,
+  });
+  if (!options.success) return { error: "Ladda om sidan och försök igen." };
+  return mutate(async () => {
+    await removeExpense(parsed.data, period.data, options.data);
+  });
 }
