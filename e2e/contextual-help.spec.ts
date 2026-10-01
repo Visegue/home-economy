@@ -128,6 +128,15 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
     await mobilePage.getByRole("button", { name: "Stäng" }).tap();
     await mobilePage.getByRole("button", { name: "Kasta ändringar" }).tap();
     await mobilePage.setViewportSize({ width: 320, height: 640 });
+    // Native month controls have different minimum widths across operating systems.
+    await mobilePage.getByLabel("Välj månad").evaluate((input) => {
+      input.style.minWidth = "200px";
+    });
+    expect(
+      await mobilePage.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
 
     for (const label of ["Lägg till sparande", "Lägg till utgift"]) {
       const trigger = mobilePage.getByRole("button", { name: label });

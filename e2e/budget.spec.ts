@@ -196,7 +196,10 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     exact: true,
   });
   await owners.scrollIntoViewIfNeeded();
-  await owners.focus();
+  // Navigate back by keyboard after scrolling; a queued scroll closes Radix tooltips.
+  await owners.press("Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(owners).toBeFocused();
   await expect(page.getByRole("tooltip")).toHaveText("Kim, Robin");
   await page.keyboard.press("Escape");
   await owners.click();

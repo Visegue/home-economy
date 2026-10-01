@@ -46,7 +46,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
   return (
     <DayDefaultsProvider days={household}>
       <div className="space-y-6">
-        <form className="flex items-end gap-3">
+        <form className="flex flex-wrap items-end gap-3">
           <div className="space-y-2">
             <Label htmlFor="overview-month">Välj månad</Label>
             <Input

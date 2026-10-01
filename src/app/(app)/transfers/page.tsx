@@ -34,7 +34,7 @@ export default async function TransfersPage({
           Bekräftade insättningar och uttag per ändamål.
         </p>
       </div>
-      <form className="flex items-end gap-3">
+      <form className="flex flex-wrap items-end gap-3">
         <label htmlFor="funding-month" className="space-y-1">
           Avser månad
           <Input
