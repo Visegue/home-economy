@@ -1,15 +1,11 @@
 import "server-only";
-import { memberColorForIndex } from "@/features/households/member-appearance";
 
-import { and, asc, count, eq, inArray } from "drizzle-orm";
-import { redirect } from "next/navigation";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import {
   withAuthenticatedDatabase,
   type AuthorizedTransaction,
 } from "@/db/authorized";
 import {
-  householdPeople,
-  households,
   householdIncomes,
   recurringItemOwners,
   recurringItems,
@@ -26,18 +22,12 @@ import { writeVersion } from "@/features/periods/write";
 import { storedMetadata, type WriteOptions } from "@/features/periods/model";
 import { settlementForecast } from "@/domain/settlement";
 
-async function ownedHousehold(
-  transaction: AuthorizedTransaction,
-  userId: string,
-) {
-  const [household] = await transaction
-    .select()
-    .from(households)
-    .where(eq(households.ownerUserId, userId))
-    .limit(1);
-  if (!household) redirect("/onboarding");
-  return household;
-}
+import { readOwnedHousehold } from "@/features/households/owned-household";
+import {
+  readHouseholdMembers,
+  readExpenseOwners,
+  validateExpenseOwners,
+} from "@/features/households/members/data";
 
 export async function getBudgetData() {
   return withAuthenticatedDatabase((transaction, user) =>
@@ -51,16 +41,8 @@ export async function readBudgetData(
   userId: string,
   includeInactive = false,
 ) {
-  const household = await ownedHousehold(transaction, userId);
-  const people = await transaction
-    .select({
-      id: householdPeople.id,
-      name: householdPeople.name,
-      color: householdPeople.color,
-    })
-    .from(householdPeople)
-    .where(eq(householdPeople.householdId, household.id))
-    .orderBy(asc(householdPeople.name));
+  const household = await readOwnedHousehold(transaction, userId);
+  const people = await readHouseholdMembers(transaction, household.id);
   const items = await transaction
     .select()
     .from(recurringItems)
@@ -77,30 +59,12 @@ export async function readBudgetData(
       ),
     )
     .orderBy(asc(recurringItems.name));
-  const owners = await transaction
-    .select()
-    .from(recurringItemOwners)
-    .where(eq(recurringItemOwners.householdId, household.id));
-  const incomeRows = await transaction
-    .select()
-    .from(householdIncomes)
-    .where(
-      and(
-        eq(householdIncomes.householdId, household.id),
-        eq(householdIncomes.active, true),
-      ),
-    )
-    .orderBy(asc(householdIncomes.name), asc(householdIncomes.startsOn));
-  const peopleById = new Map(people.map((person) => [person.id, person]));
-  const ownersByItem = new Map<number, typeof people>();
-  for (const owner of owners) {
-    const person = peopleById.get(owner.personId);
-    if (person)
-      ownersByItem.set(owner.recurringItemId, [
-        ...(ownersByItem.get(owner.recurringItemId) ?? []),
-        person,
-      ]);
-  }
+  const ownersByItem = await readExpenseOwners(
+    transaction,
+    household.id,
+    people,
+  );
+  const incomes = await readIncomes(transaction, household.id);
   const expenses: BudgetExpense[] = items.map((item) => ({
     ...storedMetadata(item),
     id: item.id,
@@ -130,7 +94,24 @@ export async function readBudgetData(
     nextDueOn: item.nextDueOn?.toISOString().slice(0, 10) ?? null,
     owners: ownersByItem.get(item.id) ?? [],
   }));
-  const incomes: BudgetIncome[] = incomeRows.map((income) => ({
+  return { household, people, expenses, incomes };
+}
+
+async function readIncomes(
+  transaction: AuthorizedTransaction,
+  householdId: number,
+): Promise<BudgetIncome[]> {
+  const incomeRows = await transaction
+    .select()
+    .from(householdIncomes)
+    .where(
+      and(
+        eq(householdIncomes.householdId, householdId),
+        eq(householdIncomes.active, true),
+      ),
+    )
+    .orderBy(asc(householdIncomes.name), asc(householdIncomes.startsOn));
+  return incomeRows.map((income) => ({
     ...storedMetadata(income),
     id: income.id,
     name: income.name,
@@ -138,26 +119,24 @@ export async function readBudgetData(
     endsOn: income.endsOn?.toISOString().slice(0, 7) ?? null,
     amountInOre: Math.round(income.amount * 100),
   }));
-  return { household, people, expenses, incomes };
+}
+
+export async function getIncomeData() {
+  return withAuthenticatedDatabase(async (transaction, user) => {
+    const household = await readOwnedHousehold(transaction, user.id);
+    const incomes = await readIncomes(transaction, household.id);
+    return { household, incomes };
+  });
 }
 
 export async function addExpense(input: ExpenseInput, id?: number) {
   return withAuthenticatedDatabase(async (transaction, user) => {
-    const household = await ownedHousehold(transaction, user.id);
-    const ownerIds = [...new Set(input.ownerIds)];
-    if (ownerIds.length) {
-      const owners = await transaction
-        .select({ id: householdPeople.id })
-        .from(householdPeople)
-        .where(
-          and(
-            eq(householdPeople.householdId, household.id),
-            inArray(householdPeople.id, ownerIds),
-          ),
-        );
-      if (owners.length !== ownerIds.length)
-        throw new Error("Invalid household participants");
-    }
+    const household = await readOwnedHousehold(transaction, user.id);
+    const ownerIds = await validateExpenseOwners(
+      transaction,
+      household.id,
+      input.ownerIds,
+    );
     return writeVersion(
       transaction,
       household.id,
@@ -268,7 +247,7 @@ export async function removeExpense(
   options: WriteOptions = {},
 ) {
   return withAuthenticatedDatabase(async (transaction, user) => {
-    const household = await ownedHousehold(transaction, user.id);
+    const household = await readOwnedHousehold(transaction, user.id);
     return writeVersion(
       transaction,
       household.id,
@@ -306,7 +285,7 @@ export async function removeExpense(
 
 export async function saveIncome(input: IncomeInput) {
   return withAuthenticatedDatabase(async (transaction, user) => {
-    const household = await ownedHousehold(transaction, user.id);
+    const household = await readOwnedHousehold(transaction, user.id);
     return writeVersion(
       transaction,
       household.id,
@@ -364,7 +343,7 @@ export async function removeIncome(
   options: WriteOptions = {},
 ) {
   return withAuthenticatedDatabase(async (transaction, user) => {
-    const household = await ownedHousehold(transaction, user.id);
+    const household = await readOwnedHousehold(transaction, user.id);
     return writeVersion(
       transaction,
       household.id,
@@ -402,70 +381,5 @@ export async function removeIncome(
         },
       },
     );
-  });
-}
-
-export async function addPerson(name: string, color?: string) {
-  return withAuthenticatedDatabase(async (transaction, user) => {
-    const household = await ownedHousehold(transaction, user.id);
-    let resolvedColor = color;
-    if (resolvedColor === undefined) {
-      const [members] = await transaction
-        .select({ total: count() })
-        .from(householdPeople)
-        .where(eq(householdPeople.householdId, household.id));
-      resolvedColor = memberColorForIndex(members.total);
-    }
-    const created = await transaction
-      .insert(householdPeople)
-      .values({ householdId: household.id, name, color: resolvedColor })
-      .onConflictDoNothing()
-      .returning();
-    return created.length > 0;
-  });
-}
-
-export async function updatePerson(id: number, name: string, color?: string) {
-  return withAuthenticatedDatabase(async (transaction, user) => {
-    const household = await ownedHousehold(transaction, user.id);
-    const [duplicate] = await transaction
-      .select({ id: householdPeople.id })
-      .from(householdPeople)
-      .where(
-        and(
-          eq(householdPeople.householdId, household.id),
-          eq(householdPeople.name, name),
-        ),
-      );
-    if (duplicate && duplicate.id !== id) return false;
-    const updated = await transaction
-      .update(householdPeople)
-      .set({ name, ...(color === undefined ? {} : { color }) })
-      .where(
-        and(
-          eq(householdPeople.id, id),
-          eq(householdPeople.householdId, household.id),
-        ),
-      )
-      .returning();
-    if (!updated.length) throw new Error("Household person not found");
-    return true;
-  });
-}
-
-export async function removePerson(id: number) {
-  return withAuthenticatedDatabase(async (transaction, user) => {
-    const household = await ownedHousehold(transaction, user.id);
-    // Owner links cascade; the expenses themselves are preserved.
-    const removed = await transaction
-      .delete(householdPeople)
-      .where(
-        and(
-          eq(householdPeople.id, id),
-          eq(householdPeople.householdId, household.id),
-        ),
-      )
-      .returning();
-    if (!removed.length) throw new Error("Household person not found");
   });
 }

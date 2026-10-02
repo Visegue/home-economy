@@ -73,13 +73,19 @@ Beräkningar använder heltals-öre; Postgres använder `numeric(14,2)`. Månads
 
 ### Månadsöversiktens läsmodell
 
-`getMonthlyOverview(period)` i `src/features/dashboard/monthly-overview.ts` är månadssidans gemensamma läsingång. Den validerar `YYYY-MM` och läser inkomster, utgifter, avräkningar, sparande och hushållspersoner i en kort, skrivskyddad `REPEATABLE READ`-transaktion via `withAuthenticatedDatabase()`. Samma databasanslutning, ögonblicksbild och transaktionslokala `app.user_id` gäller för samtliga frågor; tvingande RLS och ägarhushållsfiltret behålls. Inställningarna kan fortsatt använda den fristående budgetläsningen.
+`getMonthlyOverview(period)` i `src/features/dashboard/monthly-overview.ts` är månadssidans gemensamma läsingång. Den validerar `YYYY-MM` och läser inkomster, utgifter, avräkningar, sparande och hushållspersoner i en kort, skrivskyddad `REPEATABLE READ`-transaktion via `withAuthenticatedDatabase()`. Samma databasanslutning, ögonblicksbild och transaktionslokala `app.user_id` gäller för samtliga frågor; tvingande RLS och ägarhushållsfiltret behålls. Inställningarna läser inkomster och hushållsmedlemmar separat utan att hämta utgifter eller ägarlänkar.
 
 Läsmodellen väljer månadens giltiga poster och returnerar oformaterade belopp i heltals-öre, inklusive varje posts månadsbelopp, separata tabellsummor och totalt att föra över. Överföringar är månadsavsättningar för utgifter plus avräkningar och sparande. Kvarvarande belopp är inkomst minus dessa poster och direkta utgifter. Saknad inkomst ger `null`; registrerad nollinkomst är ett känt belopp. En betalning från redan reserverade medel dras inte av igen.
 
 Månaden är en rapporteringsperiod över långlivade poster, inte en separat plan eller ett lagrat kontosaldo. React-komponenterna formaterar beloppen och visar de aktiva posterna; de räknar inte om månadsbelopp eller tabellsummor. Avräkningarnas prognos för hela målbeloppet visas också, utan att den behandlas som månadens kostnad.
 
 Integrationstesterna i `monthly-overview.test.ts` använder PGlite, verkliga frågor och en begränsad RLS-roll. De täcker transaktionsläge, hushållsisolering, historik, avrundning, typbyten och avräkningarnas sista överföring. `pnpm db:check` verifierar runtime-åtkomst och RLS på utvecklingsbranchen eller i staging; PGlite ersätter inte denna kontroll.
+
+### Hushållsmedlemmar
+
+`src/features/households/members/` äger validering, ikonfärger, standardfärger, unika namn inom hushållet och skapande, ändring och borttagning av medlemmar. Skrivningar går genom `withAuthenticatedDatabase()` och låser hushållsraden för att samordna standardfärger och namnkontroller. Modulen validerar även utgifternas ägarval och sammanställer ägarprojektioner inom budgetläsningens befintliga transaktion.
+
+Medlemmar är namn för utgiftsägarskap och skapar inga konton eller åtkomsträttigheter. Namn- och färgändringar gäller även tidigare månaders ägarvisning. Borttagning rensar ägarlänkar men bevarar utgifterna. Inställningarna använder modulens smala medlemsläsning och budgetens inkomstläsning; de laddar inga utgifter.
 
 ### Inkomster
 

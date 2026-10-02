@@ -1,5 +1,5 @@
 import { MemberAvatar } from "@/components/member-avatar";
-import { memberColorForIndex } from "@/features/households/member-appearance";
+import { getHouseholdMembers } from "@/features/households/members/data";
 import {
   CardManagement,
   CardManagementButton,
@@ -16,8 +16,11 @@ import { DeploymentInfo } from "@/components/deployment-info";
 import { SignOutButton } from "@/components/user-menu";
 import { AccountSettings } from "@/features/account/account-settings";
 import { getAccountSettings } from "@/features/account/data";
-import { getBudgetData } from "@/features/budget/data";
-import { PersonDialog, RemovePersonDialog } from "@/features/budget/forms";
+import { getIncomeData } from "@/features/budget/data";
+import {
+  MemberDialog,
+  RemoveMemberDialog,
+} from "@/features/households/members/forms";
 import {
   IncomeDialog,
   RemoveIncomeDialog,
@@ -37,11 +40,13 @@ export default async function SettingsPage({
 }: {
   searchParams: Promise<{ accountLink?: string }>;
 }) {
-  const [{ people, household, incomes }, account, query] = await Promise.all([
-    getBudgetData(),
-    getAccountSettings(),
-    searchParams,
-  ]);
+  const [{ household, incomes }, { people, defaultColor }, account, query] =
+    await Promise.all([
+      getIncomeData(),
+      getHouseholdMembers(),
+      getAccountSettings(),
+      searchParams,
+    ]);
   const current = currentPeriod();
   const deployment = getDeploymentVersion(packageJson.version, process.env);
   return (
@@ -120,9 +125,7 @@ export default async function SettingsPage({
                 {people.length ? (
                   <CardManagementButton label="medlemmar" />
                 ) : null}
-                <PersonDialog
-                  defaultColor={memberColorForIndex(people.length)}
-                />
+                <MemberDialog defaultColor={defaultColor} />
               </CardAction>
             </CardHeader>
             <CardContent>
@@ -141,8 +144,8 @@ export default async function SettingsPage({
                       </div>
                       <ManagementOnly>
                         <div className="flex items-center gap-2">
-                          <PersonDialog person={person} />
-                          <RemovePersonDialog person={person} />
+                          <MemberDialog person={person} />
+                          <RemoveMemberDialog person={person} />
                         </div>
                       </ManagementOnly>
                     </li>

@@ -4,8 +4,8 @@ import {
   memberTextColor,
   memberColorForIndex,
   memberColors,
-} from "./member-appearance";
-import { personSchema } from "@/features/budget/model";
+} from "./appearance";
+import { memberSchema } from "./model";
 
 describe("member icons", () => {
   it("cycles through the palette in member order", () => {
@@ -34,12 +34,12 @@ describe("member icons", () => {
   });
 
   it("validates and normalizes saved colors and supports older forms", () => {
-    expect(personSchema.parse({ name: "Kim", color: "#AABBCC" }).color).toBe(
+    expect(memberSchema.parse({ name: "Kim", color: "#AABBCC" }).color).toBe(
       "#aabbcc",
     );
-    expect(personSchema.parse({ name: "Kim" }).color).toBeUndefined();
+    expect(memberSchema.parse({ name: "Kim" }).color).toBeUndefined();
     for (const color of ["red", "#fff", "#1234567", "", "url(example)"]) {
-      expect(personSchema.safeParse({ name: "Kim", color }).success).toBe(
+      expect(memberSchema.safeParse({ name: "Kim", color }).success).toBe(
         false,
       );
     }

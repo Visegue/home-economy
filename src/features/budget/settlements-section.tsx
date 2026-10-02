@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { MemberAvatarGroup } from "@/components/member-avatar-group";
-import type { HouseholdPerson } from "@/features/households/member-appearance";
+import type { HouseholdPerson } from "@/features/households/members/model";
 import { ChangeNotice } from "@/features/periods/change-notice";
 import { settlementForecast } from "@/domain/settlement";
 import { formatBudgetSek } from "@/lib/money";
