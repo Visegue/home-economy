@@ -87,6 +87,10 @@ Integrationstesterna i `monthly-overview.test.ts` använder PGlite, verkliga fr�
 
 Medlemmar är namn för utgiftsägarskap och skapar inga konton eller åtkomsträttigheter. Namn- och färgändringar gäller även tidigare månaders ägarvisning. Borttagning rensar ägarlänkar men bevarar utgifterna. Inställningarna använder modulens smala medlemsläsning och budgetens inkomstläsning; de laddar inga utgifter.
 
+### Inställningarnas läsmodell
+
+`getSettingsData(searchParams)` i `src/features/settings/data.ts` samordnar hushåll, inkomster, medlemmar och standardfärg, kontoinställningar, aktuell månad, återkoppling från kontolänkning och versionsinformation. Inställningssidan konsumerar resultatet och ansvarar för presentationen. De smala autentiserade läsningarna körs parallellt; hushållsdata går fortsatt genom `withAuthenticatedDatabase()` och tvingande RLS. Kontolänkningsstatus visas endast för `success` eller `error`. Modulen är server-only och läser inga utgifter eller ägarlänkar.
+
 ### Inkomster
 
 `household_incomes` lagrar namn, månadsbelopp och inkluderande giltighetsdatum. Inställningarna hanterar flera källor; översikten summerar beloppen som gäller på respektive planerad dag. Inkomster är budgetunderlag, inte bekräftade insättningar eller ett bankkontosaldo.
@@ -121,4 +125,4 @@ Avsättningen upphör i utgiftsmånaden (efter startmånaden för en plan som be
 
 ## Nästa steg
 
-Månadsöversikten och manuell uppföljning finns. Verkliga bankkontosaldon, automatisk bankintegration, förfallna betalningar, investeringsavkastning och nettoförmögenhet ingår inte. Migration 0014 måste appliceras före drift; lokal PGlite-verifiering ersätter inte `pnpm db:check` med miljöns runtime-roll.
+Månadsöversikten och manuell uppföljning finns. Verkliga bankkontosaldon, automatisk bankintegration, förfallna betalningar, investeringsavkastning och nettoförmögenhet ingår inte. Produktionsmigrationer och `pnpm db:check` passerade för version 0.9.1 den 2026-10-02. Vid nya miljöer och releaser krävs fortsatt migrationer och verifiering med miljöns runtime-roll; lokal PGlite-verifiering ersätter inte denna kontroll.
