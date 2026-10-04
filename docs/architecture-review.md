@@ -1,19 +1,21 @@
 # Architecture review
 
-Original review: 2026-09-28. Status updated: 2026-10-01.
+Original review: 2026-09-28. Implementation work completed: 2026-10-04.
 
-This document preserves the four improvement candidates from the original HTML architecture review, with implementation status recorded separately. Candidates 1–2 are merged. Candidate 3 is implemented on the feature branch and is awaiting merge. Candidate 4 remains optional future work.
+This document is the historical record of the completed architecture review and its four implemented improvement candidates. Candidates 1–3 were merged separately; the closing Settings change implements candidate 4 and concludes the implementation work. Completion here refers to implementation and local verification, not an assertion that the closing change has already merged or deployed.
+
+The report is retained for rationale and verification history and does not require ongoing maintenance. See [the architecture documentation](architecture.md) for the current architecture and [the release runbook](release-runbook.md) for merge, deployment and release checks.
 
 The original review recommended starting with the monthly household view because it combined cross-domain correctness rules in its callers. The domain discussion subsequently established **Monthly Overview** as the correct name: a monthly projection of longer-lived definitions, not a separate monthly plan. See [the domain glossary](../CONTEXT.md) for canonical English terms and Swedish display names, and [the architecture documentation](architecture.md) for current behavior.
 
-## Status
+## Final status
 
-| Candidate                  | Original assessment          | Status as of 2026-10-01                                                                                           |
-| -------------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| 1. Monthly Overview        | Strong; first recommendation | Completed and merged in [PR 55](https://github.com/Visegue/home-economy/pull/55)                                  |
-| 2. Effective period writes | Worth exploring              | Merged in [PR 58](https://github.com/Visegue/home-economy/pull/58); production deployment and release jobs passed |
-| 3. Household member module | Strong                       | Implemented; review, quality, browser checks and dependency audit passed; live Neon check pending                 |
-| 4. Settings data assembly  | Speculative                  | Not implemented; defer until the need is clearer                                                                  |
+| Candidate                  | Original assessment          | Final implementation status                                                                                                 |
+| -------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 1. Monthly Overview        | Strong; first recommendation | Completed and merged in [PR 55](https://github.com/Visegue/home-economy/pull/55)                                            |
+| 2. Effective period writes | Worth exploring              | Merged in [PR 58](https://github.com/Visegue/home-economy/pull/58); production deployment and release jobs passed           |
+| 3. Household member module | Strong                       | Merged in [PR 61](https://github.com/Visegue/home-economy/pull/61); production database, deployment and release jobs passed |
+| 4. Settings data assembly  | Speculative                  | Completed in the closing Settings change; final review, quality and browser checks passed                                   |
 
 ## Candidate 1 Monthly Overview
 
@@ -95,17 +97,17 @@ Expected benefits are keeping member rules together, a shared interface for Sett
 
 ### Follow up
 
-Implemented locally on 2026-10-01 in `src/features/households/members/`. The module owns member input validation, appearance, palette defaults, household-scoped name uniqueness, authenticated lifecycle writes, and expense-owner validation and projections. Member writes serialize on the household row so duplicate checks and default-color selection agree across concurrent writes. Existing account-access membership is unchanged: these members remain names for expense ownership, not login accounts.
+Implemented on 2026-10-01 in `src/features/households/members/` and merged in [PR 61](https://github.com/Visegue/home-economy/pull/61) on 2026-10-02. The module owns member input validation, appearance, palette defaults, household-scoped name uniqueness, authenticated lifecycle writes, and expense-owner validation and projections. Member writes serialize on the household row so duplicate checks and default-color selection agree across concurrent writes. Existing account-access membership is unchanged: these members remain names for expense ownership, not login accounts.
 
 Settings consumes `getHouseholdMembers()` and the narrow `getIncomeData()` read instead of loading all expenses and owner links. Budget uses member transaction readers within the Monthly Overview's existing authenticated snapshot. Renaming updates owner displays; removing a member cascades owner links, including historical versions, while preserving financial definitions. The existing lifecycle/RLS and browser tests exercise the new interface; direct-write coverage also checks validation, name/color normalization and saved-member defaults. No schema migration is required.
 
-Validation on Node.js 24: `pnpm check` passed, including 252 tests and the production build. The full `pnpm test:e2e` rerun passed all 17 browser tests. An initial transfer-dialog timeout did not recur in either the isolated transfer tests or the full rerun; the parallel test server also logged PGlite abort messages. `pnpm db:check` could not run because this worktree has no `DATABASE_URL`; verification against `dev/alexander` remains pending.
+Pre-submission validation on Node.js 24: `pnpm check` passed, including 252 tests and the production build. The full `pnpm test:e2e` rerun passed all 17 browser tests. An initial transfer-dialog timeout did not recur in either the isolated transfer tests or the full rerun; the parallel test server also logged PGlite abort messages. Local `pnpm db:check` could not run because this worktree has no `DATABASE_URL`; verification against `dev/alexander` remains pending. The [CI run for merge commit 0b1f95d](https://github.com/Visegue/home-economy/actions/runs/37003903183) subsequently passed quality, end-to-end tests, production migrations, live production `pnpm db:check`, deployment and release publication on 2026-10-02.
 
-The user confirmed the existing member semantics on 2026-10-01: names represent expense owners independently of login access, renames affect historical owner displays, and removal clears historical owner links while preserving expenses. A subsequent review against both the project standards and candidate 3's requirements found no implementation, authentication/RLS or scope issues. The remaining standards item is live Neon verification.
+The user confirmed the existing member semantics on 2026-10-01: names represent expense owners independently of login access, renames affect historical owner displays, and removal clears historical owner links while preserving expenses. A subsequent review against both the project standards and candidate 3's requirements found no implementation, authentication/RLS or scope issues. Live production verification is complete; local development verification remains separate.
 
-The dependency audit reported zero known vulnerabilities across production and development dependencies. GitHub CodeQL default setup is enabled and there were no open code-scanning alerts at review time. This records repository state before submission; CI analyzes candidate 3's changes. The planned version is `0.9.1`, a patch for the behavior-preserving refactor and member-write validation/concurrency hardening, above the confirmed `main` version `0.9.0`.
+The dependency audit reported zero known vulnerabilities across production and development dependencies. GitHub CodeQL default setup is enabled and there were no open code-scanning alerts at review time. This records repository state before submission; CodeQL also passed for the merge commit. [Version `0.9.1`](https://github.com/Visegue/home-economy/releases/tag/v0.9.1) was released on 2026-10-02, a patch for the behavior-preserving refactor and member-write validation/concurrency hardening.
 
-Candidate 4 remains deferred: narrower reads address the known unused-data problem without adding a settings assembly module.
+PR 61 addressed the known unused-data problem through narrower reads. Candidate 4 subsequently added the settings assembly interface described below.
 
 ## Candidate 4 Settings data assembly
 
@@ -126,11 +128,17 @@ Potential benefits are narrower reads and a focused test surface for coordinated
 
 ### Follow up
 
-Not implemented by PR 55. Defer this speculative candidate until the need is clearer, especially after any household member work. Avoid introducing it solely to complete the report.
+Implemented on 2026-10-04 in the closing Settings change through [getSettingsData(searchParams)](../src/features/settings/data.ts). The server-only module assembles household, income, members and defaults, account settings, the current period, account-link feedback and deployment-version information into the result consumed by the Settings page. It retains the existing parallel, narrow authenticated reads without fetching expenses or owner links. Query feedback accepts only `success` or `error`, including the existing behavior of ignoring other or repeated values.
 
-## Next steps
+The page owns presentation and consumes one read interface. Household member, income and account rules remain in their existing modules. No schema migration, write protocol or permission change is required. The planned release is `0.9.2`, a patch for this behavior-preserving refactor above the confirmed latest `main` version `0.9.1`.
 
-Run `pnpm db:check` against `dev/alexander` once its runtime connection is configured. Candidate 3 has passed implementation review and local checks; no migration is required. Before opening a PR, recheck that version `0.9.1` remains above the latest `main` as required by the release policy. Candidate 2 was merged on 2026-10-01 and its production deployment and release jobs passed. Candidate 4 should be reassessed only when coordinated settings behavior justifies a separate module. Previously identified dependency security alerts should be checked separately; they are not findings from the original architecture report.
+Validation on Node.js 24: `pnpm check` passed, including all 252 tests and the production build. `pnpm test:e2e --workers=2` passed all 17 browser tests, including Settings income and member management, account-link cancellation feedback and deployment-version display. The test server emitted the previously observed PGlite abort messages; no browser test failed.
+
+A final review of the working-tree change against both project standards and the authorized candidate 4 scope found no actionable findings. Focused security inspection confirmed that the server-only assembly retains the existing session checks and authenticated household readers, adds no shared cache, and returns no secrets or raw environment object. Account-link query feedback does not establish that an account is linked; the existing account component also checks the actual provider state. Existing integration and browser coverage is sufficient for this orchestration refactor; no new database or permission behavior requires an additional live database check. The README now reflects exact-date changes and manually confirmed transfers and links to ADR 0004.
+
+## Completion
+
+All four implementation candidates are addressed and the architecture review's implementation work is complete. The closing change contains the Settings module and final documentation updates; no additional architecture implementation remains from this report. Merge, CI and deployment verification follow the release runbook. The previously recorded local `dev/alexander` database verification and dependency security monitoring are separate operational concerns, not unfinished architecture candidates.
 
 ### Candidate 2 pre-review follow-up (historical)
 

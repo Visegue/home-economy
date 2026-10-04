@@ -7,14 +7,15 @@ Gränssnittet använder sand, aubergine, blått, senap och salvia. All demodata 
 ## Månadsöversikt
 
 - **Månaden** visar den aktuella månadens inkomster, direkta utgifter, avsättningar, avräkningar och kvarvarande belopp eller underskott. **Utgifter**, **Avräkningar** och **Spara** visas i egna tabeller med månadssummor. Alla fem kort kan minimeras med pilknappen och tangentbordet; de öppnas igen vid omladdning.
-- Lägg till inkomstkällor under **Inställningar → Hushållets inkomster** med namn, månadsbelopp efter skatt, startmånad och valfri slutmånad. Båda gränsmånaderna ingår. Utan slutmånad gäller inkomsten tills vidare. Aktiva källor summeras per månad.
-- Vid ändrat inkomstbelopp: välj **Ändra** och **Ändringen gäller från**. Det gamla beloppet avslutas automatiskt månaden före och det nya börjar gälla vald månad. Ändring från inkomstens startmånad ersätter hela perioden. Äldre månadsregistreringar och medlemsinkomster migreras enligt [arkitekturen](docs/architecture.md#pengar-och-datum).
+- Lägg till inkomstkällor under **Inställningar → Hushållets inkomster** med namn, månadsbelopp efter skatt, startdatum, valfritt slutdatum och planerad dag i månaden. Båda gränsdatumen ingår. Utan slutdatum gäller inkomsten tills vidare. Beloppet vid respektive källas planerade dag räknas i månadsbudgeten.
+- Vid ändrat inkomstbelopp: välj **Ändra från valt datum**. Det gamla beloppet avslutas dagen före och det nya börjar gälla valt datum; senare versioner bevaras. Ändring från versionens startdatum ersätter den versionen. **Rätta denna version** behåller startdatumet och uppdaterar även historiska belopp. Äldre månadsregistreringar och medlemsinkomster migreras enligt [arkitekturen](docs/architecture.md#pengar-och-datum).
 - Formulär för utgifter, inkomster, sparande och familjemedlemmar bekräftar när sparningen lyckats. Stänger du ett ändrat formulär med krysset, Escape eller ett tryck utanför väljer du om du vill fortsätta redigera eller kasta ändringarna.
-- Utgifter betalas varje månad eller avsätts inför betalning var 2, 3, 6, 12 eller 24:e månad. Ange startmånad och, för avsatta utgifter, nästa betalningsdatum.
+- Utgifter betalas varje månad eller avsätts inför betalning var 2, 3, 6, 12 eller 24:e månad. Ange startdatum, planerad dag i månaden och, för avsatta utgifter, nästa betalningsdatum.
 - Månadsavsättningen är beloppet delat med intervallet, avrundat till öre per utgift. Betalningen räknas inte dubbelt. Kontots saldo och extra avsättning inför första betalningen ingår inte.
 - **Avräkningar** planerar större framtida utgifter: ange dagens kostnad, nästa utgiftsdatum och valfria ägare. Påslag i kronor eller procent och årlig inflation med ränta på ränta är valfria; standardvärdena är 10 respektive 2 procent. Formuläret visar beräknat totalbelopp och månadsavsättning.
-- Avräkningens avsättning löper till månaden före utgiften och justeras till exakt målbelopp i öre. En utgift i startmånaden får en enda avsättning. Posten finns kvar när avsättningen upphör; ange ett nytt utgiftsdatum för en ny plan. Faktiska insättningar, kontosaldo och avkastning ingår inte. Avräkningar visas på en egen överföringsrad och räknas bara en gång i utgiftssumman. Se [beräkningsreglerna](docs/architecture.md#avräkningar).
-- **Ändra** och **Avsluta** utgifter eller sparande gäller från vald månad. Tidigare månader behålls. Avslut från startmånaden döljer hela perioden; lagrade kopplingar till månadsplaner finns kvar.
+- Avräkningens avsättning löper till månaden före utgiften och justeras till exakt målbelopp i öre. En utgift i startmånaden får en enda avsättning. Posten finns kvar när avsättningen upphör; ange ett nytt utgiftsdatum för en ny plan. Registrerade insättningar och uttag följs upp separat och ändrar inte prognosen. Bankkontosaldo och faktisk avkastning ingår inte. Avräkningar visas på en egen överföringsrad och räknas bara en gång i utgiftssumman. Se [beräkningsreglerna](docs/architecture.md#avräkningar).
+- **Ändra** och **Avsluta** inkomster, utgifter eller sparande gäller från valt datum. Tidigare dagar och kommande versioner behålls. Avslut från versionens startdatum döljer hela versionen. Månadsöversikten skiljer värdet vid månadens slut från beloppet vid den planerade dagen och visar ändringar inom månaden; ingen dagsproportionering görs. Under **Historik** kan tidigare och kommande versioner visas och redigeras.
+- Under **Överföringar och värden** registrerar du manuellt insättningar, uttag och ingående värde för avsättningar, avräkningar och sparande. Utfört datum styr öronmärkt värde, medan **Avser månad** styr planuppföljningen. Flera överföringar med valfria belopp kan registreras för samma månad. Planerade belopp flyttar inga pengar och skapar inga bekräftade överföringar; verkliga bankkontosaldon ingår inte.
 - Lägg till medlemmar under **Inställningar** och välj valfritt flera ägare per utgift. Namnen ger ingen inloggning och påverkar inte summorna.
 
 Månadsöversikten visar sparad hushållsdata. Kör `pnpm db:migrate` före start mot en befintlig databas.
@@ -181,10 +182,11 @@ Under **Inställningar → Konto** visas kopplade inloggningssätt. Befintligt l
 - [Domänbegrepp och svenska visningsnamn](CONTEXT.md) – engelska definitioner och svenska namn, även för framtida funktioner.
 - [Arbetsbokens produktkarta](docs/workbook-mapping.md)
 - [Arkitektur och säkerhetsgränser](docs/architecture.md)
-- [Arkitekturgranskning och status för förbättringsförslag](docs/architecture-review.md)
+- [Avslutad arkitekturgranskning och genomförda förbättringar](docs/architecture-review.md)
 - [ADR 0001: data- och authplattform](docs/adr/0001-data-and-auth-platform.md)
 - [ADR 0002: databasmedvetna releaser](docs/adr/0002-database-aware-releases.md)
 - [ADR 0003: appversionering och GitHub Releases](docs/adr/0003-app-versioning-and-github-releases.md)
+- [ADR 0004: giltighetsdatum och registrerade överföringar](docs/adr/0004-effective-dates-and-confirmed-transfers.md)
 - [Release och återställning](docs/release-runbook.md)
 - [Rapportera säkerhetsbrister](SECURITY.md)
 - Schema: `src/db/schema/`; migrationer: `drizzle/`

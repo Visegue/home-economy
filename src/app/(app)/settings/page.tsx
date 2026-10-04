@@ -1,5 +1,4 @@
 import { MemberAvatar } from "@/components/member-avatar";
-import { getHouseholdMembers } from "@/features/households/members/data";
 import {
   CardManagement,
   CardManagementButton,
@@ -15,8 +14,6 @@ import {
 import { DeploymentInfo } from "@/components/deployment-info";
 import { SignOutButton } from "@/components/user-menu";
 import { AccountSettings } from "@/features/account/account-settings";
-import { getAccountSettings } from "@/features/account/data";
-import { getIncomeData } from "@/features/budget/data";
 import {
   MemberDialog,
   RemoveMemberDialog,
@@ -25,10 +22,8 @@ import {
   IncomeDialog,
   RemoveIncomeDialog,
 } from "@/features/budget/income-form";
-import { currentPeriod } from "@/features/budget/model";
-import { getDeploymentVersion } from "@/lib/deployment-version";
+import { getSettingsData, type SettingsQuery } from "@/features/settings/data";
 import { formatBudgetSek } from "@/lib/money";
-import packageJson from "../../../../package.json";
 import { DayDefaultsProvider } from "@/features/periods/fields";
 import { DayDefaultsForm } from "@/features/periods/defaults-form";
 import { dateLabel, versionBounds } from "@/features/periods/model";
@@ -38,17 +33,17 @@ export const metadata = { title: "Hushållsinställningar" };
 export default async function SettingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ accountLink?: string }>;
+  searchParams: Promise<SettingsQuery>;
 }) {
-  const [{ household, incomes }, { people, defaultColor }, account, query] =
-    await Promise.all([
-      getIncomeData(),
-      getHouseholdMembers(),
-      getAccountSettings(),
-      searchParams,
-    ]);
-  const current = currentPeriod();
-  const deployment = getDeploymentVersion(packageJson.version, process.env);
+  const {
+    household,
+    incomes,
+    people,
+    defaultColor,
+    account,
+    current,
+    deployment,
+  } = await getSettingsData(searchParams);
   return (
     <DayDefaultsProvider days={household}>
       <div className="max-w-4xl space-y-6">
@@ -164,16 +159,7 @@ export default async function SettingsPage({
             <CardTitle>Konto</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <AccountSettings
-              {...account}
-              linkResult={
-                query.accountLink === "error"
-                  ? "error"
-                  : query.accountLink === "success"
-                    ? "success"
-                    : undefined
-              }
-            />
+            <AccountSettings {...account} />
             <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-5">
               <p className="text-sm text-muted-foreground">
                 Logga ut från Hemekonomi på den här enheten.
