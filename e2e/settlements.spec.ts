@@ -57,20 +57,31 @@ test("planerar avräkningar med påslag, inflation och separata månadsöverför
   await page.getByRole("checkbox", { name: "Räkna med inflation" }).check();
   await page.getByRole("button", { name: "Spara avräkning" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(card).toContainText(formatBudgetSek(1_373_328));
+
   const table = card.getByRole("table", { name: "Planerade avräkningar" });
   const row = table.getByRole("row").filter({ hasText: "Nya vitvaror" });
   await expect(row.getByRole("cell").nth(1)).toHaveText(
     formatBudgetSek(57_222),
   );
-  await expect(row.getByRole("cell").nth(5)).toHaveText(
-    formatBudgetSek(1_373_328),
-  );
+  await expect(table.getByRole("columnheader")).toHaveText([
+    "Namn",
+    "Per månad",
+    "Totalt undansparat",
+  ]);
+  await row.getByRole("button", { name: "Nya vitvaror", exact: true }).click();
+  const details = page.getByRole("dialog", {
+    name: "Nya vitvaror",
+    exact: true,
+  });
+  await expect(details).toContainText(formatBudgetSek(1_373_328));
+  await expect(
+    details.getByRole("button", { name: "Ägare: Kim" }),
+  ).toBeVisible();
+  await details.getByRole("button", { name: "Stäng", exact: true }).click();
   await expect(
     table.getByRole("row").filter({ hasText: "Totalt per månad" }),
   ).toContainText(formatBudgetSek(57_222));
 
-  await expect(card.getByRole("button", { name: "Ägare: Kim" })).toBeVisible();
   await expect(settlementTransfer).toContainText(formatBudgetSek(57_222));
   await expect(transfers.getByLabel("Totalt att föra över")).toHaveText(
     formatBudgetSek(57_222),
@@ -102,7 +113,16 @@ test("planerar avräkningar med påslag, inflation och separata månadsöverför
     formatBudgetSek(54_169),
   );
   await page.reload();
-  await expect(card).toContainText("Utan inflation");
+  await row.getByRole("button", { name: "Nya vitvaror", exact: true }).click();
+  await expect(details).toContainText("Utan inflation");
+  await expect(details).toContainText(formatBudgetSek(100_050));
+  const panelBounds = await details.boundingBox();
+  expect(panelBounds!.width).toBeCloseTo(390, 1);
+  await page.screenshot({
+    path: testInfo.outputPath("settlement-details-mobile.png"),
+    animations: "disabled",
+  });
+  await details.getByRole("button", { name: "Stäng", exact: true }).click();
   for (const title of [
     "Räcker inkomsten?",
     "Att föra över",
@@ -130,7 +150,6 @@ test("planerar avräkningar med påslag, inflation och separata månadsöverför
     await expect(content).toBeVisible();
   }
 
-  await expect(card).toContainText(formatBudgetSek(100_050));
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -15,6 +16,8 @@ import {
 } from "vitest";
 
 import {
+  confirmedTransfers,
+  financialItems,
   householdIncomes,
   householdMembers,
   householdPeople,
@@ -65,7 +68,8 @@ vi.mock("@/db", () => ({
   },
 }));
 
-import { addExpense, saveIncome } from "@/features/budget/data";
+import { addExpense, removeExpense, saveIncome } from "@/features/budget/data";
+import { confirmTransfer } from "@/features/funding/data";
 import { saveSaving } from "@/features/savings/data";
 import { getMonthlyOverview } from "./monthly-overview";
 
@@ -113,6 +117,8 @@ afterAll(async () => {
   await client.close();
 });
 
+afterEach(() => vi.useRealTimers());
+
 async function expense(
   values: Partial<typeof recurringItems.$inferInsert> = {},
 ) {
@@ -134,6 +140,167 @@ async function expense(
 }
 
 describe("monthly overview", () => {
+  it("uses Stockholm today for current and future months without projecting contributions", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-30T22:30:00Z"));
+    const id = await saveSaving(
+      { name: "Buffert", amountInOre: 10_000 },
+      undefined,
+      "2026-09-01",
+    );
+    await confirmTransfer({
+      id: crypto.randomUUID(),
+      source: "saving",
+      versionId: id,
+      kind: "opening",
+      amount: "2000",
+      occurredOn: "2026-09-01",
+      attributionMonth: "2026-09",
+      note: "",
+    });
+    await confirmTransfer({
+      id: crypto.randomUUID(),
+      source: "saving",
+      versionId: id,
+      kind: "withdrawal",
+      amount: "2200",
+      occurredOn: "2026-10-01",
+      attributionMonth: "2026-10",
+      note: "",
+      confirmNegative: true,
+    });
+    const previous = await getMonthlyOverview("2026-09");
+    const current = await getMonthlyOverview("2026-10");
+    const future = await getMonthlyOverview("2026-11");
+    expect(previous.valueDate).toBe("2026-09-30");
+    expect(previous.savings[0].funding.valueInOre).toBe(200_000);
+    for (const overview of [current, future]) {
+      expect(overview.valueDate).toBe("2026-10-01");
+      expect(overview.savings[0].funding.valueInOre).toBe(-20_000);
+      expect(overview.savings[0].funding.transfers).toHaveLength(2);
+      expect(overview.savings[0].funding.progress.depositedInOre).toBe(0);
+    }
+  });
+
+  it("sums independent earmarks and distinguishes missing opening values at the selected date", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-10T12:00:00Z"));
+    const first = await saveSaving(
+      { name: "Buffert", amountInOre: 10_000 },
+      undefined,
+      "2026-09-01",
+    );
+    const second = await saveSaving(
+      { name: "Buffert", amountInOre: 20_000 },
+      undefined,
+      "2026-09-01",
+    );
+    const third = await saveSaving(
+      { name: "Senare startvärde", amountInOre: 30_000 },
+      undefined,
+      "2026-09-01",
+    );
+    for (const [versionId, kind, amount, occurredOn, attributionMonth] of [
+      [first, "opening", "0", "2026-09-01", "2026-09"],
+      [first, "deposit", "500", "2026-09-30", "2026-10"],
+      [second, "deposit", "200", "2026-09-30", "2026-09"],
+      [third, "opening", "1000", "2026-10-01", "2026-10"],
+    ] as const) {
+      await confirmTransfer({
+        id: crypto.randomUUID(),
+        source: "saving",
+        versionId,
+        kind,
+        amount,
+        occurredOn,
+        attributionMonth,
+        note: "",
+      });
+    }
+    const september = await getMonthlyOverview("2026-09");
+    expect(
+      september.savings.find((saving) => saving.id === first)?.funding,
+    ).toMatchObject({
+      valueInOre: 50_000,
+      hasOpening: true,
+      progress: { depositedInOre: 0, remainingInOre: 10_000 },
+    });
+    expect(
+      september.savings.find((saving) => saving.id === second)?.funding,
+    ).toMatchObject({ valueInOre: 20_000, hasOpening: false });
+    expect(
+      september.savings.find((saving) => saving.id === third)?.funding,
+    ).toMatchObject({ valueInOre: 0, hasOpening: false });
+    expect(september.recordedTotals.savings).toEqual({
+      valueInOre: 70_000,
+      hasMissingOpening: true,
+    });
+    const october = await getMonthlyOverview("2026-10");
+    expect(october.recordedTotals.savings.valueInOre).toBe(170_000);
+    expect(
+      october.savings.find((saving) => saving.id === first)?.funding.progress
+        .depositedInOre,
+    ).toBe(50_000);
+    await saveSaving(
+      { name: "Ny buffert", amountInOre: 15_000 },
+      first,
+      "2026-10-01",
+    );
+    const renamed = await getMonthlyOverview("2026-10");
+    expect(renamed.savings).toHaveLength(3);
+    expect(
+      renamed.savings.find((s) => s.name === "Ny buffert")?.funding,
+    ).toMatchObject({ valueInOre: 50_000, hasOpening: true });
+    expect(renamed.recordedTotals.savings.valueInOre).toBe(170_000);
+    expect(
+      (await getMonthlyOverview("2026-09")).savings.find((s) => s.id === first)
+        ?.name,
+    ).toBe("Buffert");
+  });
+
+  it("keeps historical recorded earmarked value after payment and ending the expense", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-10T12:00:00Z"));
+    const id = await addExpense({
+      name: "Försäkring",
+      amount: 120_000,
+      type: "allocated",
+      months: 12,
+      nextDueOn: "2026-10-01",
+      ownerIds: [],
+      period: "2026-08-01",
+      scheduledDay: 25,
+    });
+    for (const [kind, occurredOn] of [
+      ["opening", "2026-09-01"],
+      ["withdrawal", "2026-10-01"],
+    ] as const) {
+      await confirmTransfer({
+        id: crypto.randomUUID(),
+        source: "expense",
+        versionId: id,
+        kind,
+        amount: "2000",
+        occurredOn,
+        attributionMonth: "2026-09",
+        note: "",
+      });
+    }
+    await removeExpense(id, "2026-10-02");
+
+    const september = await getMonthlyOverview("2026-09");
+    expect(september.valueDate).toBe("2026-09-30");
+    expect(september.allocatedExpenses[0]).toMatchObject({
+      name: "Försäkring",
+      monthlyAmountInOre: 10_000,
+      funding: { valueInOre: 200_000, hasOpening: true },
+    });
+    const october = await getMonthlyOverview("2026-10");
+    expect(october.valueDate).toBe("2026-10-10");
+    expect(october.allocatedExpenses[0].funding.valueInOre).toBe(0);
+    expect((await getMonthlyOverview("2026-11")).allocatedExpenses).toEqual([]);
+  });
+
   it("assembles rows and totals in one authenticated read-only snapshot", async () => {
     const people = await database
       .insert(householdPeople)
@@ -371,6 +538,8 @@ describe("monthly overview", () => {
   });
 
   it("retains replacement adjustments and historical contributions after a revision", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-01T12:00:00Z"));
     const input = {
       name: "Vitvaror",
       amount: 100_000,
@@ -386,6 +555,16 @@ describe("monthly overview", () => {
       },
     };
     const id = await addExpense(input);
+    await confirmTransfer({
+      id: crypto.randomUUID(),
+      source: "expense",
+      versionId: id,
+      kind: "opening",
+      amount: "1000",
+      occurredOn: "2026-01-01",
+      attributionMonth: "2026-01",
+      note: "Startvärde för avräkning",
+    });
     const revisedId = await addExpense(
       { ...input, name: "Nya vitvaror", period: "2026-07" },
       id,
@@ -411,6 +590,11 @@ describe("monthly overview", () => {
         inflationPercent: 2,
       },
     });
+    for (const overview of [june, july]) {
+      expect(overview.replacementReserves[0].funding.valueInOre).toBe(100_000);
+      expect(overview.replacementReserves[0].funding.transfers).toHaveLength(1);
+      expect(overview.recordedTotals.replacements.valueInOre).toBe(100_000);
+    }
     expect(july.totals.replacementContributionsInOre).toBe(9_350);
     expect(july.totals.monthlyRemainderInOre).toBeNull();
   });
@@ -491,6 +675,24 @@ describe("monthly overview", () => {
 
   it("does not combine another household even when the user is a member", async () => {
     await expense({ amount: 123 });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-07-01T12:00:00Z"));
+    const savingId = await saveSaving(
+      { name: "Eget sparande", amountInOre: 100 },
+      undefined,
+      "2026-06-01",
+    );
+    await confirmTransfer({
+      id: crypto.randomUUID(),
+      source: "saving",
+      versionId: savingId,
+      kind: "opening",
+      amount: "25",
+      occurredOn: "2026-06-01",
+      attributionMonth: "2026-06",
+      note: "Egen historik",
+    });
+
     await database.insert(user).values({
       id: "other-owner",
       name: "Annan ägare",
@@ -515,8 +717,23 @@ describe("monthly overview", () => {
       settlementStartsOn: new Date("2026-01-01T00:00:00Z"),
       nextDueOn: new Date("2027-01-01T00:00:00Z"),
     });
+    const [privateItem] = await database
+      .insert(financialItems)
+      .values({ householdId: other.id, kind: "saving" })
+      .returning();
+    await database.insert(confirmedTransfers).values({
+      id: crypto.randomUUID(),
+      householdId: other.id,
+      itemId: privateItem.id,
+      kind: "opening",
+      amount: 9999,
+      occurredOn: new Date("2026-06-01T00:00:00Z"),
+      attributionMonth: new Date("2026-06-01T00:00:00Z"),
+      note: "Privat historik",
+    });
     await database.insert(savingsGoals).values({
       householdId: other.id,
+      itemId: privateItem.id,
       name: "Privat sparande",
       monthlyContribution: "8000.00",
     });
@@ -537,7 +754,12 @@ describe("monthly overview", () => {
       expect(overview.expenses).toHaveLength(1);
       expect(overview.totals.expensesInOre).toBe(12_300);
       expect(overview.incomes).toEqual([]);
-      expect(overview.savings).toEqual([]);
+      expect(overview.savings).toHaveLength(1);
+      expect(overview.savings[0].funding.valueInOre).toBe(2500);
+      expect(overview.savings[0].funding.transfers.map((t) => t.note)).toEqual([
+        "Egen historik",
+      ]);
+      expect(overview.recordedTotals.savings.valueInOre).toBe(2500);
       expect(overview.replacementReserves).toEqual([]);
     }
   });

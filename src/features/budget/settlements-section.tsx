@@ -1,35 +1,29 @@
 import {
   CardManagement,
   CardManagementButton,
-  ManagementOnly,
 } from "@/components/card-management";
 import { CollapsibleCard } from "@/components/collapsible-card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { MemberAvatarGroup } from "@/components/member-avatar-group";
-import type { HouseholdPerson } from "@/features/households/members/model";
-import { ChangeNotice } from "@/features/periods/change-notice";
-import { settlementForecast } from "@/domain/settlement";
-import { formatBudgetSek } from "@/lib/money";
+import type { getMonthlyOverview } from "@/features/dashboard/monthly-overview";
+import { OverviewTable } from "@/features/dashboard/overview-table";
+import { PostDetails } from "@/features/dashboard/post-details";
 import { ExpenseDialog, RemoveExpenseDialog } from "./forms";
-import type { MonthlyExpense } from "./model";
-
+import type { HouseholdPerson } from "@/features/households/members/model";
 export function SettlementsSection({
   expenses,
   totalInOre,
   people,
   period,
+  valueDate,
+  recordedTotal,
 }: {
-  expenses: MonthlyExpense[];
+  expenses: Awaited<
+    ReturnType<typeof getMonthlyOverview>
+  >["replacementReserves"];
   totalInOre: number;
   people: HouseholdPerson[];
   period: string;
+  valueDate: string;
+  recordedTotal: { valueInOre: number; hasMissingOpening: boolean };
 }) {
   return (
     <section aria-label="Avräkningar">
@@ -50,123 +44,38 @@ export function SettlementsSection({
           }
         >
           {expenses.length ? (
-            <Table aria-label="Planerade avräkningar">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Avräkning</TableHead>
-                  <TableHead className="text-right">Per månad</TableHead>
-                  <TableHead>Ägare</TableHead>
-                  <TableHead>Nästa utgift</TableHead>
-                  <TableHead className="text-right">Kostnad i dag</TableHead>
-                  <TableHead className="text-right">
-                    Beräknat totalbelopp
-                  </TableHead>
-                  <ManagementOnly>
-                    <TableHead>
-                      <span className="sr-only">Åtgärder</span>
-                    </TableHead>
-                  </ManagementOnly>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {expenses.map((expense) => {
-                  const forecast =
-                    expense.settlement && expense.nextDueOn
-                      ? settlementForecast(
-                          expense.amountInOre,
-                          expense.settlement.startsOn,
-                          expense.nextDueOn,
-                          expense.settlement,
-                        )
-                      : null;
-                  const contribution = expense.monthlyAmountInOre;
-                  return (
-                    <TableRow key={expense.id}>
-                      <TableCell className="font-medium">
-                        {expense.name}
-                        <ChangeNotice item={expense} />
-                        {!expense.settlement ? (
-                          <p className="text-xs font-normal">
-                            Månadens avsättning gäller en tidigare
-                            avräkningsversion. Typ vid månadsslut:{" "}
-                            {expense.destination === "direct"
-                              ? "Direkt"
-                              : "Avsatt utgift"}
-                            .
-                          </p>
-                        ) : null}
-                        {expense.settlement ? (
-                          <>
-                            <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                              {expense.settlement.markupAmountInOre !== null
-                                ? `Påslag ${formatBudgetSek(expense.settlement.markupAmountInOre)}`
-                                : expense.settlement.markupPercent !== null
-                                  ? `Påslag ${expense.settlement.markupPercent.toLocaleString("sv-SE")} %`
-                                  : "Utan påslag"}
-                            </span>
-                            <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                              {expense.settlement.inflationPercent !== null
-                                ? `Inflation ${expense.settlement.inflationPercent.toLocaleString("sv-SE")} % per år`
-                                : "Utan inflation"}
-                            </span>
-                          </>
-                        ) : null}
-                        {contribution === 0 ? (
-                          <p className="mt-1 max-w-64 text-xs font-normal whitespace-normal text-muted-foreground">
-                            Ingen månadsavsättning. Ange nästa utgiftsdatum för
-                            en ny plan.
-                          </p>
-                        ) : null}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {formatBudgetSek(contribution)}
-                      </TableCell>
-                      <TableCell>
-                        {expense.owners.length ? (
-                          <MemberAvatarGroup people={expense.owners} />
-                        ) : (
-                          <span className="text-muted-foreground">
-                            Ingen vald
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>{expense.nextDueOn ?? "—"}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatBudgetSek(expense.amountInOre)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {forecast ? formatBudgetSek(forecast.targetInOre) : "—"}
-                      </TableCell>
-                      <ManagementOnly>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <ExpenseDialog
-                              expense={expense}
-                              people={people}
-                              period={period}
-                            />
-                            <RemoveExpenseDialog
-                              expense={expense}
-                              period={period}
-                            />
-                          </div>
-                        </TableCell>
-                      </ManagementOnly>
-                    </TableRow>
-                  );
-                })}
-                <TableRow className="bg-muted/50 font-semibold">
-                  <TableCell>Totalt per månad</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatBudgetSek(totalInOre)}
-                  </TableCell>
-                  <TableCell colSpan={4} />
-                  <ManagementOnly>
-                    <TableCell />
-                  </ManagementOnly>
-                </TableRow>
-              </TableBody>
-            </Table>
+            <OverviewTable
+              label="Planerade avräkningar"
+              period={period}
+              valueDate={valueDate}
+              totalInOre={totalInOre}
+              recordedTotal={recordedTotal}
+              rows={expenses.map((expense) => ({
+                id: expense.id,
+                name: expense.name,
+                amountInOre: expense.monthlyAmountInOre,
+                changed: !!(expense.changes.length || expense.ended),
+                funding: expense.funding,
+                details: (
+                  <PostDetails
+                    item={expense}
+                    source="expense"
+                    period={period}
+                    valueDate={valueDate}
+                  />
+                ),
+                actions: (
+                  <>
+                    <ExpenseDialog
+                      expense={expense}
+                      people={people}
+                      period={period}
+                    />
+                    <RemoveExpenseDialog expense={expense} period={period} />
+                  </>
+                ),
+              }))}
+            />
           ) : (
             <p className="py-4 text-sm text-muted-foreground">
               Inga avräkningar ännu.

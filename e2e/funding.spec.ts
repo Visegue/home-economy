@@ -160,6 +160,46 @@ test("bekräftade överföringar är skilda från planen och hänförs till valf
   await expect(card).toContainText("Överföringshistorik (3)");
 
   await page.goto("/");
+  const overviewTable = page.getByRole("table", { name: "Månadssparande" });
+  const currentRow = overviewTable
+    .getByRole("row")
+    .filter({ hasText: "Buffert" });
+  await expect(currentRow.getByRole("cell").nth(2)).toHaveText("−300,00 kr");
+  await currentRow
+    .getByRole("button", { name: "Buffert", exact: true })
+    .click();
+  const details = page.getByRole("dialog", { name: "Buffert", exact: true });
+  await expect(details).toContainText("Överföringshistorik (3)");
+  await expect(details).not.toContainText("Ingående värde saknas");
+  await expect(
+    details.getByRole("region", { name: "Månadens planuppföljning" }),
+  ).toContainText("Insatt för månaden0,00 kr");
+  await details
+    .getByRole("link", { name: "Registrera överföring för Buffert" })
+    .click();
+  await expect(page).toHaveURL(/\/transfers\?month=.*#purpose-/);
+  const linkedId = new URL(page.url()).hash.slice(1);
+  await expect(page.locator(`[id="${linkedId}"]`)).toContainText("Buffert");
+  await expect(card).toContainText("Överföringshistorik (3)");
+  await page.goBack();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await overviewTable
+    .getByRole("button", { name: "Buffert", exact: true })
+    .click();
+  await page.goto(`/?month=${previous}`);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const historicalRow = overviewTable
+    .getByRole("row")
+    .filter({ hasText: "Buffert" });
+  await expect(historicalRow.getByRole("cell").nth(2)).toHaveText(
+    "2 000,00 kr",
+  );
+  await historicalRow
+    .getByRole("button", { name: "Buffert", exact: true })
+    .click();
+  await expect(details).toContainText("Insatt för månaden700,00 kr");
+  await details.getByRole("button", { name: "Stäng", exact: true }).click();
+  await page.goto("/");
   await page.getByRole("button", { name: "Hantera sparande" }).click();
   await page
     .getByRole("button", { name: "Ändra Buffert", exact: true })

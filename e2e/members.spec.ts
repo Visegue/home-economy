@@ -127,7 +127,9 @@ test("redigerar och tar bort medlemmar med bevarade utgifter", async ({
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.goto("/");
   const expense = page.getByRole("row").filter({ hasText: "Mobil" });
-  const ownerButton = expense.getByRole("button", {
+  await expense.getByRole("button", { name: "Mobil", exact: true }).click();
+  const details = page.getByRole("dialog", { name: "Mobil", exact: true });
+  const ownerButton = details.getByRole("button", {
     name: "Ägare: Kim Ny",
     exact: true,
   });
@@ -139,8 +141,8 @@ test("redigerar och tar bort medlemmar med bevarade utgifter", async ({
       .getByText("Kim Ny", { exact: true }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(expense.locator('[data-slot="member-avatar"]')).toHaveText("KN");
-  await expect(expense.locator('[data-slot="member-avatar"]')).toHaveCSS(
+  await expect(details.locator('[data-slot="member-avatar"]')).toHaveText("KN");
+  await expect(details.locator('[data-slot="member-avatar"]')).toHaveCSS(
     "background-color",
     "rgb(255, 255, 0)",
   );
@@ -167,6 +169,8 @@ test("redigerar och tar bort medlemmar med bevarade utgifter", async ({
   await page.reload();
   await expect(page.getByText("Inga medlemmar tillagda ännu.")).toBeVisible();
   await page.goto("/");
-  await expect(expense).toContainText("Ingen vald");
+  await expense.getByRole("button", { name: "Mobil", exact: true }).click();
+  await expect(details).toContainText("Ingen vald");
+  await details.getByRole("button", { name: "Stäng", exact: true }).click();
   await expect(expense).toContainText("250,25 kr");
 });

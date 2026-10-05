@@ -51,7 +51,10 @@ export default async function TransfersPage({
       </form>
       {purposes.length ? (
         purposes.map((purpose) => (
-          <Card key={purpose.itemId ?? `${purpose.source}-${purpose.id}`}>
+          <Card
+            key={purpose.itemId ?? `${purpose.source}-${purpose.id}`}
+            id={`purpose-${purpose.itemId ?? `${purpose.source}-${purpose.id}`}`}
+          >
             <CardHeader>
               <CardTitle>{purpose.name}</CardTitle>
             </CardHeader>
