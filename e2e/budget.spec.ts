@@ -191,7 +191,9 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     page.getByRole("button", { name: "Lägg till utgift", exact: true }),
   ).toBeFocused();
   const rent = page.getByRole("row").filter({ hasText: "Hyra" });
-  const owners = rent.getByRole("button", {
+  await rent.getByRole("button", { name: "Hyra", exact: true }).click();
+  const rentDetails = page.getByRole("dialog", { name: "Hyra", exact: true });
+  const owners = rentDetails.getByRole("button", {
     name: "Ägare: Kim, Robin",
     exact: true,
   });
@@ -220,8 +222,10 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   });
 
   await expect(
-    rent.getByRole("button", { name: "Ägare: Kim, Robin", exact: true }),
+    rentDetails.getByRole("button", { name: "Ägare: Kim, Robin", exact: true }),
   ).toBeVisible();
+
+  await rentDetails.getByRole("button", { name: "Stäng", exact: true }).click();
 
   for (const [name, cycle, date, amount] of [
     ["Bilförsäkring", "Kvartalsvis", `${shiftPeriod(period, 2)}-01`, "3000"],
@@ -238,21 +242,37 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     await page.getByLabel("Nästa betalning").fill(date);
     await page.getByRole("button", { name: "Spara utgift" }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.getByRole("row").filter({ hasText: name })).toContainText(
-      "Ingen vald",
-    );
+    await page
+      .getByRole("table", { name: "Avsatta utgifter", exact: true })
+      .getByRole("button", { name, exact: true })
+      .click();
+    const details = page.getByRole("dialog", { name, exact: true });
+    await expect(details).toContainText("Ingen vald");
+    await expect(details).toContainText(cycle);
+    await details.getByRole("button", { name: "Stäng", exact: true }).click();
   }
   const summary = page.getByRole("region", { name: "Månadens nyckeltal" });
   await expect(summary).toContainText("11 600,00".replaceAll(" ", "\u00a0"));
   await expect(summary).toContainText("18 400,50".replaceAll(" ", "\u00a0"));
   await expect(summary).toContainText("1 600,00".replaceAll(" ", "\u00a0"));
   await page.reload();
+  await rent.getByRole("button", { name: "Hyra", exact: true }).click();
   await expect(
-    rent.getByRole("button", { name: "Ägare: Kim, Robin", exact: true }),
+    rentDetails.getByRole("button", { name: "Ägare: Kim, Robin", exact: true }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("row").filter({ hasText: "Bilförsäkring" }),
-  ).toContainText(`${shiftPeriod(period, 2)}-01`);
+  await rentDetails.getByRole("button", { name: "Stäng", exact: true }).click();
+  await page
+    .getByRole("table", { name: "Avsatta utgifter", exact: true })
+    .getByRole("button", { name: "Bilförsäkring", exact: true })
+    .click();
+  const insuranceDetails = page.getByRole("dialog", {
+    name: "Bilförsäkring",
+    exact: true,
+  });
+  await expect(insuranceDetails).toContainText(`${shiftPeriod(period, 2)}-01`);
+  await insuranceDetails
+    .getByRole("button", { name: "Stäng", exact: true })
+    .click();
 
   await page.getByRole("button", { name: "Lägg till utgift" }).click();
   await page.getByLabel("Namn på utgiften").fill("Ogiltigt belopp");
@@ -321,10 +341,12 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await page.getByRole("button", { name: "Spara utgift", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(rent).toContainText("11 000,25 kr");
+  await rent.getByRole("button", { name: "Hyra", exact: true }).click();
   await expect(
-    rent.getByRole("button", { name: "Ägare: Kim, Robin", exact: true }),
+    rentDetails.getByRole("button", { name: "Ägare: Kim, Robin", exact: true }),
   ).toBeVisible();
 
+  await rentDetails.getByRole("button", { name: "Stäng", exact: true }).click();
   await page
     .getByRole("button", { name: "Avsluta Besiktning", exact: true })
     .click();

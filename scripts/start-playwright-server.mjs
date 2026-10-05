@@ -15,6 +15,9 @@ try {
     await migrate(drizzle(database), { migrationsFolder: "drizzle" });
     const passwordHash = await hashPassword("synthetic-account-password-123");
     for (const id of [
+      "overview-0",
+      "overview-1",
+      "overview-2",
       "onboarding-0",
       "onboarding-1",
       "onboarding-2",

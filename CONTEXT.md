@@ -99,6 +99,11 @@ The reporting month against whose expected contribution a Confirmed Transfer is 
 **Svenska**: Ingående värde.
 The known value belonging to an Earmark at a specified date before its recorded transfers. Expected contributions do not establish an Opening Value.
 
+**Recorded Earmarked Value**:
+**Svenska**: Registrerat öronmärkt värde.
+The recorded amount attributed to an Expense Reserve, Savings Purpose, or Replacement Reserve at a given date, including its Opening Value and Confirmed Transfers. It is independent of expected contributions and does not establish a bank Account's balance or require a recorded Account association.
+_Avoid_: Account Balance, Planned Contribution
+
 **Available Household Funds**:
 **Svenska**: Tillgängliga medel.
 The Household's funds available after excluding money committed to Expense Reserves, including money assigned to Savings Purposes and Replacement Reserves. Inclusion does not imply that the money can be withdrawn or converted to cash immediately.

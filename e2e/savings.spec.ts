@@ -81,6 +81,22 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await expect(
     table.getByRole("row").filter({ hasText: "Totalt per månad" }),
   ).toContainText("1 751,04 kr");
+  await expect(table.getByRole("columnheader")).toHaveText([
+    "Namn",
+    "Per månad",
+    "Totalt undansparat",
+  ]);
+  const detailsTrigger = table.getByRole("button", {
+    name: "Buffert",
+    exact: true,
+  });
+  await detailsTrigger.focus();
+  await page.keyboard.press("Enter");
+  const details = page.getByRole("dialog", { name: "Buffert", exact: true });
+  await expect(details).toContainText("Ingående värde saknas");
+  await expect(details).toContainText("Inga registrerade överföringar ännu");
+  await page.keyboard.press("Escape");
+  await expect(detailsTrigger).toBeFocused();
   await expect(summary).toContainText("Kvar efter utgifter och sparande");
   await expect(summary).toContainText("2 998,96 kr");
   await expect(
@@ -181,7 +197,7 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await page.getByRole("button", { name: "Spara utgift" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(total).toHaveText("100,25 kr");
-  await expect(transfers).toContainText("Avsättningskonto100,25 kr");
+  await expect(transfers).toContainText("Avsatta utgifter100,25 kr");
   for (const [savingName, savingStart] of [
     ["Semester", start],
     ["Framtida sparande", shiftPeriod(start, 1)],
@@ -204,4 +220,50 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
     fullPage: true,
     animations: "disabled",
   });
+});
+
+test("månadsöversikten rymmer långa namn och stora belopp på mobil", async ({
+  page,
+  context,
+}, testInfo) => {
+  await setSession(context, `overview-${testInfo.retry}`);
+  await page.goto("/onboarding");
+  await page.getByLabel("Namn på hushållet").fill("Mobilöversikt");
+  await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
+  const longName =
+    "Semester-och-buffertsparande-med-ett-mycket-långt-sammanhängande-namn";
+  await page.getByRole("button", { name: "Lägg till sparande" }).click();
+  await page.getByLabel("Namn på sparandet").fill(longName);
+  await page.getByLabel("Belopp per månad (kr)").fill("12345678,90");
+  await page.getByRole("button", { name: "Spara sparande" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const table = page.getByRole("table", { name: "Månadssparande" });
+  const row = table.getByRole("row").filter({ hasText: longName });
+  await expect(row.getByRole("cell").nth(2)).toContainText("0,00 kr");
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await row.getByRole("button", { name: longName, exact: true }).click();
+    const details = page.getByRole("dialog", { name: longName, exact: true });
+    await expect(
+      details.getByRole("button", { name: "Stäng", exact: true }),
+    ).toBeInViewport();
+    await page.screenshot({
+      path: testInfo.outputPath(`overview-details-${width}.png`),
+      animations: "disabled",
+    });
+    await details.getByRole("button", { name: "Stäng", exact: true }).click();
+    await expect(
+      row.getByRole("button", { name: longName, exact: true }),
+    ).toBeFocused();
+    await page.screenshot({
+      path: testInfo.outputPath(`overview-table-${width}.png`),
+      fullPage: true,
+      animations: "disabled",
+    });
+  }
 });
