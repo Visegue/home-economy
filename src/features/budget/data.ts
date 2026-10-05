@@ -18,7 +18,7 @@ import type {
 } from "./model";
 import { currentPeriod } from "./model";
 import { periodDate } from "./validity";
-import { writeVersion } from "@/features/periods/write";
+import { PeriodWriteError, writeVersion } from "@/features/periods/write";
 import { storedMetadata, type WriteOptions } from "@/features/periods/model";
 import { settlementForecast } from "@/domain/settlement";
 
@@ -143,21 +143,25 @@ export async function addExpense(input: ExpenseInput, id?: number) {
       "expense",
       { ...input, id, date: input.period },
       {
-        lock: async (versionId) =>
-          (
-            await transaction
-              .select()
-              .from(recurringItems)
-              .where(
-                and(
-                  eq(recurringItems.id, versionId),
-                  eq(recurringItems.householdId, household.id),
-                  eq(recurringItems.active, true),
-                  inArray(recurringItems.kind, ["expense", "reserve"]),
-                ),
-              )
-              .for("update")
-          )[0],
+        lock: async (versionId) => {
+          const [existing] = await transaction
+            .select()
+            .from(recurringItems)
+            .where(
+              and(
+                eq(recurringItems.id, versionId),
+                eq(recurringItems.householdId, household.id),
+                eq(recurringItems.active, true),
+                inArray(recurringItems.kind, ["expense", "reserve"]),
+              ),
+            )
+            .for("update");
+          if (existing && existing.destination !== input.type)
+            throw new PeriodWriteError(
+              "Utgiftstypen kan inte ändras. Avsluta posten och skapa en ny med den önskade typen.",
+            );
+          return existing;
+        },
         close: async (existing, values) => {
           await transaction
             .update(recurringItems)

@@ -81,7 +81,7 @@ Registrerat öronmärkt värde och panelens planuppföljning beräknas med fundi
 
 Månaden är en rapporteringsperiod över långlivade poster, inte en separat plan eller ett lagrat kontosaldo. React-komponenterna formaterar beloppen och visar månadens poster; de räknar inte om månadsbelopp eller tabellsummor. Gemensamma tabeller för avsatta utgifter, avräkningar och sparande visar månadsbelopp och registrerat värde; direkta utgifter visas separat. Postens detaljer renderas på servern och skickas som innehåll till en liten interaktiv Sheet-komponent. Datum, ägare, avräkningarnas prognoser och full registreringshistorik nås i panelen. Månadsnyckeln återställer panelen vid månadsbyte; navigering lämnar vyn. Registreringslänken använder stabil postidentitet för ankaret i `/transfers`.
 
-Integrationstesterna i `monthly-overview.test.ts` använder PGlite, verkliga frågor och en begränsad RLS-roll. De täcker transaktionsläge, hushållsisolering inklusive överföringshistorik, historiska värdedatum, Stockholms månadsskifte, saknade/nollställda startvärden, negativt värde, stabil identitet vid namnbyte, avrundning, typbyten och avräkningarnas sista överföring. `pnpm db:check` verifierar runtime-åtkomst och RLS på utvecklingsbranchen eller i staging; PGlite ersätter inte denna kontroll.
+Integrationstesterna i `monthly-overview.test.ts` använder PGlite, verkliga frågor och en begränsad RLS-roll. De täcker transaktionsläge, hushållsisolering inklusive överföringshistorik, historiska värdedatum, Stockholms månadsskifte, saknade/nollställda startvärden, negativt värde, stabil identitet vid namnbyte, avrundning, avslut följt av en separat post med annan typ och avräkningarnas sista överföring. `pnpm db:check` verifierar runtime-åtkomst och RLS på utvecklingsbranchen eller i staging; PGlite ersätter inte denna kontroll.
 
 ### Hushållsmedlemmar
 
@@ -104,6 +104,8 @@ Valfri inkomst vid hushållsskapande gäller från aktuell månad i Sverige, uta
 ### Utgifter och sparande
 
 Inkomster, utgifter och sparande använder det gemensamma skrivprotokollet `features/periods/write.ts`. Det låser vald rad och dess stabila identitet, kontrollerar revision, skiljer rättelse från en ny version och bevarar senare versioner. Vid en ny ändring avslutas den tidigare versionen dagen före. Domänadaptrarna behåller utgiftsägare, avräkningsunderlag och sparandets övriga fält.
+
+Utgiftstypen väljs vid skapande och är låst vid både ändring och rättelse. Utgiftsadaptern jämför formulärets typ med den låsta radens `destination` innan skrivprotokollet ändrar datum, revision eller ägarkopplingar. UI:t visar befintlig typ som text och skickar den i ett dolt fält; serverkontrollen skyddar även manipulerade anrop. En annan typ kräver avslut och en separat post med egen identitet. Registrerade pengar och överföringar stannar på den gamla posten. Avslut gäller den valda versionen och bevarar senare versioner; båda posterna kan påverka övergångsmånadens planbelopp enligt sina egna giltighetsdatum och planerade dagar. Se [ADR 0005](adr/0005-locked-expense-types.md).
 
 Månadsöversikten skiljer versionen vid månadsslutet från beloppet på den planerade dagen. Datumet är individuellt, med hushållets standarddag per typ för nya poster. Korta månader använder sista dagen. Ingen dagsproportionering görs. Datum, tidigare/nytt värde och avslut visas i månaden; `/history` ger åtkomst till tidigare och kommande versioner. Avslut från versionens start döljer hela versionen; senare avslut bevarar tidigare dagar. Framtida versioner och registrerade överföringar påverkas inte.
 

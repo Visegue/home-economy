@@ -599,7 +599,7 @@ describe("monthly overview", () => {
     expect(july.totals.monthlyRemainderInOre).toBeNull();
   });
 
-  it("classifies expense-to-replacement conversions by the selected month", async () => {
+  it("classifies a separately created replacement reserve after ending a direct expense", async () => {
     const input = {
       name: "Bil",
       amount: 120_000,
@@ -610,20 +610,18 @@ describe("monthly overview", () => {
       ownerIds: [],
     };
     const id = await addExpense(input);
-    await addExpense(
-      {
-        ...input,
-        type: "settlement",
-        period: "2026-07",
-        nextDueOn: "2027-07-01",
-        settlement: {
-          markupAmountInOre: 12_000,
-          markupPercent: null,
-          inflationPercent: null,
-        },
+    await removeExpense(id, "2026-07");
+    await addExpense({
+      ...input,
+      type: "settlement",
+      period: "2026-07",
+      nextDueOn: "2027-07-01",
+      settlement: {
+        markupAmountInOre: 12_000,
+        markupPercent: null,
+        inflationPercent: null,
       },
-      id,
-    );
+    });
     const before = await getMonthlyOverview("2026-06");
     const after = await getMonthlyOverview("2026-07");
     expect(before.regularExpenses).toHaveLength(1);

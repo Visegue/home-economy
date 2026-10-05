@@ -37,6 +37,24 @@ import { SettlementFields, type SettlementDraft } from "./settlement-fields";
 import { VersionFields, useVersionFields } from "@/features/periods/fields";
 import { formDate, versionBounds } from "@/features/periods/model";
 
+const expenseTypes = [
+  {
+    value: "direct",
+    label: "Direkt utgift",
+    description: "Betalas varje månad",
+  },
+  {
+    value: "allocated",
+    label: "Avsatt utgift",
+    description: "Betalas mer sällan",
+  },
+  {
+    value: "settlement",
+    label: "Avräkning",
+    description: "Planeras på lång sikt",
+  },
+] as const;
+
 function Feedback({ state }: { state: FormState }) {
   return state.error ? (
     <p role="alert" className="text-sm text-destructive">
@@ -272,46 +290,46 @@ function ExpenseForm({
               </InfoButton>
             </span>
           </legend>
-          {[
-            {
-              value: "direct",
-              label: "Direkt utgift",
-              description: "Betalas varje månad",
-            },
-            {
-              value: "allocated",
-              label: "Avsatt utgift",
-              description: "Betalas mer sällan",
-            },
-            {
-              value: "settlement",
-              label: "Avräkning",
-              description: "Planeras på lång sikt",
-            },
-          ].map((option) => (
-            <label
-              key={option.value}
-              aria-label={option.label}
-              className="flex cursor-pointer items-start gap-2 rounded-lg border p-3 has-checked:border-primary has-checked:bg-primary/5"
-            >
-              <input
-                type="radio"
-                name="type"
-                value={option.value}
-                checked={type === option.value}
-                onChange={() =>
-                  setType(option.value as BudgetExpense["destination"])
-                }
-                className="mt-1 accent-primary"
-              />
-              <span>
-                <span className="block font-medium">{option.label}</span>
-                <span className="text-xs text-muted-foreground">
-                  {option.description}
+          {expense ? (
+            <>
+              <input type="hidden" name="type" value={type} />
+              <p className="font-medium sm:col-span-3">
+                {expenseTypes.find((option) => option.value === type)?.label}
+              </p>
+              <p className="text-sm text-muted-foreground sm:col-span-3">
+                Typen är låst. Avsluta posten och skapa en ny för att använda en
+                annan typ. Avslutet gäller den valda versionen; senare versioner
+                behålls. Registrerade pengar och överföringar ligger kvar på den
+                gamla posten. Båda posterna kan ge ett månadsbelopp under
+                övergångsmånaden, beroende på giltighetsdatum och planerad dag.
+              </p>
+            </>
+          ) : (
+            expenseTypes.map((option) => (
+              <label
+                key={option.value}
+                aria-label={option.label}
+                className="flex cursor-pointer items-start gap-2 rounded-lg border p-3 has-checked:border-primary has-checked:bg-primary/5"
+              >
+                <input
+                  type="radio"
+                  name="type"
+                  value={option.value}
+                  checked={type === option.value}
+                  onChange={() =>
+                    setType(option.value as BudgetExpense["destination"])
+                  }
+                  className="mt-1 accent-primary"
+                />
+                <span>
+                  <span className="block font-medium">{option.label}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {option.description}
+                  </span>
                 </span>
-              </span>
-            </label>
-          ))}
+              </label>
+            ))
+          )}
         </fieldset>
         <div className="space-y-2">
           <Label htmlFor="expense-name">Namn på utgiften</Label>
