@@ -53,15 +53,17 @@ pnpm dev
 
 ## Kvalitetskontroller
 
-`pnpm check` kontrollerar versionsformat och kör format, lint, typkontroll, tester och bygge. Kör enskilt med:
+Efter `pnpm install` kan `pnpm check` köras utan `.env.local`, databas eller egna auth-nycklar. Kommandot kontrollerar versionsformat och kör format, lint, typkontroll, tester och verifieringsbygge. Kör enskilt med:
 
 ```bash
 pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test
-pnpm build
+pnpm build:check
 ```
+
+`pnpm build:check` använder samma syntetiska databasadress och auth-nyckel lokalt som i CI. Bygget importerar konfigurationen utan att fråga databasen. Det skapade bygget är endast för verifiering. För deploy används `pnpm build` med miljöns riktiga inställningar.
 
 Oxlint kontrollerar React, tillgänglighet, importer, promises, Vitest och Next.js. Typmedveten lint är avstängd; `tsc --noEmit` ansvarar för typkontrollen.
 

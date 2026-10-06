@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
+    "build:check": "node scripts/build-check.mjs",
     "start": "next start",
     "lint": "oxlint --deny-warnings .",
     "lint:fix": "oxlint --fix .",
@@ -22,7 +23,7 @@
     "db:migrate": "node scripts/migrate.mjs",
     "db:check": "node scripts/check-database.mjs",
     "db:studio": "drizzle-kit studio",
-    "check": "pnpm check:version && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "check": "pnpm check:version && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build:check"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.5",
