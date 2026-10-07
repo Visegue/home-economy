@@ -30,11 +30,14 @@ Månadsöversikten visar sparad hushållsdata. Kör `pnpm db:migrate` före star
 - Neon Postgres, Drizzle ORM och Better Auth (verifierad e-post/lösenord och Google OAuth)
 - PGlite för tester och offlineutveckling utan Docker eller molnprojekt
 - Oxlint, `tsc`, Vitest, Testing Library och Playwright
-- pnpm 11 och Node.js 24 i CI
+- Bun för appen, byggen, databasskript och övriga kompatibla verktyg
+- pnpm 11 som pakethanterare; Node.js 24 LTS för pnpm och testkörare
 
-Använd pnpm som pakethanterare för samma låsfil lokalt och i CI. Bun kan köra appen lokalt.
+Använd pnpm som pakethanterare för samma låsfil lokalt och i CI. Paketets skript väljer Bun där det fungerar. Vitest med jsdom, Playwrights testkörare och Next.js med PGlite använder Node 24 efter verifierade kompatibilitetsfel under Bun. `pnpm dev` väljer automatiskt Node i PGlite-läge och Bun med Neon. `.tool-versions` anger Bun 1.3.14 och Node 24 och används lokalt och i CI. `package.json` begränsar Node till `24.x`.
 
 ## Kom igång
+
+Med mise installerat, kör `mise install` för att installera projektets Bun- och Node-versioner. Aktiverad mise väljer dem automatiskt i projektkatalogen. För enskilda kommandon fungerar även `mise exec -- pnpm check`. Med en annan versionshanterare, installera versionerna i `.tool-versions` innan du fortsätter.
 
 ```bash
 corepack enable
@@ -74,11 +77,15 @@ Två kontroller körs separat:
 
 Databastesterna kör migrationer och RLS med en begränsad roll i PGlite. PGlite- och Playwright-tester använder ingen Neon-kvot och skickar inga mejl. Google OAuth och mejlleverans kräver separat kontroll i webbläsaren. `db:check` använder Neon-kvot även när testdata rullas tillbaka.
 
+Vitest använder högst två testprocesser lokalt eftersom varje databastestfil startar en egen PGlite-instans. Ändra vid behov med `pnpm test --maxWorkers=4` eller `VITEST_MAX_WORKERS=4 pnpm check`. I CI väljer Vitest antalet automatiskt utifrån tillgängliga processorer.
+
 CI kör även `pnpm db:generate` och stoppar PR:er med saknade migrationsfiler. Vid Playwright-fel sparas rapporter och traces i sju dagar. CI och rapporter använder Actions-tid och lagring.
 
 ## Deploy och release
 
 GitHub Actions sköter all deploy. Vercels automatiska Git-deploys är avstängda i `vercel.json`.
+
+`vercel.json` väljer Buns körmiljö med `bunVersion: "1.x"`, som för närvarande motsvarar Bun 1.3.14. Vercel hanterar versionsuppdateringar; stödet är i [beta](https://vercel.com/docs/functions/runtimes/bun). Next.js bygg- och startskript använder också Bun. Produktionsdeployens Vercel-CLI körs med Bun, medan pnpm hanterar installationen.
 
 | Miljö               | Flöde efter godkända kvalitets- och Playwright-tester                                                                                                                  |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

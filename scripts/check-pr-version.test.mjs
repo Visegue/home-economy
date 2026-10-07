@@ -15,6 +15,7 @@ describe("PR version gate", () => {
     "package.json",
     "pnpm-lock.yaml",
     "next.config.ts",
+    ".tool-versions",
     "vercel.json",
     "proxy.ts",
     "middleware.ts",

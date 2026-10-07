@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 // This verification artifact is never deployed.
 const result = spawnSync(
   process.execPath,
-  ["node_modules/next/dist/bin/next", "build", "--webpack"],
+  ["--bun", "node_modules/next/dist/bin/next", "build", "--webpack"],
   {
     stdio: "inherit",
     env: {
