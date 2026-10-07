@@ -134,14 +134,25 @@ Alla miljöer ligger i Neon-projektet [home-economy](https://console.neon.tech/a
 
 Varje utvecklare ska ha en egen branch, exempelvis `dev/<namn>`, med syntetiska data. Lägg den poolade runtime-anslutningen i `DATABASE_URL` och den direkta ägaranslutningen i `DATABASE_MIGRATION_URL` i Git-ignorerade `.env.local`. App och migrationsverktyg läser samma miljöfil. Prepared statements är avstängda för transaktionspoolning.
 
-Samma Drizzle-schema och SQL-migrationer används överallt:
+Samma Drizzle-schema och SQL-migrationer används överallt. Databaskommandona har olika syften:
+
+| Kommando           | Vad det gör                                                                                                                                                                    | När det behövs                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `pnpm db:generate` | Jämför `src/db/schema/` med tidigare schemasnapshot och skapar migrationsfiler i `drizzle/`. Ändrar inte databasen.                                                            | Efter en schemaändring. Granska genererad SQL innan migration.                                  |
+| `pnpm db:migrate`  | Kontrollerar migrationshistoriken och applicerar väntande SQL-migrationer. Kräver `DATABASE_MIGRATION_URL` för Neon/Postgres; stöder även PGlite.                              | När databasen behöver uppdateras till kodens schema. Redan applicerade migrationer hoppas över. |
+| `pnpm db:check`    | Verifierar auth-lagring, runtime-rollens rättigheter, tvingande RLS och transaktionsisolering via `DATABASE_URL`. Syntetiska testposter rullas tillbaka. Kräver Neon/Postgres. | Efter migration eller ändrad databaskoppling eller behörighet.                                  |
+| `pnpm db:studio`   | Öppnar Drizzle Studio för att läsa och redigera data i Postgres. Använder `DATABASE_MIGRATION_URL`, annars `DATABASE_URL`.                                                     | Vid manuell inspektion. Med ägaranslutningen har verktyget större rättigheter än appen.         |
+
+Vid en schemaändring är arbetsgången:
 
 ```bash
 pnpm db:generate
+# Granska SQL-filerna i drizzle/ innan nästa steg.
 pnpm db:migrate
 pnpm db:check
-pnpm db:studio
 ```
+
+Studio är ett separat inspektionsverktyg och ingår inte i migrationsflödet. För vanlig lokal utveckling räcker `pnpm dev` när databasen är uppdaterad; det kommandot kör inga migrationer.
 
 Saknad `DATABASE_URL` ger fel. Välj offline-läge uttryckligen med `DATABASE_PROVIDER=pglite`:
 
