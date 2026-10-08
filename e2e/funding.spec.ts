@@ -219,7 +219,7 @@ test("bekräftade överföringar är skilda från planen och hänförs till valf
   await dialog.getByRole("button", { name: "Spara sparande" }).click();
   await expect(dialog).toHaveCount(0);
   await page.getByLabel("Välj månad").fill(next);
-  await page.getByRole("button", { name: "Visa månad" }).click();
+  await expect(page.getByLabel("Välj månad")).toHaveValue(next);
   await expect(
     page.getByRole("button", { name: "Hantera sparande" }),
   ).toBeVisible();
