@@ -105,6 +105,13 @@ Verifiera radbrutna rubriker, mobil och åtkomst till kortens kontroller.
 
 ### #62: månadsväljare
 
+Implementationens kontroll ligger i en liten klientkomponent. Serverns
+bekräftade månad behålls i väljare, rubrik och data under bytet. Kontroller
+spärras med `aria-disabled` och händelsekontroll; månadens inmatning är
+skrivskyddad medan bytet pågår. Det behåller fokus utan att avmontera
+kontrollen. Statusraden har reserverad höjd och spinnern är stilla vid
+minskad rörelse. Månadsdata och giltighetsregler är fortsatt serverstyrda.
+
 - Gäller bara **Månaden**. Väljaren på **Överföringar och värden** ingår inte.
 - Direktval av en giltig månad byter omedelbart, utan **Visa månad**-knapp.
   Komplettera med pilar för föregående/nästa och **Denna månad**.

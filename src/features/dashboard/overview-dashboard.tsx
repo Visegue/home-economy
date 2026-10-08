@@ -5,8 +5,6 @@ import {
 import Link from "next/link";
 import { ArrowRightLeft, ReceiptText, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { ExpenseDialog, RemoveExpenseDialog } from "@/features/budget/forms";
 import { monthLabel } from "@/features/budget/model";
@@ -19,6 +17,7 @@ import { OverviewTable } from "./overview-table";
 import { PostDetails } from "./post-details";
 import { DayDefaultsProvider } from "@/features/periods/fields";
 import { ChangeNotice } from "@/features/periods/change-notice";
+import { MonthSelector } from "./month-selector";
 
 export async function OverviewDashboard({ period }: { period: string }) {
   const {
@@ -41,19 +40,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
   return (
     <DayDefaultsProvider days={household}>
       <div className="space-y-6">
-        <form className="flex flex-wrap items-end gap-3">
-          <div className="space-y-2">
-            <Label htmlFor="overview-month">Välj månad</Label>
-            <Input
-              id="overview-month"
-              name="month"
-              type="month"
-              defaultValue={period}
-              required
-            />
-          </div>
-          <Button>Visa månad</Button>
-        </form>
+        <MonthSelector period={period} />
         <nav
           aria-label="Ekonomihantering"
           className="flex flex-wrap gap-4 text-sm"

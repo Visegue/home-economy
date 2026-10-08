@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   amountSchema,
   expenseSchema,
@@ -6,6 +6,7 @@ import {
   type BudgetIncome,
   monthlySummary,
   shiftPeriod,
+  currentPeriod,
   type BudgetExpense,
 } from "./model";
 
@@ -144,6 +145,17 @@ describe("monthly budget", () => {
   it("navigates across years", () => {
     expect(shiftPeriod("2026-12", 1)).toBe("2027-01");
     expect(shiftPeriod("2026-01", -1)).toBe("2025-12");
+  });
+  it("chooses the current month in Stockholm across the UTC month boundary", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-31T22:30:00Z"));
+      expect(currentPeriod()).toBe("2026-10");
+      vi.setSystemTime(new Date("2026-10-31T23:30:00Z"));
+      expect(currentPeriod()).toBe("2026-11");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
