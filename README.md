@@ -13,6 +13,7 @@ Gränssnittet använder sand, aubergine, blått, senap och salvia. All demodata 
 - Vid ändrat inkomstbelopp: välj **Ändra från valt datum**. Det gamla beloppet avslutas dagen före och det nya börjar gälla valt datum; senare versioner bevaras. Ändring från versionens startdatum ersätter den versionen. **Rätta denna version** behåller startdatumet och uppdaterar även historiska belopp. Äldre månadsregistreringar och medlemsinkomster migreras enligt [arkitekturen](docs/architecture.md#pengar-och-datum).
 - Formulär för utgifter, inkomster, sparande och familjemedlemmar bekräftar när sparningen lyckats. Stänger du ett ändrat formulär med krysset, Escape eller ett tryck utanför väljer du om du vill fortsätta redigera eller kasta ändringarna.
 - Utgifter betalas varje månad eller avsätts inför betalning var 2, 3, 6, 12 eller 24:e månad. Ange startdatum, planerad dag i månaden och, för avsatta utgifter, nästa betalningsdatum.
+- Välj **Direkt utgift**, **Avsatt utgift** eller **Avräkning** när posten skapas. Typen är sedan låst, även vid rättelse och **Ändra från valt datum**. För en annan typ avslutar du den gamla posten och skapar en ny; registrerade pengar och överföringar ligger kvar på den gamla posten. Avslut gäller den valda versionen och bevarar senare versioner. Båda posterna kan ge ett månadsbelopp under övergångsmånaden, beroende på giltighetsdatum och planerad dag. Se [beslutet om låst typ](docs/adr/0005-locked-expense-types.md).
 - Månadsavsättningen är beloppet delat med intervallet, avrundat till öre per utgift. Betalningen räknas inte dubbelt. Kontots saldo och extra avsättning inför första betalningen ingår inte.
 - **Avräkningar** planerar större framtida utgifter: ange dagens kostnad, nästa utgiftsdatum och valfria ägare. Påslag i kronor eller procent och årlig inflation med ränta på ränta är valfria; standardvärdena är 10 respektive 2 procent. Formuläret visar beräknat totalbelopp och månadsavsättning.
 - Avräkningens avsättning löper till månaden före utgiften och justeras till exakt målbelopp i öre. En utgift i startmånaden får en enda avsättning. Posten finns kvar när avsättningen upphör; ange ett nytt utgiftsdatum för en ny plan. Registrerade insättningar och uttag följs upp separat och ändrar inte prognosen. Bankkontosaldo och faktisk avkastning ingår inte. Avräkningar visas på en egen överföringsrad och räknas bara en gång i utgiftssumman. Se [beräkningsreglerna](docs/architecture.md#avräkningar).
@@ -29,11 +30,14 @@ Månadsöversikten visar sparad hushållsdata. Kör `pnpm db:migrate` före star
 - Neon Postgres, Drizzle ORM och Better Auth (verifierad e-post/lösenord och Google OAuth)
 - PGlite för tester och offlineutveckling utan Docker eller molnprojekt
 - Oxlint, `tsc`, Vitest, Testing Library och Playwright
-- pnpm 11 och Node.js 24 i CI
+- Bun för appen, byggen, databasskript och övriga kompatibla verktyg
+- pnpm 11 som pakethanterare; Node.js 24 LTS för pnpm och testkörare
 
-Använd pnpm som pakethanterare för samma låsfil lokalt och i CI. Bun kan köra appen lokalt.
+Använd pnpm som pakethanterare för samma låsfil lokalt och i CI. Paketets skript väljer Bun där det fungerar. Vitest med jsdom, Playwrights testkörare och Next.js med PGlite använder Node 24 efter verifierade kompatibilitetsfel under Bun. `pnpm dev` väljer automatiskt Node i PGlite-läge och Bun med Neon. `.tool-versions` anger Bun 1.3.14 och Node 24 och används lokalt och i CI. `package.json` begränsar Node till `24.x`.
 
 ## Kom igång
+
+Med mise installerat, kör `mise install` för att installera projektets Bun- och Node-versioner. Aktiverad mise väljer dem automatiskt i projektkatalogen. För enskilda kommandon fungerar även `mise exec -- pnpm check`. Med en annan versionshanterare, installera versionerna i `.tool-versions` innan du fortsätter.
 
 ```bash
 corepack enable
@@ -52,15 +56,17 @@ pnpm dev
 
 ## Kvalitetskontroller
 
-`pnpm check` kontrollerar versionsformat och kör format, lint, typkontroll, tester och bygge. Kör enskilt med:
+Efter `pnpm install` kan `pnpm check` köras utan `.env.local`, databas eller egna auth-nycklar. Kommandot kontrollerar versionsformat och kör format, lint, typkontroll, tester och verifieringsbygge. Kör enskilt med:
 
 ```bash
 pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test
-pnpm build
+pnpm build:check
 ```
+
+`pnpm build:check` använder samma syntetiska databasadress och auth-nyckel lokalt som i CI. Bygget importerar konfigurationen utan att fråga databasen. Det skapade bygget är endast för verifiering. För deploy används `pnpm build` med miljöns riktiga inställningar.
 
 Oxlint kontrollerar React, tillgänglighet, importer, promises, Vitest och Next.js. Typmedveten lint är avstängd; `tsc --noEmit` ansvarar för typkontrollen.
 
@@ -71,11 +77,15 @@ Två kontroller körs separat:
 
 Databastesterna kör migrationer och RLS med en begränsad roll i PGlite. PGlite- och Playwright-tester använder ingen Neon-kvot och skickar inga mejl. Google OAuth och mejlleverans kräver separat kontroll i webbläsaren. `db:check` använder Neon-kvot även när testdata rullas tillbaka.
 
+Vitest använder högst två testprocesser lokalt eftersom varje databastestfil startar en egen PGlite-instans. Ändra vid behov med `pnpm test --maxWorkers=4` eller `VITEST_MAX_WORKERS=4 pnpm check`. I CI väljer Vitest antalet automatiskt utifrån tillgängliga processorer.
+
 CI kör även `pnpm db:generate` och stoppar PR:er med saknade migrationsfiler. Vid Playwright-fel sparas rapporter och traces i sju dagar. CI och rapporter använder Actions-tid och lagring.
 
 ## Deploy och release
 
 GitHub Actions sköter all deploy. Vercels automatiska Git-deploys är avstängda i `vercel.json`.
+
+`vercel.json` väljer Buns körmiljö med `bunVersion: "1.x"`, som för närvarande motsvarar Bun 1.3.14. Vercel hanterar versionsuppdateringar; stödet är i [beta](https://vercel.com/docs/functions/runtimes/bun). Next.js bygg- och startskript använder också Bun. Produktionsdeployens Vercel-CLI körs med Bun, medan pnpm hanterar installationen.
 
 | Miljö               | Flöde efter godkända kvalitets- och Playwright-tester                                                                                                                  |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -124,14 +134,25 @@ Alla miljöer ligger i Neon-projektet [home-economy](https://console.neon.tech/a
 
 Varje utvecklare ska ha en egen branch, exempelvis `dev/<namn>`, med syntetiska data. Lägg den poolade runtime-anslutningen i `DATABASE_URL` och den direkta ägaranslutningen i `DATABASE_MIGRATION_URL` i Git-ignorerade `.env.local`. App och migrationsverktyg läser samma miljöfil. Prepared statements är avstängda för transaktionspoolning.
 
-Samma Drizzle-schema och SQL-migrationer används överallt:
+Samma Drizzle-schema och SQL-migrationer används överallt. Databaskommandona har olika syften:
+
+| Kommando           | Vad det gör                                                                                                                                                                    | När det behövs                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `pnpm db:generate` | Jämför `src/db/schema/` med tidigare schemasnapshot och skapar migrationsfiler i `drizzle/`. Ändrar inte databasen.                                                            | Efter en schemaändring. Granska genererad SQL innan migration.                                  |
+| `pnpm db:migrate`  | Kontrollerar migrationshistoriken och applicerar väntande SQL-migrationer. Kräver `DATABASE_MIGRATION_URL` för Neon/Postgres; stöder även PGlite.                              | När databasen behöver uppdateras till kodens schema. Redan applicerade migrationer hoppas över. |
+| `pnpm db:check`    | Verifierar auth-lagring, runtime-rollens rättigheter, tvingande RLS och transaktionsisolering via `DATABASE_URL`. Syntetiska testposter rullas tillbaka. Kräver Neon/Postgres. | Efter migration eller ändrad databaskoppling eller behörighet.                                  |
+| `pnpm db:studio`   | Öppnar Drizzle Studio för att läsa och redigera data i Postgres. Använder `DATABASE_MIGRATION_URL`, annars `DATABASE_URL`.                                                     | Vid manuell inspektion. Med ägaranslutningen har verktyget större rättigheter än appen.         |
+
+Vid en schemaändring är arbetsgången:
 
 ```bash
 pnpm db:generate
+# Granska SQL-filerna i drizzle/ innan nästa steg.
 pnpm db:migrate
 pnpm db:check
-pnpm db:studio
 ```
+
+Studio är ett separat inspektionsverktyg och ingår inte i migrationsflödet. För vanlig lokal utveckling räcker `pnpm dev` när databasen är uppdaterad; det kommandot kör inga migrationer.
 
 Saknad `DATABASE_URL` ger fel. Välj offline-läge uttryckligen med `DATABASE_PROVIDER=pglite`:
 

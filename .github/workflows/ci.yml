@@ -25,8 +25,11 @@ jobs:
           version: 11.24.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 24
+          node-version-file: .tool-versions
           cache: pnpm
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: .tool-versions
       - run: pnpm install --frozen-lockfile
       - name: Validate app version
         run: pnpm check:version
@@ -40,7 +43,7 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
           CHANGED_FILE_COUNT: ${{ github.event.pull_request.changed_files }}
-        run: node scripts/check-pr-version.mjs
+        run: bun scripts/check-pr-version.mjs
       - name: Verify committed Drizzle migrations
         run: |
           pnpm db:generate
@@ -55,12 +58,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: DATABASE_PROVIDER=pglite PGLITE_DATA_DIR=memory:// pnpm db:migrate
-      - run: pnpm build
-        env:
-          # Build imports auth/database configuration but does not query Postgres.
-          DATABASE_URL: postgresql://build:unused@127.0.0.1:5432/build_only
-          # Synthetic build-only key; this artifact is never deployed.
-          BETTER_AUTH_SECRET: synthetic-ci-build-secret-not-for-deployment
+      - run: pnpm build:check
 
   end-to-end:
     runs-on: ubuntu-latest
@@ -72,10 +70,13 @@ jobs:
           version: 11.24.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 24
+          node-version-file: .tool-versions
           cache: pnpm
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: .tool-versions
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: bun --bun playwright install --with-deps chromium
       - run: pnpm test:e2e
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: failure()
@@ -126,8 +127,11 @@ jobs:
           version: 11.24.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 24
+          node-version-file: .tool-versions
           cache: pnpm
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: .tool-versions
       - run: pnpm install --frozen-lockfile
       - name: Apply preview migrations
         env:
@@ -150,11 +154,11 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PR_BRANCH: ${{ github.head_ref }}
-        run: node scripts/deploy-preview.mjs
+        run: bun scripts/deploy-preview.mjs
       - name: Smoke test preview
         env:
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.url }}
-        run: node scripts/smoke-deployment.mjs
+        run: bun scripts/smoke-deployment.mjs
 
   deploy-production:
     name: Deploy production
@@ -175,8 +179,11 @@ jobs:
           version: 11.24.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 24
+          node-version-file: .tool-versions
           cache: pnpm
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: .tool-versions
       - run: pnpm install --frozen-lockfile
       - name: Validate production configuration
         env:
@@ -201,7 +208,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          deployment_url="$(pnpm dlx vercel@59.16.0 deploy --prod --skip-domain --yes --no-color \
+          deployment_url="$(pnpm --package=vercel@59.16.0 dlx bun run --bun vercel deploy --prod --skip-domain --yes --no-color \
             --env APP_DEPLOY_ENV=production \
             --env "APP_DEPLOY_SHA=$GITHUB_SHA" \
             --env APP_DEPLOY_BRANCH=main \
@@ -223,7 +230,7 @@ jobs:
       - name: Smoke test staged deployment
         env:
           DEPLOYMENT_URL: ${{ steps.stage.outputs.url }}
-        run: node scripts/smoke-deployment.mjs
+        run: bun scripts/smoke-deployment.mjs
       - name: Promote production deployment
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}

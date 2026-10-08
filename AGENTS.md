@@ -11,7 +11,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # Project guidance
 
 - UI copy is Swedish; identifiers and commits are English.
-- Use `pnpm` and CI's Node.js 24. Bun may run the app, but must not manage packages.
+- Use `pnpm` for package management and Bun for the app, builds and compatible tools. Verified Bun compatibility failures require Node.js 24 for Vitest/jsdom, Playwright's test runner and Next.js with PGlite. Runtime versions are in `.tool-versions`.
 - Run `pnpm check` before handoff and `pnpm test:e2e` for user-visible flows.
 - Default to Server Components; use `"use client"` only for interactive UI.
 - Use `src/components/ui` shadcn/ui primitives and `src/app/globals.css` tokens.

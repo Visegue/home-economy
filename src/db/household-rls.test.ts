@@ -171,7 +171,7 @@ describe("effective dates and confirmed transfers", () => {
     },
   );
   it.each(["allocated", "settlement"] as const)(
-    "keeps %s earmarks and confirmed values available after conversion to a direct expense",
+    "keeps %s earmarks and confirmed values available after ending and creating a separate direct expense",
     async (type) => {
       await effectiveFixture();
       const input: ExpenseInput = {
@@ -235,21 +235,23 @@ describe("effective dates and confirmed transfers", () => {
       expect((await getFundingData("2026-08")).purposes[0].transfers).toEqual(
         purpose.transfers,
       );
-      await addExpense(
-        {
-          ...input,
-          type: "direct",
-          amount: 10_000,
-          period: "2026-09-01",
-          nextDueOn: "",
-          revision: 2,
-        },
-        id,
+      await removeExpense(id, "2026-09-01", { revision: 2 });
+      const directId = await addExpense({
+        ...input,
+        type: "direct",
+        amount: 10_000,
+        period: "2026-09-01",
+        nextDueOn: "",
+        settlement: undefined,
+      });
+      const expenses = (await getBudgetData()).expenses;
+      expect(expenses.find((e) => e.id === directId)?.itemId).not.toBe(
+        expenses.find((e) => e.id === id)?.itemId,
       );
       purpose = (await getFundingData("2026-09")).purposes[0];
       expect(purpose.progress.plannedInOre).toBe(0);
       expect(purpose.valueInOre).toBe(115_000);
-      // The old reserve remains withdrawable; a type change must not strand its value.
+      // Ending the old post and creating another does not move its recorded money.
       await confirmTransfer({
         ...record("withdrawal", "150", "2026-09-03"),
         versionId: purpose.id,
@@ -1566,90 +1568,181 @@ describe("settlement persistence and isolation", () => {
   });
 });
 
-it.each(["direct", "allocated"] as const)(
-  "converts %s expenses to settlements and back without stale adjustments or lost history",
-  async (type) => {
-    const userId = `conversion-${type}`;
-    await database.insert(user).values({
-      id: userId,
-      name: "Testägare",
-      email: `${userId}@example.test`,
-      emailVerified: true,
-    });
-    identity.userId = userId;
-    await createPersonalHousehold("Typbyteshushåll");
-    await saveMember({ name: "Kim" });
-    const people = (await getHouseholdMembers()).people;
-    const regular: ExpenseInput = {
-      name: "Planerad utgift",
-      amount: 120_000,
-      period: "2026-01",
-      type,
-      months: type === "allocated" ? 12 : 1,
-      nextDueOn: type === "allocated" ? "2027-01-01" : "",
-      ownerIds: people.map((person) => person.id),
-    };
-    const originalId = await addExpense(regular);
-    const settlementId = await addExpense(
-      {
-        ...regular,
-        type: "settlement",
-        period: "2026-07",
-        nextDueOn: "2028-07-01",
-        settlement: {
-          markupAmountInOre: null,
-          markupPercent: 10,
-          inflationPercent: null,
+describe("locked expense types", () => {
+  it.each([
+    ["direct", "allocated"],
+    ["direct", "settlement"],
+    ["allocated", "direct"],
+    ["allocated", "settlement"],
+    ["settlement", "direct"],
+    ["settlement", "allocated"],
+  ] as const)(
+    "rejects %s to %s changes and corrections without side effects",
+    async (type, target) => {
+      await effectiveFixture();
+      await saveMember({ name: "Kim" });
+      const people = (await getHouseholdMembers()).people;
+      const input: ExpenseInput = {
+        name: "Låst utgift",
+        amount: 120_000,
+        period: "2026-07-01",
+        type,
+        months: 12,
+        nextDueOn: type === "direct" ? "" : "2027-07-01",
+        ownerIds: people.map((person) => person.id),
+        scheduledDay: 25,
+        settlement:
+          type === "settlement"
+            ? {
+                markupAmountInOre: null,
+                markupPercent: null,
+                inflationPercent: null,
+              }
+            : undefined,
+      };
+      const id = await addExpense(input);
+      await addExpense(
+        { ...input, name: "Framtida version", period: "2026-12-01" },
+        id,
+      );
+      if (type !== "direct") {
+        await confirmTransfer({
+          id: randomUUID(),
+          source: "expense",
+          versionId: id,
+          kind: "opening",
+          amount: "500",
+          occurredOn: "2026-07-01",
+          attributionMonth: "2026-07",
+          note: "Syntetiskt test",
+        });
+      }
+      const before = await getBudgetData();
+      const fundingBefore = await getFundingData("2026-08");
+      for (const mode of ["change", "correct"] as const) {
+        await expect(
+          addExpense(
+            {
+              ...input,
+              type: target,
+              name: "Manipulerad ändring",
+              amount: 150_000,
+              period: "2026-08-15",
+              scheduledDay: 10,
+              ownerIds: [],
+              mode,
+              revision: 2,
+              nextDueOn: target === "direct" ? "" : "2028-07-01",
+              settlement:
+                target === "settlement"
+                  ? {
+                      markupAmountInOre: null,
+                      markupPercent: 10,
+                      inflationPercent: null,
+                    }
+                  : undefined,
+            },
+            id,
+          ),
+        ).rejects.toThrow("Utgiftstypen kan inte ändras");
+        expect(await getBudgetData()).toEqual(before);
+        expect(await getFundingData("2026-08")).toEqual(fundingBefore);
+      }
+    },
+  );
+  it.each(["direct", "allocated", "settlement"] as const)(
+    "preserves %s type, dated history and future versions through changes, corrections and ending",
+    async (type) => {
+      await effectiveFixture();
+      await saveMember({ name: "Kim" });
+      const people = (await getHouseholdMembers()).people;
+      const input: ExpenseInput = {
+        name: "Datumstyrd utgift",
+        amount: 120_000,
+        type,
+        period: "2026-07-01",
+        scheduledDay: 25,
+        months: 12,
+        nextDueOn: type === "direct" ? "" : "2027-07-01",
+        ownerIds: people.map((person) => person.id),
+        settlement:
+          type === "settlement"
+            ? {
+                markupAmountInOre: null,
+                markupPercent: null,
+                inflationPercent: null,
+              }
+            : undefined,
+      };
+      const originalId = await addExpense(input);
+      const futureId = await addExpense(
+        { ...input, amount: 240_000, period: "2026-12-01", revision: 1 },
+        originalId,
+      );
+      const changedId = await addExpense(
+        { ...input, amount: 150_000, period: "2026-08-15", revision: 2 },
+        originalId,
+      );
+      await addExpense(
+        {
+          ...input,
+          amount: 180_000,
+          period: "2026-07-01",
+          mode: "correct",
+          revision: 1,
         },
-      },
-      originalId,
-    );
-    let data = await getBudgetData();
-    const regularMonthly = type === "direct" ? 120_000 : 10_000;
-    expect(monthlySummary("2026-06", data.expenses, []).totalInOre).toBe(
-      regularMonthly,
-    );
-    expect(monthlySummary("2026-07", data.expenses, []).settlementInOre).toBe(
-      5_500,
-    );
-    expect(
-      data.expenses.find((expense) => expense.id === settlementId),
-    ).toMatchObject({
-      settlement: { startsOn: "2026-07-01", markupPercent: 10 },
-      owners: people,
-    });
-    const restoredId = await addExpense(
-      {
-        ...regular,
-        period: "2027-01",
-        nextDueOn: type === "allocated" ? "2028-01-01" : "",
-      },
-      settlementId,
-    );
-    data = await getBudgetData();
-    expect(monthlySummary("2026-12", data.expenses, []).settlementInOre).toBe(
-      5_500,
-    );
-    expect(monthlySummary("2027-01", data.expenses, [])).toMatchObject({
-      settlementInOre: 0,
-      totalInOre: regularMonthly,
-    });
-    expect(
-      data.expenses.find((expense) => expense.id === restoredId),
-    ).toMatchObject({
-      destination: type,
-      settlement: null,
-      owners: people,
-    });
-    const [stored] = await database
-      .select()
-      .from(recurringItems)
-      .where(eq(recurringItems.id, restoredId));
-    expect(stored).toMatchObject({
-      settlementStartsOn: null,
-      markupAmount: null,
-      markupPercent: null,
-      inflationPercent: null,
-    });
-  },
-);
+        changedId,
+      );
+      let expenses = (await getBudgetData()).expenses;
+      const original = expenses.find((e) => e.id === originalId)!;
+      expect(original).toMatchObject({
+        destination: type,
+        amountInOre: 120_000,
+        effectiveFrom: "2026-07-01",
+        effectiveThrough: "2026-08-14",
+        owners: people,
+      });
+      expect(expenses.find((e) => e.id === changedId)).toMatchObject({
+        destination: type,
+        amountInOre: 180_000,
+        effectiveFrom: "2026-08-15",
+        effectiveThrough: "2026-11-30",
+        itemId: original.itemId,
+        owners: people,
+      });
+      expect(expenses.find((e) => e.id === futureId)).toMatchObject({
+        destination: type,
+        amountInOre: 240_000,
+        effectiveFrom: "2026-12-01",
+        effectiveThrough: null,
+        itemId: original.itemId,
+        owners: people,
+      });
+      await removeExpense(changedId, "2026-09-01", { revision: 2 });
+      const newType = type === "direct" ? "allocated" : "direct";
+      const separateId = await addExpense({
+        ...input,
+        type: newType,
+        period: "2026-09-01",
+        nextDueOn: newType === "direct" ? "" : "2027-07-01",
+        settlement: undefined,
+      });
+      expenses = (await getBudgetData()).expenses;
+      expect(expenses.find((e) => e.id === separateId)).toMatchObject({
+        destination: newType,
+      });
+      expect(expenses.find((e) => e.id === separateId)?.itemId).not.toBe(
+        original.itemId,
+      );
+      expect(expenses.find((e) => e.id === changedId)?.effectiveThrough).toBe(
+        "2026-08-31",
+      );
+      expect(expenses.find((e) => e.id === originalId)).toEqual(original);
+      expect(expenses.find((e) => e.id === futureId)).toMatchObject({
+        destination: type,
+        amountInOre: 240_000,
+        effectiveFrom: "2026-12-01",
+      });
+    },
+  );
+});
