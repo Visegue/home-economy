@@ -2,6 +2,7 @@ import {
   CardManagement,
   CardManagementButton,
 } from "@/components/card-management";
+import { RefreshCw } from "lucide-react";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import type { getMonthlyOverview } from "@/features/dashboard/monthly-overview";
 import { OverviewTable } from "@/features/dashboard/overview-table";
@@ -30,6 +31,12 @@ export function SettlementsSection({
       <CardManagement key={period} hasItems={expenses.length > 0}>
         <CollapsibleCard
           title="Avräkningar"
+          icon={
+            <RefreshCw
+              className="size-5 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+          }
           actions={
             <>
               {expenses.length ? (

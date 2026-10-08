@@ -7,6 +7,7 @@ Gränssnittet använder sand, aubergine, blått, senap och salvia. All demodata 
 ## Månadsöversikt
 
 - **Månaden** visar först **Att föra över** och därefter posttabellerna. Inkomstjämförelsen **Räcker inkomsten?** ligger längre ned. Alla fem kort kan minimeras med pilknappen och tangentbordet; de öppnas igen vid omladdning.
+- Kortrubrikerna har dekorativa ikoner för överföringar, utgifter, avräkningar, sparande och inkomstjämförelse. Rubriktexten och kortens tillgängliga namn behålls.
 - Direkta utgifter har en egen tabell. Avsatta utgifter, avräkningar och sparanden visar **Namn**, **Per månad** och **Totalt undansparat**, med summor per tabell. Undansparat räknas enbart från registrerat ingående värde, insättningar och uttag per post, oberoende av bankkonto. Värdedatumet är månadsslut för tidigare månader och dagens datum i Stockholm för aktuell eller framtida månad. Saknat startvärde markeras med **Ingående värde saknas**; registrerat nollvärde är känt.
 - Tryck på postens namn för detaljer i en sidopanel (helskärm på mobil): datum, ägare och beräkningsuppgifter, månadens planuppföljning, överföringshistorik samt en länk till registrering för rätt post. Escape eller **Stäng** återför fokus till namnet. Panelen stängs vid månadsbyte eller navigering.
 - Lägg till inkomstkällor under **Inställningar → Hushållets inkomster** med namn, månadsbelopp efter skatt, startdatum, valfritt slutdatum och planerad dag i månaden. Båda gränsdatumen ingår. Utan slutdatum gäller inkomsten tills vidare. Beloppet vid respektive källas planerade dag räknas i månadsbudgeten.

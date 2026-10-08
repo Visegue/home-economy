@@ -2,6 +2,7 @@ import {
   CardManagement,
   CardManagementButton,
 } from "@/components/card-management";
+import { PiggyBank } from "lucide-react";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import type { getMonthlyOverview } from "@/features/dashboard/monthly-overview";
 import { OverviewTable } from "@/features/dashboard/overview-table";
@@ -25,6 +26,12 @@ export function SavingsSection({
       <CardManagement key={period} hasItems={savings.length > 0}>
         <CollapsibleCard
           title="Spara"
+          icon={
+            <PiggyBank
+              className="size-5 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+          }
           actions={
             <>
               {savings.length ? (
