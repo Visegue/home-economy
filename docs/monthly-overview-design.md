@@ -4,7 +4,211 @@ Fastställd design för [issue #63](https://github.com/Visegue/home-economy/issu
 bekräftad av användaren den 4 oktober 2026 efter designintervjun.
 Dokumentet beskriver avsedd förändring; implementationen ingår inte i intervjun.
 
+## Autonom batch: kravintervju 2026-10-08
+
+Det samlade kravunderlaget bekräftades av användaren den 8 oktober 2026.
+Issues #64, #62, #82 och #66 är redo för autonom implementation när användaren
+senare startar batchen. Ingen implementation ingår i kravintervjun.
+
+### Urval och leverans
+
+Urvalet har efter användarens beslut utökats från tre till fyra issues.
+Ordningen är **#64 → #62 → #82 → #66**, med en separat PR per issue.
+#64 och #62 är avgränsade presentations- och navigeringsförbättringar.
+#82 gör detaljvyn lättare att nå, och #66 gör den till platsen för postens
+hantering. Alla fyra kan genomföras utan nya pengaregler eller migrationer.
+
+När användaren senare startar batchen ska varje issue implementeras och
+testas, committas och pushas, få en PR, granskas av en annan agent och rättas
+innan den mergas. Kör `pnpm check`, `pnpm test:e2e` och obligatoriska
+PR-kontroller. Vid ändrad databasintegration eller behörighet gäller även
+`pnpm db:check`. Använd syntetiska data och håll befintlig RLS, validering,
+giltighetsdatum och överföringshistorik intakta.
+
+Granskningen ska kontrollera både projektets standarder och issue-specen mot
+en fixerad PR-bas och slutlig commit. Åtgärda fynd, kör om berörda tester och
+låt ändrad kod granskas igen. Agentgranskningen ersätter inte obligatoriska
+GitHub-kontroller eller branchskydd; inga kontroller får kringgås. Följ
+projektets versioneringsregler och release-runbook. Verifiera lyckad
+produktionsdeploy och promotion av rätt commit före nästa issue. Starta
+nästa arbete från senaste `main`, med ny versionsjämförelse.
+
+Användaren vill ha hela flödet automatiserat utan löpande PR-godkännanden.
+Agenten löser rutinmässiga implementationstekniska val inom denna spec.
+Stoppa vid nödvändig ändring av omfattning, nya kostnader eller olöst
+blockering som kräver användaren; dokumentera hindret och kringgå inte
+skydd. Detta mandat startar inga Git-operationer eller någon implementation
+under kravintervjun. Inga återkommande automationsjobb skapas här.
+
+### Obligatoriska leveranskrav per implementation
+
+Användaren kompletterade kravunderlaget den 8 oktober 2026: dokumentation,
+ADR:er, tester och säkerhetsskanningar ska ingå i varje implementation och
+kontrolleras före merge, även när GitHubs branchskydd inte kräver dem.
+
+- **Dokumentation:** uppdatera berörd README, design- och
+  arkitekturdokumentation i samma PR som funktionen. Dokumentera faktiskt
+  implementerat beteende, avgränsningar och verifiering; lämna inte
+  motstridiga äldre UI-beskrivningar. Ta med kravintervjuns lokala
+  dokumentändringar i första PR om de ännu inte finns på `main`.
+- **ADR:er:** läs berörda ADR:er och kontrollera att implementationen följer
+  dem. Uppdatera eller skapa ADR när ett arkitektur- eller domänbeslut
+  faktiskt ändras eller tillkommer, med motivering och konsekvenser.
+  Dokumentera ADR-bedömningen i varje PR, även om inga ADR-ändringar behövs.
+  Ändra inte beslut utanför issue-scope för att undvika en dokumenterad
+  konflikt. `CONTEXT.md` uppdateras om domänbegrepp ändras.
+- **Tester:** lägg till eller uppdatera meningsfulla tester för issue:s
+  acceptanskriterier och regressionsrisker. Kör `pnpm check` och
+  `pnpm test:e2e` på slutlig kod; kör `pnpm db:check` vid ändrad
+  databasintegration eller behörighet. Redovisa resultat och testade
+  användarflöden i PR. Skippade eller misslyckade krav får inte beskrivas
+  som godkända.
+- **Säkerhetsskanningar:** invänta och kontrollera CodeQL för slutlig
+  PR-kod, kör beroendegranskning med `pnpm audit` och kontrollera secret
+  scanning samt push protection. CodeQL default setup, secret scanning,
+  push protection och Dependabot security updates verifierades som aktiva
+  i repot den 8 oktober 2026; verifiera tillgänglighet igen vid implementation.
+  Rätta nya säkerhetsfynd som ändringen introducerar. Bedöm befintliga
+  fynd som påverkar ändringen; tysta eller kringgå inte fynd för att kunna
+  mergea. Vid olöst fynd eller utebliven nödvändig skanning stoppas merge
+  och hindret dokumenteras. Redovisa skanningarnas verktyg, omfattning,
+  resultat och relevanta körningslänkar för granskad kod utan hemligheter
+  eller persondata.
+- **Riktad säkerhetsgranskning:** kontrollera att ny klientinteraktion inte
+  försvagar servervalidering, sessionskontroll eller hushållsisolering,
+  läcker data via loggar/cache eller inför osäker rendering av användartext.
+  För #66 granskas även vald post/version, skrivningar, formulärskydd och
+  skydd mot dubbla åtgärder. Skanningar ersätter inte denna granskning.
+
+Den separata granskningsagenten ska uttryckligen kontrollera dessa
+leveranskrav och verifieringsbevis. Säkerhetsdetaljer rapporteras privat
+enligt `SECURITY.md`; publika PR:er får bara innehålla ofarliga sammanfattningar.
+Inga nya betaltjänster eller säkerhetsplattformar är förutbestämda.
+
+### #64: ikoner i kortrubriker
+
+Alla fem kort på Månaden får dekorativa Lucide-ikoner före rubriken:
+
+| Kort              | Ikonriktning     |
+| ----------------- | ---------------- |
+| Att föra över     | Överföringspilar |
+| Utgifter          | Kvitto           |
+| Avräkningar       | Cirkulära pilar  |
+| Spara             | Spargris         |
+| Räcker inkomsten? | Våg              |
+
+Storlek och placering är enhetliga. Agenten får välja motsvarande konkreta
+ikoner och finjustera avstånd och färg inom befintlig stil. Rubriktexter och
+tillgängliga namn bevaras, utan extra uppläsning eller tabbstopp. Riktningen
+är godkänd och kan justeras senare; ingen separat designgrind behövs.
+Verifiera radbrutna rubriker, mobil och åtkomst till kortens kontroller.
+
+### #62: månadsväljare
+
+- Gäller bara **Månaden**. Väljaren på **Överföringar och värden** ingår inte.
+- Direktval av en giltig månad byter omedelbart, utan **Visa månad**-knapp.
+  Komplettera med pilar för föregående/nästa och **Denna månad**.
+- Behåll intervallet 1900–2199 och aktuell månad i `Europe/Stockholm`.
+  Spärra pilar vid intervallgränser. Tom eller ofullständig inmatning får
+  inte starta ogiltig navigation. Befintlig policy för ogiltig URL behålls.
+- URL, väljare och visade data ska överensstämma när navigationen är klar.
+  Omladdning och bakåt/framåt ska ge rätt månad. Varje faktiskt byte skapar
+  en historikpost; redan vald månad är en no-op. Bevara övriga URL-parametrar.
+- Under byte från väljaren visas en liten spinner och svensk tillgänglig
+  status vid kontrollen. Väljarens kontroller spärras tills bytet är klart.
+  Ingen minsta väntetid införs; reservera utrymme så att indikatorn inte
+  flyttar layouten och respektera minskad rörelse.
+- Den tidigare månadens innehåll och dess rubrik ligger kvar tills nästa
+  månad är klar. De får inte visas som om de tillhörde den nya månaden.
+  Vanligt månadsbyte ska bevara sidans scrolläge och inte stjäla fokus.
+- Detaljpanelen stängs vid bekräftat månadsbyte. Formulärens befintliga
+  skydd för osparade ändringar och pågående sparning bevaras.
+- Spinnaren gäller byte initierat i väljaren. Generell laddningsindikering,
+  fel/omförsök, offline-hantering och prestandaarbete ligger i #77/#76.
+  Befintlig auth- och felhantering behålls; pending får inte bli ett separat
+  låst tillstånd efter avslutad eller avbruten navigation.
+
+Verifiera direktval, båda pilarna, Denna månad, årsskifte, intervallgränser,
+no-op, historik/omladdning och Stockholms månadsskifte. Med fördröjd navigation
+ska spinner och status synas, kontroller spärras och rubrik/data höra ihop.
+Kontrollera mobil, tangentbord, fokus och minskad rörelse. Spinnern behöver
+inte hinna synas vid snabba byten.
+
+### #82: hela postraden öppnar detaljer
+
+Alla fyra posttabeller omfattas: direkta utgifter, avsatta utgifter,
+avräkningar och sparande. Klick eller tryck på belopp och tom yta i en
+postrad öppnar samma detaljpanel som namnet. Rubrik- och totalrader är
+inaktiva. Bevara tabellsemantiken och namnets riktiga knapp som ett enda
+tangentbordsmål för detaljöppningen, med Enter/Space och synlig fokusmarkering.
+
+Andra kontroller utför bara sina egna åtgärder. Textmarkering, kopiering och
+scrollning får inte öppna panelen. Vid vanlig stängning återgår fokus till
+namnknappen även när panelen öppnades från beloppet. Rätt post/version och
+vald månad visas, även vid likadana namn och historiska/framtida månader.
+Månadsbyte och navigation stänger panelen enligt befintligt kontrakt.
+
+#82 levereras före #66. Fram till dess behålls Hantera och dess kontroller;
+radaktivering öppnar detaljer även i hanteringsläge. #66 tar därefter bort
+läget. Testa alla fyra tabeller med mus, touch och tangentbord, inklusive
+textmarkering, scrollning, summeringar och befintliga radåtgärder.
+
+### #66: hantering från detaljer
+
+Den valda riktningen är **Ändra** och **Avsluta** som tydliga åtgärder i
+postens detaljpanel för alla fyra posttyper på Månaden. Ta bort Hantera/Klar,
+kortens hanteringslägen och tabellernas åtgärdskolumn. Skapandeknapparna
+behålls. Andra sidors hantering och formulärens större omdesign ingår inte.
+
+- **Öppna formulär:** stäng detaljpanelen tillfälligt och öppna befintlig
+  formulärdialog. Högst en huvudmodal är aktiv åt gången. Befintlig
+  bekräftelse för att kasta osparade ändringar får visas ovanpå formuläret.
+- **Avbryt redigering:** återgå till oförändrade detaljer, med fokus till
+  Ändra. Kasta/Fortsätt redigera och befintliga formulärskydd bevaras.
+- **Spara:** invänta serverbekräftelse och uppdaterade data, återgå sedan
+  till uppdaterade detaljer för samma post och valda månad. Fokus går till
+  Ändra. Om posten inte längre hör till månaden, återgå till översikten med
+  bekräftelse och fokus vid det berörda kortet.
+- **Fel:** behåll formulär och inmatning med begripligt fel och möjlighet
+  att korrigera eller försöka igen enligt befintligt kontrakt. Stäng inte
+  en pågående skrivning via Escape, overlay eller stängknapp.
+- **Avbryt avslut:** återgå till samma detaljer, med fokus till Avsluta.
+- **Lyckat avslut:** återgå alltid till översikten, med bekräftelse och
+  fokus vid det berörda kortet, även när posten fortfarande visas där.
+
+Vald version och datumförval följer dagens regler även i historiska och
+framtida månader. Ändra från valt datum och Rätta denna version behålls;
+utgiftstypen är låst. Avslut gäller vald version, inte automatiskt hela
+posten, och bevarar senare versioner och registrerade pengar. Ingen permanent
+radering, automatisk frigöring eller omfördelning införs; det hör till #73.
+
+Exempel: tryck på en rad → detaljer → Ändra → formulär → Spara → uppdaterade
+detaljer. Avbryt går till oförändrade detaljer. Detaljer → Avsluta → bekräfta
+valt datum → översikt med bekräftelse. Detta ersätter issue #66:s öppna
+val mellan gemensamt hanteringsläge och åtgärder i detaljerna; någon ny
+användargodkänd prototyp krävs inte före implementation.
+
+Verifiera alla fyra typer, skapa oförändrat, lyckad ändring/rättelse,
+avbryt, osparade ändringar, valideringsfel, långsam sparning och avslut.
+Täck ny version efter sparning, namnbyte, post som lämnar månaden, sista post
+som försvinner, historiska/framtida versioner och bevarade senare versioner.
+Fokus och återgång ska fungera även om den ursprungliga raden avmonteras.
+Kontrollera mobil och tangentbord genom hela kedjan.
+
+### Domän och dokumentation
+
+UI-valen ändrar inga domänbegrepp eller pengaregler. `CONTEXT.md` behålls som
+ordlista och ingen ny ADR är förutbestämd; ADR-bedömningen och relevant
+uppdatering enligt leveranskraven ovan är obligatoriska. Följ ADR 0004 och 0005. Detta designunderlag
+innehåller avsedda förändringar; README och arkitekturbeskrivning ska bara
+beskriva dem som befintliga funktioner efter respektive implementation.
+
 ## Fastställd riktning
+
+Nedan bevaras det ursprungliga designunderlaget för #63. Batchbesluten ovan
+ersätter dess äldre UI-regler där de överlappar, särskilt namnöppning,
+Hantera-läge och fokus efter posthantering. Nulägesbeskrivningar nedan avser
+tidpunkten för #63:s designintervju.
 
 - Vyns huvuduppgift är att visa förväntade överföringar och följa det totalt
   undansparade beloppet per avsatt utgift, avräkning och sparändamål.

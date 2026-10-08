@@ -138,6 +138,40 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
       ),
     ).toBe(true);
 
+    for (const title of [
+      "Att föra över",
+      "Utgifter",
+      "Avräkningar",
+      "Spara",
+      "Räcker inkomsten?",
+    ]) {
+      const heading = mobilePage.getByRole("heading", {
+        name: title,
+        exact: true,
+      });
+      await expect(heading).toHaveAccessibleName(title);
+      const bounds = await heading.boundingBox();
+      expect(bounds!.x).toBeGreaterThanOrEqual(0);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
+      const collapse = mobilePage.getByRole("button", {
+        name: `Minimera ${title}`,
+        exact: true,
+      });
+      await collapse.tap();
+      const expand = mobilePage.getByRole("button", {
+        name: `Expandera ${title}`,
+        exact: true,
+      });
+      await expect(expand).toHaveAttribute("aria-expanded", "false");
+      await expand.tap();
+      await expect(collapse).toHaveAttribute("aria-expanded", "true");
+    }
+    await mobilePage.screenshot({
+      path: testInfo.outputPath("monthly-card-headers-narrow.png"),
+      fullPage: true,
+      animations: "disabled",
+    });
+
     for (const label of ["Lägg till sparande", "Lägg till utgift"]) {
       const trigger = mobilePage.getByRole("button", { name: label });
       const bounds = await trigger.boundingBox();

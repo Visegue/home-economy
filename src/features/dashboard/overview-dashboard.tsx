@@ -3,7 +3,7 @@ import {
   CardManagementButton,
 } from "@/components/card-management";
 import Link from "next/link";
-import { PiggyBank } from "lucide-react";
+import { ArrowRightLeft, ReceiptText, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,8 +81,8 @@ export async function OverviewDashboard({ period }: { period: string }) {
             description={monthLabel(period)}
             className="bg-secondary/35"
             icon={
-              <PiggyBank
-                className="size-5 text-secondary-foreground"
+              <ArrowRightLeft
+                className="size-5 shrink-0 text-secondary-foreground"
                 aria-hidden="true"
               />
             }
@@ -124,6 +124,12 @@ export async function OverviewDashboard({ period }: { period: string }) {
         <CardManagement key={period} hasItems={regularExpenses.length > 0}>
           <CollapsibleCard
             title="Utgifter"
+            icon={
+              <ReceiptText
+                className="size-5 shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
+            }
             actions={
               <>
                 {regularExpenses.length ? (
@@ -222,7 +228,15 @@ export async function OverviewDashboard({ period }: { period: string }) {
           period={period}
         />
         <section aria-label="Månadens nyckeltal">
-          <CollapsibleCard title="Räcker inkomsten?">
+          <CollapsibleCard
+            title="Räcker inkomsten?"
+            icon={
+              <Scale
+                className="size-5 shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
+            }
+          >
             <dl className="space-y-3 text-sm">
               <div className="flex justify-between gap-4">
                 <dt>Inkomster</dt>
