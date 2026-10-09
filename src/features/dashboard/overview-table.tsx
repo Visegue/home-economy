@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-import { ManagementOnly } from "@/components/card-management";
 import {
   Table,
   TableHeader,
@@ -54,8 +52,7 @@ export function OverviewTable({
     name: string;
     amountInOre: number;
     changed: boolean;
-    details: ReactNode;
-    actions: ReactNode;
+    postKey: string;
     funding?: { valueInOre: number; hasOpening: boolean };
   }[];
   totalInOre: number;
@@ -80,11 +77,6 @@ export function OverviewTable({
           {recordedTotal ? (
             <TableHead className="text-right">Totalt undansparat</TableHead>
           ) : null}
-          <ManagementOnly>
-            <TableHead>
-              <span className="sr-only">Åtgärder</span>
-            </TableHead>
-          </ManagementOnly>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -92,6 +84,7 @@ export function OverviewTable({
           <ItemDetails
             key={`${period}-${row.id}`}
             name={row.name}
+            postKey={row.postKey}
             changed={row.changed}
             cells={
               <>
@@ -105,18 +98,9 @@ export function OverviewTable({
                     <RecordedValue {...row.funding} />
                   </TableCell>
                 ) : null}
-                <ManagementOnly>
-                  <TableCell>
-                    <div className="flex flex-wrap justify-end gap-2">
-                      {row.actions}
-                    </div>
-                  </TableCell>
-                </ManagementOnly>
               </>
             }
-          >
-            {row.details}
-          </ItemDetails>
+          />
         ))}
         <TableRow className="bg-muted/50 font-semibold">
           <TableCell>Totalt per månad</TableCell>
@@ -133,9 +117,6 @@ export function OverviewTable({
               />
             </TableCell>
           ) : null}
-          <ManagementOnly>
-            <TableCell />
-          </ManagementOnly>
         </TableRow>
       </TableBody>
     </Table>

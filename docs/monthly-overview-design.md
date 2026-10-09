@@ -163,10 +163,11 @@ textmarkering, scrollning, summeringar och befintliga radåtgärder.
 Implementationen av #82 låter den lilla klientkomponenten äga tabellraden och
 namnets Sheet-trigger, medan beloppsceller och detaljer fortsatt renderas på
 servern. Raden får ingen extra roll eller tabbposition. Pointergester,
-textmarkering och andra kontroller aktiverar inte namnknappen. Radens
-månads-/versionsnyckel behåller befintlig stängning vid månadsbyte.
+textmarkering och andra kontroller aktiverar inte namnknappen. Samordnarens modalstate återställs vid bekräftat månadsbyte utan att remontera väljaren; radens versionsnyckel återställer radinteraktionen.
 
 ### #66: hantering från detaljer
+
+Implementationen samordnar modalflödet på månadsnivå, ovanför tabellernas versionsnycklade rader. Detaljer och beloppsceller renderas fortsatt på servern. Befintliga formulär återanvänds utanför detaljpanelens innehåll och inväntar både skrivresultat och nya serverprops innan återgång. Skrivresultatets versions-ID och autentiserade postidentitet följer namnbyte, ny version och äldre postidentiteter; ingen namnmatchning görs. Kortets fokusmål finns även när sista raden försvinner. Avslut spärras mot stängning under skrivning och ger bekräftelse vid översikten.
 
 Den valda riktningen är **Ändra** och **Avsluta** som tydliga åtgärder i
 postens detaljpanel för alla fyra posttyper på Månaden. Ta bort Hantera/Klar,

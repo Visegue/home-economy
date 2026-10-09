@@ -16,6 +16,7 @@ import { expenseSchema, incomeSchema } from "./model";
 export interface FormState {
   error?: string;
   success?: string;
+  savedId?: number;
 }
 async function mutate(
   operation: () => Promise<FormState | void>,
@@ -85,8 +86,8 @@ export async function addExpenseAction(
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   return mutate(async () => {
-    await addExpense(parsed.data, parsedId.data);
-    return { success: "Utgiften har sparats." };
+    const savedId = await addExpense(parsed.data, parsedId.data);
+    return { success: "Utgiften har sparats.", savedId };
   });
 }
 export async function saveIncomeAction(

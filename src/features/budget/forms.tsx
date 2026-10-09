@@ -15,7 +15,7 @@ import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
 import { Pencil, Save, CircleStop, X } from "lucide-react";
 import { ActionIconButton } from "@/components/action-icon-button";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -135,7 +135,7 @@ export function RemoveExpenseDialog({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <FormDialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <ActionIconButton label={`Avsluta ${expense.name}`} tone="danger">
           <CircleStop aria-hidden="true" />
@@ -151,11 +151,11 @@ export function RemoveExpenseDialog({
           />
         ) : null}
       </FormDialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }
 
-function ExpenseForm({
+export function ExpenseForm({
   period,
   people,
   onSaved,
@@ -164,7 +164,7 @@ function ExpenseForm({
 }: {
   period: string;
   people: HouseholdPerson[];
-  onSaved: () => void;
+  onSaved: (savedId?: number) => void;
   expense?: BudgetExpense;
   defaultType: BudgetExpense["destination"];
 }) {
@@ -223,7 +223,9 @@ function ExpenseForm({
     {},
   );
 
-  useCloseAfterSave(Boolean(state.success), pending, onSaved);
+  useCloseAfterSave(Boolean(state.success), pending, () =>
+    onSaved(state.savedId),
+  );
   const parsedAmount = amountSchema.safeParse(amount);
   useFormGuard(
     {
@@ -501,7 +503,7 @@ function ExpenseForm({
   );
 }
 
-function RemoveExpenseForm({
+export function RemoveExpenseForm({
   expense,
   period,
   onCancel,
@@ -522,11 +524,12 @@ function RemoveExpenseForm({
   const [state, action, pending] = useActionState(
     async (previous: FormState, data: FormData) => {
       const result = await removeExpenseAction(previous, data);
-      if (result.success) onRemoved();
       return result;
     },
     {},
   );
+  useFormGuard(null, pending);
+  useCloseAfterSave(Boolean(state.success), pending, onRemoved);
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="id" value={expense.id} />

@@ -1,3 +1,4 @@
+import { closePostDetails } from "./helpers/post-management";
 import { expect, test } from "@playwright/test";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
 import { setSession } from "./helpers/session";
@@ -51,18 +52,11 @@ for (const [type, label] of [
         exact: true,
       }),
     });
-    await card
-      .getByRole("button", {
-        name:
-          type === "settlement" ? "Hantera avräkningar" : "Hantera utgifter",
-        exact: true,
-      })
-      .click();
-    const edit = card.getByRole("button", {
-      name: `Ändra ${name}`,
-      exact: true,
-    });
-    await edit.focus();
+    const nameButton = card.getByRole("button", { name, exact: true });
+    await nameButton.press("Enter");
+    const edit = page
+      .getByRole("dialog", { name, exact: true })
+      .getByRole("button", { name: "Ändra", exact: true });
     await edit.press("Enter");
     await expect(dialog.getByRole("radio")).toHaveCount(0);
     await expect(dialog.getByText(label, { exact: true })).toBeVisible();
@@ -105,7 +99,6 @@ for (const [type, label] of [
       )
       .fill("1500");
     await save.click();
-    await expect(dialog).toHaveCount(0);
     await expect(edit).toBeFocused();
     await edit.click();
     await expect(dialog.getByText(label, { exact: true })).toBeVisible();
@@ -117,6 +110,7 @@ for (const [type, label] of [
       ),
     ).toHaveValue("1500,00");
     await dialog.getByRole("button", { name: "Stäng", exact: true }).click();
-    await expect(edit).toBeFocused();
+    await closePostDetails(page, name);
+    await expect(nameButton).toBeFocused();
   });
 }

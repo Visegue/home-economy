@@ -1,3 +1,4 @@
+import { openPostAction, closePostDetails } from "./helpers/post-management";
 import { expect, test } from "@playwright/test";
 import { setSession } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
@@ -321,24 +322,16 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await expect(
     page.getByRole("button", { name: "Avsluta Besiktning", exact: true }),
   ).toHaveCount(0);
-  const manageExpenses = page.getByRole("button", {
-    name: "Hantera utgifter",
-    exact: true,
-  });
-  await manageExpenses.focus();
-  await page.keyboard.press("Enter");
   await expect(
-    page.getByRole("button", { name: "Klar med utgifter" }),
-  ).toHaveAttribute("aria-pressed", "true");
-  await expect(
-    page.getByRole("button", { name: "Avsluta Besiktning", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Ändra Hyra", exact: true }).click();
+    page.getByRole("button", { name: "Hantera utgifter" }),
+  ).toHaveCount(0);
+  await openPostAction(page, "Hyra", "Ändra");
   await expect(page.getByLabel("Ändringen gäller från")).toHaveValue(
     `${period}-01`,
   );
   await page.getByLabel("Belopp per betalning (kr)").fill("11000,25");
   await page.getByRole("button", { name: "Spara utgift", exact: true }).click();
+  await closePostDetails(page, "Hyra");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(rent).toContainText("11 000,25 kr");
   await rent.getByRole("button", { name: "Hyra", exact: true }).click();
@@ -347,20 +340,18 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   ).toBeVisible();
 
   await rentDetails.getByRole("button", { name: "Stäng", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Avsluta Besiktning", exact: true })
-    .click();
+  await openPostAction(page, "Besiktning", "Avsluta");
   await expect(
     page.getByRole("button", { name: "Avbryt", exact: true }),
   ).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(
-    page.getByRole("button", { name: "Avsluta Besiktning", exact: true }),
+    page
+      .getByRole("dialog", { name: "Besiktning", exact: true })
+      .getByRole("button", { name: "Avsluta", exact: true }),
   ).toBeFocused();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "Avsluta Besiktning", exact: true })
-    .click();
+  await closePostDetails(page, "Besiktning");
+  await openPostAction(page, "Besiktning", "Avsluta");
   await page
     .getByRole("button", { name: "Bekräfta avslut av Besiktning", exact: true })
     .last()
