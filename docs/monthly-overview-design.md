@@ -160,6 +160,12 @@ radaktivering öppnar detaljer även i hanteringsläge. #66 tar därefter bort
 läget. Testa alla fyra tabeller med mus, touch och tangentbord, inklusive
 textmarkering, scrollning, summeringar och befintliga radåtgärder.
 
+Implementationen av #82 låter den lilla klientkomponenten äga tabellraden och
+namnets Sheet-trigger, medan beloppsceller och detaljer fortsatt renderas på
+servern. Raden får ingen extra roll eller tabbposition. Pointergester,
+textmarkering och andra kontroller aktiverar inte namnknappen. Radens
+månads-/versionsnyckel behåller befintlig stängning vid månadsbyte.
+
 ### #66: hantering från detaljer
 
 Den valda riktningen är **Ändra** och **Avsluta** som tydliga åtgärder i
