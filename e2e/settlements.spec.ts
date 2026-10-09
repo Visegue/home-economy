@@ -1,3 +1,4 @@
+import { openPostAction, closePostDetails } from "./helpers/post-management";
 import { expect, test } from "@playwright/test";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
 import { formatBudgetSek } from "../src/lib/money";
@@ -87,10 +88,7 @@ test("planerar avräkningar med påslag, inflation och separata månadsöverför
     formatBudgetSek(57_222),
   );
   await page.reload();
-  await card
-    .getByRole("button", { name: "Hantera avräkningar", exact: true })
-    .click();
-  await card.getByRole("button", { name: "Ändra Nya vitvaror" }).click();
+  await openPostAction(page, "Nya vitvaror", "Ändra");
   await expect(page.getByLabel("Påslag (%)", { exact: true })).toHaveValue(
     "10",
   );
@@ -107,6 +105,7 @@ test("planerar avräkningar med påslag, inflation och separata månadsöverför
     page.getByRole("button", { name: "Spara avräkning" }),
   ).toBeInViewport();
   await page.getByRole("button", { name: "Spara avräkning" }).click();
+  await closePostDetails(page, "Nya vitvaror");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(settlementTransfer).toContainText(formatBudgetSek(54_169));
   await expect(transfers.getByLabel("Totalt att föra över")).toHaveText(
@@ -159,16 +158,13 @@ test("planerar avräkningar med påslag, inflation och separata månadsöverför
     path: testInfo.outputPath("settlements-mobile.png"),
     fullPage: true,
   });
-  await card
-    .getByRole("button", { name: "Hantera avräkningar", exact: true })
-    .click();
-  await card.getByRole("button", { name: "Ändra Nya vitvaror" }).click();
+  await openPostAction(page, "Nya vitvaror", "Ändra");
   await expect(page.getByLabel("Påslag (kr)")).toHaveValue("1000,50");
   await expect(
     page.getByRole("checkbox", { name: "Räkna med inflation" }),
   ).not.toBeChecked();
   await page.getByRole("button", { name: "Stäng", exact: true }).click();
-  await card.getByRole("button", { name: "Avsluta Nya vitvaror" }).click();
+  await openPostAction(page, "Nya vitvaror", "Avsluta");
   await page
     .getByRole("button", { name: "Bekräfta avslut av Nya vitvaror" })
     .click();

@@ -22,6 +22,15 @@ try {
       "onboarding-1",
       "onboarding-2",
       "budget-0",
+      "detail-legacy-0",
+      "detail-legacy-1",
+      "detail-legacy-2",
+      "detail-guards-0",
+      "detail-guards-1",
+      "detail-guards-2",
+      "detail-management-0",
+      "detail-management-1",
+      "detail-management-2",
       "row-identities-0",
       "row-identities-1",
       "row-identities-2",
@@ -91,6 +100,33 @@ try {
          values ($1, $1, $1, $2, now())`,
         [id, new Date(Date.now() + (id === "expired" ? -1 : 1) * 86_400_000)],
       );
+      if (id.startsWith("detail-legacy-")) {
+        // Synthetic legacy versions cannot be created through the modern UI.
+        // Seed them before Next starts; assertions use only the public app.
+        await database.query("select set_config('app.user_id', $1, false)", [
+          id,
+        ]);
+        const {
+          rows: [household],
+        } = await database.query(
+          `insert into public.households (name, owner_user_id) values ('Äldre posttest', $1) returning id`,
+          [id],
+        );
+        await database.query(
+          `insert into public.household_members (household_id, user_id, role) values ($1, $2, 'owner')`,
+          [household.id, id],
+        );
+        for (const amount of ["100.00", "200.00"]) {
+          await database.query(
+            `insert into public.savings_goals (household_id, name, monthly_contribution) values ($1, 'Äldre sparande', $2)`,
+            [household.id, amount],
+          );
+          await database.query(
+            `insert into public.recurring_items (household_id, name, kind, amount, cadence_unit) values ($1, 'Äldre utgift', 'expense', $2, 'month')`,
+            [household.id, amount],
+          );
+        }
+      }
       if (id.startsWith("account-")) {
         const credential = id.startsWith("account-password-");
         await database.query(

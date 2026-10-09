@@ -12,7 +12,7 @@ import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
 import { Pencil, Save, CircleStop, X } from "lucide-react";
 import { ActionIconButton } from "@/components/action-icon-button";
-import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -28,13 +28,13 @@ import type { Saving } from "./validation";
 import { VersionFields, useVersionFields } from "@/features/periods/fields";
 import { formDate, versionBounds } from "@/features/periods/model";
 
-function SavingForm({
+export function SavingForm({
   saving,
   onSaved,
   period,
 }: {
   saving?: Saving;
-  onSaved: () => void;
+  onSaved: (savedId?: number) => void;
   period: string;
 }) {
   const fieldId = useId();
@@ -63,7 +63,9 @@ function SavingForm({
     {},
   );
 
-  useCloseAfterSave(Boolean(state.success), pending, onSaved);
+  useCloseAfterSave(Boolean(state.success), pending, () =>
+    onSaved(state.savedId),
+  );
   const parsedAmount = monthlyIncomeInputSchema.safeParse(amount);
   useFormGuard(
     {
@@ -229,7 +231,7 @@ export function RemoveSavingDialog({
 }) {
   const [open, setOpen] = useState(false);
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <FormDialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <ActionIconButton label={`Avsluta ${saving.name}`} tone="danger">
           <CircleStop aria-hidden="true" />
@@ -245,11 +247,11 @@ export function RemoveSavingDialog({
           />
         ) : null}
       </FormDialogContent>
-    </Dialog>
+    </FormDialog>
   );
 }
 
-function RemoveSavingForm({
+export function RemoveSavingForm({
   saving,
   period,
   onCancel,
@@ -270,11 +272,12 @@ function RemoveSavingForm({
   const [state, action, pending] = useActionState(
     async (previous: SavingState, data: FormData) => {
       const result = await removeSavingAction(saving.id, previous, data);
-      if (result.success) onRemoved();
       return result;
     },
     {},
   );
+  useFormGuard(null, pending);
+  useCloseAfterSave(Boolean(state.success), pending, onRemoved);
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="revision" value={saving.revision} />

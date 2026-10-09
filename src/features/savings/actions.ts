@@ -18,6 +18,7 @@ export interface SavingState {
   nameError?: string;
   amountError?: string;
   success?: boolean;
+  savedId?: number;
 }
 
 export async function saveSavingAction(
@@ -43,6 +44,7 @@ export async function saveSavingAction(
       )?.message,
     };
   }
+  let savedId: number;
   try {
     const options = writeOptionsSchema.safeParse({
       mode: formData.get("mode") ?? undefined,
@@ -51,7 +53,7 @@ export async function saveSavingAction(
     });
     if (!options.success)
       return { error: "Välj planerad dag mellan 1 och 31." };
-    await saveSaving(parsed.data, id, period.data, options.data);
+    savedId = await saveSaving(parsed.data, id, period.data, options.data);
   } catch (error) {
     unstable_rethrow(error);
     if (error instanceof PeriodWriteError) return { error: error.message };
@@ -65,7 +67,7 @@ export async function saveSavingAction(
   revalidatePath("/");
   revalidatePath("/history");
   revalidatePath("/transfers");
-  return { success: true };
+  return { success: true, savedId };
 }
 
 export async function removeSavingAction(

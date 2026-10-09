@@ -163,11 +163,11 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
     path: testInfo.outputPath("row-details-desktop-focus.png"),
     animations: "disabled",
   });
-  for (const label of ["utgifter", "avräkningar", "sparande"]) {
-    await page
-      .getByRole("button", { name: `Hantera ${label}`, exact: true })
-      .click();
-  }
+  await expect(
+    page.getByRole("button", {
+      name: /^(Hantera|Klar med) (utgifter|avräkningar|sparande)$/,
+    }),
+  ).toHaveCount(0);
   for (const item of cases) {
     const row = page
       .getByRole("table", { name: item.table, exact: true })
@@ -177,9 +177,9 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
     await expect(
       page.getByRole("dialog", { name: item.name, exact: true }),
     ).toBeVisible();
-    await page.keyboard.press("Escape");
-    await row
-      .getByRole("button", { name: `Ändra ${item.name}`, exact: true })
+    await page
+      .getByRole("dialog", { name: item.name, exact: true })
+      .getByRole("button", { name: "Ändra", exact: true })
       .click();
     const form = page.getByRole("dialog", { name: item.edit, exact: true });
     await expect(form).toBeVisible();
@@ -187,14 +187,21 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
     await form.getByRole("heading").click(); // Portal content must not bubble into the row.
     await expect(page.getByRole("dialog")).toHaveCount(1);
     await form.getByRole("button", { name: "Stäng", exact: true }).click();
-    await row
-      .getByRole("button", { name: `Avsluta ${item.name}`, exact: true })
+    await page
+      .getByRole("dialog", { name: item.name, exact: true })
+      .getByRole("button", { name: "Avsluta", exact: true })
       .click();
     await expect(page.getByRole("dialog")).toHaveCount(1);
     await page
       .getByRole("dialog")
       .getByRole("button", { name: "Avbryt", exact: true })
       .click();
+    await expect(
+      page
+        .getByRole("dialog", { name: item.name, exact: true })
+        .getByRole("button", { name: "Avsluta", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
   }
   const mobileContext = await browser.newContext({
@@ -304,15 +311,18 @@ test("visar rätt identitet och datumversion för likadana namn vid historiknavi
   const second = table.getByRole("row").filter({
     has: page.getByRole("cell", { name: "200,00 kr", exact: true }),
   });
+  await first.getByRole("button", { name: "Delat namn", exact: true }).click();
   await page
-    .getByRole("button", { name: "Hantera sparande", exact: true })
-    .click();
-  await first
-    .getByRole("button", { name: "Ändra Delat namn", exact: true })
+    .getByRole("dialog", { name: "Delat namn", exact: true })
+    .getByRole("button", { name: "Ändra", exact: true })
     .click();
   await page.getByLabel("Ändringen gäller från").fill("2027-02-01");
   await page.getByLabel("Belopp per månad (kr)").fill("300");
   await page.getByRole("button", { name: "Spara sparande" }).click();
+  await page
+    .getByRole("dialog", { name: "Delat namn", exact: true })
+    .getByRole("button", { name: "Stäng", exact: true })
+    .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const details = page.getByRole("dialog", { name: "Delat namn", exact: true });
   await first.getByRole("cell").nth(1).click();

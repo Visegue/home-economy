@@ -1,3 +1,4 @@
+import { openPostAction, closePostDetails } from "./helpers/post-management";
 import { expect, test } from "@playwright/test";
 import { setSession } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
@@ -27,10 +28,7 @@ test("inaktiv avsatt utgift behåller överföringar men visar inget förväntat
   await expect(page.getByRole("dialog").getByRole("status")).toBeVisible();
   await page.getByRole("button", { name: "Stäng", exact: true }).click();
   await page.goto("/");
-  await page.getByRole("button", { name: "Hantera utgifter" }).click();
-  await page
-    .getByRole("button", { name: "Avsluta Försäkring", exact: true })
-    .click();
+  await openPostAction(page, "Försäkring", "Avsluta");
   await page
     .getByRole("button", { name: "Bekräfta avslut av Försäkring" })
     .click();
@@ -200,29 +198,26 @@ test("bekräftade överföringar är skilda från planen och hänförs till valf
   await expect(details).toContainText("Insatt för månaden700,00 kr");
   await details.getByRole("button", { name: "Stäng", exact: true }).click();
   await page.goto("/");
-  await page.getByRole("button", { name: "Hantera sparande" }).click();
-  await page
-    .getByRole("button", { name: "Ändra Buffert", exact: true })
-    .click();
+  await openPostAction(page, "Buffert", "Ändra");
   await dialog.getByLabel("Ändringen gäller från").fill(`${next}-10`);
   await dialog.getByLabel("Namn på sparandet").fill("Framtida buffert");
   await dialog.getByLabel(/Belopp/).fill("1500");
   await dialog.getByRole("button", { name: "Spara sparande" }).click();
+  await closePostDetails(page, "Buffert");
   await expect(dialog).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "Ändra Buffert", exact: true })
-    .click();
+  await openPostAction(page, "Buffert", "Ändra");
   await expect(dialog).toContainText("Senare ändringar bevaras");
   await dialog.getByRole("combobox", { name: "Typ av ändring" }).click();
   await page.getByRole("option", { name: "Rätta denna version" }).click();
   await dialog.getByLabel(/Belopp/).fill("1200");
   await dialog.getByRole("button", { name: "Spara sparande" }).click();
+  await closePostDetails(page, "Buffert");
   await expect(dialog).toHaveCount(0);
   await page.getByLabel("Välj månad").fill(next);
   await expect(page.getByLabel("Välj månad")).toHaveValue(next);
   await expect(
     page.getByRole("button", { name: "Hantera sparande" }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(page.getByText(/1\s500,00/).first()).toBeVisible();
   await page.goto(`/transfers?month=${previous}`);
   await expect(card).toContainText("Överföringshistorik (3)");

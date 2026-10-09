@@ -1,3 +1,4 @@
+import { openPostAction, closePostDetails } from "./helpers/post-management";
 import { expect, test } from "@playwright/test";
 import { setSession } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
@@ -105,29 +106,12 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await expect(section.getByRole("button", { name: /^Avsluta / })).toHaveCount(
     0,
   );
-  await section.getByRole("button", { name: "Hantera sparande" }).click();
-  await expect(page.getByRole("button", { name: "Ändra Mobil" })).toHaveCount(
-    0,
-  );
-  await page.getByRole("button", { name: "Hantera utgifter" }).click();
-  await expect(page.getByRole("button", { name: "Ändra Mobil" })).toBeVisible();
-  await page.getByRole("button", { name: "Klar med utgifter" }).click();
-  await expect(page.getByRole("button", { name: "Ändra Mobil" })).toHaveCount(
-    0,
-  );
   await expect(
-    section.getByRole("button", { name: "Ändra Buffert" }),
-  ).toBeVisible();
-  await expect(
-    section.getByRole("button", { name: "Avsluta Buffert", exact: true }),
-  ).toBeVisible();
-  await page.mouse.move(0, 0);
-  await page.screenshot({
-    path: testInfo.outputPath("card-management-desktop.png"),
-    fullPage: true,
-    animations: "disabled",
-  });
-  await section.getByRole("button", { name: "Ändra Buffert" }).click();
+    page.getByRole("button", {
+      name: /^(Hantera|Klar med) (utgifter|sparande)$/,
+    }),
+  ).toHaveCount(0);
+  await openPostAction(page, "Buffert", "Ändra");
   await expect(dialog.getByLabel("Ändringen gäller från")).toHaveValue(
     `${start}-01`,
   );
@@ -135,6 +119,7 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await name.fill("Ny buffert");
   await amount.fill("2000,99");
   await dialog.getByRole("button", { name: "Spara sparande" }).click();
+  await closePostDetails(page, "Ny buffert");
   await expect(total).toHaveText("2 501,28 kr");
   await expect(summary).toContainText("2 248,72 kr");
   await page.reload();
@@ -150,20 +135,12 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await expect(section.getByRole("button", { name: /^Avsluta / })).toHaveCount(
     0,
   );
-  await section.getByRole("button", { name: "Hantera sparande" }).click();
-  await section.getByRole("button", { name: "Klar med sparande" }).click();
-  await expect(
-    section.getByRole("button", { name: "Ändra Ny buffert" }),
-  ).toHaveCount(0);
-  await expect(section.getByRole("button", { name: /^Avsluta / })).toHaveCount(
-    0,
-  );
-  await section.getByRole("button", { name: "Hantera sparande" }).click();
-  await section.getByRole("button", { name: "Ändra Ny buffert" }).click();
+  await openPostAction(page, "Ny buffert", "Ändra");
   await expect(dialog.getByLabel("Ändringen gäller från")).toHaveValue(
     `${start}-01`,
   );
   await dialog.getByRole("button", { name: "Stäng", exact: true }).click();
+  await closePostDetails(page, "Ny buffert");
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({
@@ -171,12 +148,12 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
     fullPage: true,
     animations: "disabled",
   });
-  await section.getByRole("button", { name: "Avsluta Ny buffert" }).click();
+  await openPostAction(page, "Ny buffert", "Avsluta");
   await dialog
     .getByRole("button", { name: "Bekräfta avslut av Ny buffert" })
     .click();
   await expect(total).toHaveText("500,29 kr");
-  await section.getByRole("button", { name: "Avsluta Semester" }).click();
+  await openPostAction(page, "Semester", "Avsluta");
   await dialog
     .getByRole("button", { name: "Bekräfta avslut av Semester" })
     .click();

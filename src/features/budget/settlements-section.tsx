@@ -1,13 +1,8 @@
-import {
-  CardManagement,
-  CardManagementButton,
-} from "@/components/card-management";
 import { RefreshCw } from "lucide-react";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import type { getMonthlyOverview } from "@/features/dashboard/monthly-overview";
 import { OverviewTable } from "@/features/dashboard/overview-table";
-import { PostDetails } from "@/features/dashboard/post-details";
-import { ExpenseDialog, RemoveExpenseDialog } from "./forms";
+import { ExpenseDialog } from "./forms";
 import type { HouseholdPerson } from "@/features/households/members/model";
 export function SettlementsSection({
   expenses,
@@ -27,69 +22,51 @@ export function SettlementsSection({
   recordedTotal: { valueInOre: number; hasMissingOpening: boolean };
 }) {
   return (
-    <section aria-label="Avräkningar">
-      <CardManagement key={period} hasItems={expenses.length > 0}>
-        <CollapsibleCard
-          title="Avräkningar"
-          icon={
-            <RefreshCw
-              className="size-5 shrink-0 text-muted-foreground"
-              aria-hidden="true"
-            />
-          }
-          actions={
-            <>
-              {expenses.length ? (
-                <CardManagementButton label="avräkningar" />
-              ) : null}
-              <ExpenseDialog
-                period={period}
-                people={people}
-                defaultType="settlement"
-              />
-            </>
-          }
-        >
-          {expenses.length ? (
-            <OverviewTable
-              label="Planerade avräkningar"
+    <section
+      aria-label="Avräkningar"
+      data-post-card="Avräkningar"
+      tabIndex={-1}
+    >
+      <CollapsibleCard
+        title="Avräkningar"
+        icon={
+          <RefreshCw
+            className="size-5 shrink-0 text-muted-foreground"
+            aria-hidden="true"
+          />
+        }
+        actions={
+          <>
+            <ExpenseDialog
               period={period}
-              valueDate={valueDate}
-              totalInOre={totalInOre}
-              recordedTotal={recordedTotal}
-              rows={expenses.map((expense) => ({
-                id: expense.id,
-                name: expense.name,
-                amountInOre: expense.monthlyAmountInOre,
-                changed: !!(expense.changes.length || expense.ended),
-                funding: expense.funding,
-                details: (
-                  <PostDetails
-                    item={expense}
-                    source="expense"
-                    period={period}
-                    valueDate={valueDate}
-                  />
-                ),
-                actions: (
-                  <>
-                    <ExpenseDialog
-                      expense={expense}
-                      people={people}
-                      period={period}
-                    />
-                    <RemoveExpenseDialog expense={expense} period={period} />
-                  </>
-                ),
-              }))}
+              people={people}
+              defaultType="settlement"
             />
-          ) : (
-            <p className="py-4 text-sm text-muted-foreground">
-              Inga avräkningar ännu.
-            </p>
-          )}
-        </CollapsibleCard>
-      </CardManagement>
+          </>
+        }
+      >
+        {expenses.length ? (
+          <OverviewTable
+            label="Planerade avräkningar"
+            period={period}
+            valueDate={valueDate}
+            totalInOre={totalInOre}
+            recordedTotal={recordedTotal}
+            rows={expenses.map((expense) => ({
+              id: expense.id,
+              name: expense.name,
+              amountInOre: expense.monthlyAmountInOre,
+              changed: !!(expense.changes.length || expense.ended),
+              funding: expense.funding,
+              postKey: `expense-${expense.id}`,
+            }))}
+          />
+        ) : (
+          <p className="py-4 text-sm text-muted-foreground">
+            Inga avräkningar ännu.
+          </p>
+        )}
+      </CollapsibleCard>
     </section>
   );
 }
