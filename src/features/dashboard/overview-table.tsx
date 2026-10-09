@@ -89,35 +89,34 @@ export function OverviewTable({
       </TableHeader>
       <TableBody>
         {rows.map((row) => (
-          <TableRow key={row.id}>
-            <TableCell>
-              <ItemDetails key={`${period}-${row.id}`} name={row.name}>
-                {row.details}
-              </ItemDetails>
-              {row.changed ? (
-                <p className="text-xs text-muted-foreground">
-                  Ändrad under månaden
-                </p>
-              ) : null}
-            </TableCell>
-            <TableCell className="text-right font-medium tabular-nums">
-              <span className="[overflow-wrap:normal]">
-                {formatBudgetSek(row.amountInOre).replaceAll("\u00a0", " ")}
-              </span>
-            </TableCell>
-            {recordedTotal && row.funding ? (
-              <TableCell className="text-right tabular-nums">
-                <RecordedValue {...row.funding} />
-              </TableCell>
-            ) : null}
-            <ManagementOnly>
-              <TableCell>
-                <div className="flex flex-wrap justify-end gap-2">
-                  {row.actions}
-                </div>
-              </TableCell>
-            </ManagementOnly>
-          </TableRow>
+          <ItemDetails
+            key={`${period}-${row.id}`}
+            name={row.name}
+            changed={row.changed}
+            cells={
+              <>
+                <TableCell className="text-right font-medium tabular-nums">
+                  <span className="[overflow-wrap:normal]">
+                    {formatBudgetSek(row.amountInOre).replaceAll("\u00a0", " ")}
+                  </span>
+                </TableCell>
+                {recordedTotal && row.funding ? (
+                  <TableCell className="text-right tabular-nums">
+                    <RecordedValue {...row.funding} />
+                  </TableCell>
+                ) : null}
+                <ManagementOnly>
+                  <TableCell>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {row.actions}
+                    </div>
+                  </TableCell>
+                </ManagementOnly>
+              </>
+            }
+          >
+            {row.details}
+          </ItemDetails>
         ))}
         <TableRow className="bg-muted/50 font-semibold">
           <TableCell>Totalt per månad</TableCell>
