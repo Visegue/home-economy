@@ -46,6 +46,7 @@ export function AuthLayout({
 export function FormActions({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
+      data-slot="form-actions"
       className={cn(
         "sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-3 border-t bg-popover pt-4 pb-[env(safe-area-inset-bottom)]",
         className,

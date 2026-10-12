@@ -418,3 +418,9 @@ framtida kod eller en fullständig säkerhetsrevision av appen.
 - Pröva behovet av en ny ADR i #72 och #73 när modellen för kontokoppling eller
   frigörande/omfördelning faktiskt beslutas. Dokumentera då verkliga alternativ
   och konsekvenser som är betydelsefulla och svåra att ändra senare.
+
+## Formulärens återkoppling
+
+Skapandets kompakta Direkt/Avsatt/Avräkning föregår grunduppgifter, datum/giltighet och typfält i samma dialog. Typen är fortfarande låst vid ändring/rättelse. Gemensamma värden och dolda typutkast bevaras vid skapandets typbyte; avsatt/avräkning delar nästa utgiftsdatum och planerad dag är separat per typ.
+
+Lokala fel visas vid sparförsök och får fältkoppling/fokus. Efter första försöket kan blur rätta ett lokalt fältfel; serverberoende konflikter kräver ett nytt uttryckligt sparförsök. Ett ofullständigt eller ogiltigt beräkningsunderlag visas som —. Befintliga regler för nollbelopp och uttrycklig bekräftelse av negativt registrerat värde ändras inte. Se [UI-kontraktet](ui-components.md#formulärkontrakt-83).

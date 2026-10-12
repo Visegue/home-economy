@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Form, FormSection, Input } from "@home-economy/ui/form";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/client";
 
@@ -57,23 +57,25 @@ export function ForgotPasswordForm({ configured }: { configured: boolean }) {
   }
 
   return (
-    <form className="space-y-4" onSubmit={requestReset}>
-      <div className="ui-field">
-        <Label htmlFor="reset-email">E-postadress</Label>
-        <Input
-          id="reset-email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          required
-          disabled={!configured || pending}
-        />
-      </div>
-      {message ? (
-        <p role="alert" className="ui-error">
-          {message}
-        </p>
-      ) : null}
+    <Form
+      className="space-y-4"
+      onSubmit={requestReset}
+      pending={pending}
+      error={message}
+    >
+      <FormSection title="Återställning">
+        <div className="ui-field">
+          <Label htmlFor="reset-email">E-postadress</Label>
+          <Input
+            id="reset-email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            disabled={!configured || pending}
+          />
+        </div>
+      </FormSection>
       <Button
         type="submit"
         className="w-full"
@@ -89,6 +91,6 @@ export function ForgotPasswordForm({ configured }: { configured: boolean }) {
       <Button asChild variant="link" className="w-full">
         <Link href="/login">Tillbaka till inloggningen</Link>
       </Button>
-    </form>
+    </Form>
   );
 }

@@ -1,9 +1,16 @@
 "use client";
 
+import { SelectTrigger } from "@home-economy/ui/form";
+
 import { FormActions } from "@home-economy/ui/layout";
-import { ChoiceInput } from "@home-economy/ui/choice";
+import { ChoiceInput } from "@home-economy/ui/form";
 
 import Link from "next/link";
+import { validateExpense } from "@/features/forms/validation";
+import {
+  calendarDateSchema,
+  effectiveDateSchema,
+} from "@/features/periods/model";
 import { MemberAvatar } from "@/components/member-avatar";
 import type { HouseholdPerson } from "@/features/households/members/model";
 import { useActionState, useEffect, useRef, useState } from "react";
@@ -17,15 +24,15 @@ import { savedMessage, useSaveNotice } from "@/components/save-notice";
 import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
 import { Pencil, Save, CircleStop, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ActionIconButton } from "@/components/action-icon-button";
 import { DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Form, FormSection, Input } from "@home-economy/ui/form";
 import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
-  SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { formatBudgetSek } from "@/lib/money";
@@ -59,11 +66,7 @@ const expenseTypes = [
 ] as const;
 
 function Feedback({ state }: { state: FormState }) {
-  return state.error ? (
-    <p role="alert" className="ui-error">
-      {state.error}
-    </p>
-  ) : state.success ? (
+  return state.success ? (
     <output className="block text-sm text-accent-foreground">
       {state.success}
     </output>
@@ -246,34 +249,16 @@ export function ExpenseForm({
     pending,
   );
   return (
-    <form action={action} className="space-y-5">
+    <Form
+      action={action}
+      pending={pending}
+      error={state.error}
+      validate={validateExpense}
+      className="space-y-5"
+    >
       {expense ? <input type="hidden" name="id" value={expense.id} /> : null}
       <fieldset disabled={pending} className="space-y-5">
-        <VersionFields version={expense} fields={versionFields} />
-        <div className="ui-field">
-          <Label htmlFor="expense-period">
-            {expense ? "Ändringen gäller från" : "Från och med"}
-          </Label>
-          <Input
-            id="expense-period"
-            name="period"
-            type="date"
-            required
-            value={effectivePeriod}
-            onChange={(event) => setEffectivePeriod(event.target.value)}
-            min={
-              expense
-                ? (versionBounds(expense).start ?? "1900-01-01")
-                : "1900-01-01"
-            }
-            max={
-              expense
-                ? (versionBounds(expense).end ?? "2199-12-31")
-                : "2199-12-31"
-            }
-          />
-        </div>
-        <fieldset className="grid gap-2 sm:grid-cols-3">
+        <fieldset className="grid grid-cols-3 gap-1">
           <legend className="mb-2 text-sm font-medium">
             <span className="inline-flex items-center gap-1">
               Typ av utgift
@@ -298,10 +283,10 @@ export function ExpenseForm({
           {expense ? (
             <>
               <input type="hidden" name="type" value={type} />
-              <p className="font-medium sm:col-span-3">
+              <p className="col-span-3 font-medium">
                 {expenseTypes.find((option) => option.value === type)?.label}
               </p>
-              <p className="text-sm text-muted-foreground sm:col-span-3">
+              <p className="col-span-3 text-sm text-muted-foreground">
                 Typen är låst. Avsluta posten och skapa en ny för att använda en
                 annan typ. Avslutet gäller den valda versionen; senare versioner
                 behålls. Registrerade pengar och överföringar ligger kvar på den
@@ -314,7 +299,7 @@ export function ExpenseForm({
               <Label
                 key={option.value}
                 aria-label={option.label}
-                className="flex cursor-pointer items-start gap-2 rounded-lg border p-3 has-checked:border-primary has-checked:bg-primary/5"
+                className="relative flex min-w-0 cursor-pointer items-center justify-center gap-1 rounded-lg border px-1 py-3 has-checked:border-primary has-checked:bg-primary/5 has-focus-visible:ring-2 has-focus-visible:ring-ring"
               >
                 <ChoiceInput
                   type="radio"
@@ -324,53 +309,88 @@ export function ExpenseForm({
                   onChange={() =>
                     setType(option.value as BudgetExpense["destination"])
                   }
-                  className="mt-1 accent-primary"
+                  className="absolute inset-0 z-10 size-full cursor-pointer opacity-0"
                 />
                 <span>
-                  <span className="block font-medium">{option.label}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {option.description}
+                  <span className="block text-sm font-medium">
+                    {option.value === "direct"
+                      ? "Direkt"
+                      : option.value === "allocated"
+                        ? "Avsatt"
+                        : "Avräkning"}
                   </span>
                 </span>
               </Label>
             ))
           )}
         </fieldset>
-        <div className="ui-field">
-          <Label htmlFor="expense-name">Namn på utgiften</Label>
-          <Input
-            id="expense-name"
-            name="name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="Till exempel hemförsäkring"
-            maxLength={160}
-            required
-          />
-        </div>
-        <div className="ui-field">
-          <Label htmlFor="expense-amount">
-            {type === "settlement"
-              ? "Kostnad i dag (kr)"
-              : "Belopp per betalning (kr)"}
-          </Label>
-          <Input
-            id="expense-amount"
-            name="amount"
-            inputMode="decimal"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            placeholder="0,00"
-            required
-          />
-        </div>
+        <FormSection title="Grunduppgifter">
+          <div className="ui-field">
+            <Label htmlFor="expense-name">Namn på utgiften</Label>
+            <Input
+              id="expense-name"
+              name="name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Till exempel hemförsäkring"
+              maxLength={160}
+              required
+            />
+          </div>
+          <div className="ui-field">
+            <Label htmlFor="expense-amount">
+              {type === "settlement"
+                ? "Kostnad i dag (kr)"
+                : "Belopp per betalning (kr)"}
+            </Label>
+            <Input
+              id="expense-amount"
+              name="amount"
+              inputMode="decimal"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              placeholder="0,00"
+              required
+            />
+          </div>
+        </FormSection>
+        <FormSection title="Datum och giltighet">
+          <VersionFields version={expense} fields={versionFields} />
+          <div className="ui-field">
+            <Label htmlFor="expense-period">
+              {expense ? "Ändringen gäller från" : "Från och med"}
+            </Label>
+            <Input
+              id="expense-period"
+              name="period"
+              type="date"
+              required
+              value={effectivePeriod}
+              onChange={(event) => setEffectivePeriod(event.target.value)}
+              min={
+                expense
+                  ? (versionBounds(expense).start ?? "1900-01-01")
+                  : "1900-01-01"
+              }
+              max={
+                expense
+                  ? (versionBounds(expense).end ?? "2199-12-31")
+                  : "2199-12-31"
+              }
+            />
+          </div>
+        </FormSection>
         {type === "allocated" ? (
-          <>
+          <FormSection title="Avsättning">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="ui-field">
                 <Label htmlFor="expense-months">Hur ofta?</Label>
                 <Select name="months" value={months} onValueChange={setMonths}>
-                  <SelectTrigger id="expense-months" className="w-full">
+                  <SelectTrigger
+                    name="months"
+                    id="expense-months"
+                    className="w-full"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -402,11 +422,18 @@ export function ExpenseForm({
               <p>
                 Att avsätta:{" "}
                 <strong>
-                  {formatBudgetSek(
-                    parsedAmount.success
-                      ? Math.round(parsedAmount.data / Number(months))
-                      : 0,
-                  )}{" "}
+                  <output aria-label="Beräknad månadsavsättning">
+                    {parsedAmount.success &&
+                    parsedAmount.data > 0 &&
+                    effectiveDateSchema.safeParse(effectivePeriod).success &&
+                    calendarDateSchema.safeParse(nextDueOn).success &&
+                    nextDueOn >= `${effectivePeriod.slice(0, 7)}-01` &&
+                    cycles.some((cycle) => cycle.months === Number(months))
+                      ? formatBudgetSek(
+                          Math.round(parsedAmount.data / Number(months)),
+                        )
+                      : "—"}
+                  </output>{" "}
                   per månad
                 </strong>
               </p>
@@ -421,22 +448,24 @@ export function ExpenseForm({
                 </p>
               </InfoButton>
             </div>
-          </>
+          </FormSection>
         ) : null}
         {type === "settlement" ? (
-          <SettlementFields
-            amount={amount}
-            effectivePeriod={effectivePeriod.slice(0, 7)}
-            planningPeriod={
-              expense?.settlement && expense.nextDueOn === nextDueOn
-                ? expense.settlement.startsOn.slice(0, 7)
-                : effectivePeriod.slice(0, 7)
-            }
-            nextDueOn={nextDueOn}
-            onDateChange={setNextDueOn}
-            draft={settlementDraft}
-            onDraftChange={setSettlementDraft}
-          />
+          <FormSection title="Avräkningens uppgifter">
+            <SettlementFields
+              amount={amount}
+              effectivePeriod={effectivePeriod.slice(0, 7)}
+              planningPeriod={
+                expense?.settlement && expense.nextDueOn === nextDueOn
+                  ? expense.settlement.startsOn.slice(0, 7)
+                  : effectivePeriod.slice(0, 7)
+              }
+              nextDueOn={nextDueOn}
+              onDateChange={setNextDueOn}
+              draft={settlementDraft}
+              onDraftChange={setSettlementDraft}
+            />
+          </FormSection>
         ) : null}
         <fieldset className="ui-field">
           <legend className="mb-2 text-sm font-medium">
@@ -502,7 +531,7 @@ export function ExpenseForm({
           <Save aria-hidden="true" />
         </ActionIconButton>
       </FormActions>
-    </form>
+    </Form>
   );
 }
 
@@ -534,7 +563,12 @@ export function RemoveExpenseForm({
   useFormGuard(null, pending);
   useCloseAfterSave(Boolean(state.success), pending, onRemoved);
   return (
-    <form action={action} className="space-y-4">
+    <Form
+      action={action}
+      pending={pending}
+      error={state.error}
+      className="space-y-4"
+    >
       <input type="hidden" name="id" value={expense.id} />
       <input type="hidden" name="revision" value={expense.revision} />
       <p>
@@ -555,23 +589,26 @@ export function RemoveExpenseForm({
       />
       <Feedback state={state} />
       <div className="flex justify-end gap-2">
-        <ActionIconButton
+        <Button
+          type="button"
           ref={cancelRef}
-          label="Avbryt"
+          aria-label="Avbryt"
           disabled={pending}
           onClick={onCancel}
         >
           <X aria-hidden="true" />
-        </ActionIconButton>
-        <ActionIconButton
+          Avbryt
+        </Button>
+        <Button
           type="submit"
-          label={`Bekräfta avslut av ${expense.name}`}
-          tone="danger"
-          pending={pending}
+          aria-label={`Bekräfta avslut av ${expense.name}`}
+          variant="destructive"
+          disabled={pending}
         >
           <CircleStop aria-hidden="true" />
-        </ActionIconButton>
+          Ja, avsluta
+        </Button>
       </div>
-    </form>
+    </Form>
   );
 }

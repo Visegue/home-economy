@@ -2,21 +2,16 @@
 
 import { randomUUID } from "node:crypto";
 import { redirect, unstable_rethrow } from "next/navigation";
-import { z } from "zod";
+import { householdNameSchema } from "@/features/households/validation";
 
 import { createPersonalHousehold } from "@/features/households/data";
 import { logServerError } from "@/lib/server-error-log";
 import { monthlyIncomeInputSchema } from "@/features/income/validation";
 import { requireSession } from "@/lib/auth/session";
 
-const householdNameSchema = z
-  .string()
-  .trim()
-  .min(1, "Ange ett namn på hushållet.")
-  .max(120, "Namnet får vara högst 120 tecken.");
-
 export interface OnboardingState {
   error?: string;
+  nameError?: string;
   errorReference?: string;
   incomeError?: string;
 }
@@ -29,7 +24,7 @@ export async function createHouseholdAction(
   const parsedName = householdNameSchema.safeParse(formData.get("name"));
 
   if (!parsedName.success) {
-    return { error: parsedName.error.issues[0]?.message };
+    return { nameError: parsedName.error.issues[0]?.message };
   }
 
   const income = monthlyIncomeInputSchema.safeParse(

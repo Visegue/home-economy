@@ -24,6 +24,7 @@ export function FormDialogContent({
     contentRef.current = content;
     const viewport = window.visualViewport;
     if (!content || !viewport) return;
+    let focusFrame = 0;
 
     const updateViewport = () => {
       // The keyboard can shrink the visual viewport without changing dvh.
@@ -40,23 +41,52 @@ export function FormDialogContent({
       if (!(focused instanceof HTMLElement) || !content.contains(focused)) {
         return;
       }
-      if (focused === content) return;
+      if (focused === content || focused.closest('[data-slot="form-actions"]'))
+        return;
       const field = focused.getBoundingClientRect();
       const dialog = content.getBoundingClientRect();
-      if (field.bottom > dialog.bottom - 16) {
-        content.scrollTop += field.bottom - dialog.bottom + 16;
-      } else if (field.top < dialog.top + 16) {
+      const footer = content
+        .querySelector<HTMLElement>('[data-slot="form-actions"]')
+        ?.getBoundingClientRect();
+      const bottom = footer
+        ? Math.min(dialog.bottom - 16, footer.top - 12)
+        : dialog.bottom - 16;
+      const feedbackBottom = (focused.getAttribute("aria-describedby") ?? "")
+        .split(/\s+/)
+        .reduce((edge, id) => {
+          const feedback = document.getElementById(id);
+          return feedback instanceof HTMLElement &&
+            content.contains(feedback) &&
+            feedback.getAttribute("role") === "alert"
+            ? Math.max(edge, feedback.getBoundingClientRect().bottom)
+            : edge;
+        }, field.bottom);
+      if (field.top < dialog.top + 16) {
         content.scrollTop -= dialog.top + 16 - field.top;
+      } else if (feedbackBottom > bottom) {
+        // Keep the focused control visible even when a long message must scroll.
+        content.scrollTop += Math.min(
+          feedbackBottom - bottom,
+          Math.max(0, field.top - dialog.top - 16),
+        );
       }
+    };
+    // Native focus scrolling does not account for a sticky form footer.
+    const updateAfterFocus = () => {
+      cancelAnimationFrame(focusFrame);
+      focusFrame = requestAnimationFrame(updateViewport);
     };
 
     updateViewport();
     viewport.addEventListener("resize", updateViewport);
     viewport.addEventListener("scroll", updateViewport);
+    content.addEventListener("focusin", updateAfterFocus);
     return () => {
       contentRef.current = null;
       viewport.removeEventListener("resize", updateViewport);
       viewport.removeEventListener("scroll", updateViewport);
+      content.removeEventListener("focusin", updateAfterFocus);
+      cancelAnimationFrame(focusFrame);
     };
   }, []);
 

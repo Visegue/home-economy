@@ -8,8 +8,9 @@ import { FormDialogContent } from "@/components/form-dialog-content";
 import { useSaveNotice } from "@/components/save-notice";
 import { Button } from "@/components/ui/button";
 import { DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Form, FormSection, FormMessage, Input } from "@home-economy/ui/form";
 import { Label } from "@/components/ui/label";
+import { matchingPasswords } from "@/lib/auth/form-validation";
 import { authClient } from "@/lib/auth/client";
 
 type AccountSettingsProps = {
@@ -190,9 +191,11 @@ export function AccountSettings({
         </output>
       ) : null}
       {error ? (
-        <p role="alert" className="ui-error">
-          {error}
-        </p>
+        <FormMessage
+          message={error}
+          pending={pending !== null}
+          className="ui-error"
+        />
       ) : null}
     </div>
   );
@@ -210,14 +213,16 @@ function ChangePasswordForm({
   const [confirmation, setConfirmation] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const notify = useSaveNotice();
   useFormGuard({ currentPassword, newPassword, confirmation }, pending);
 
   async function changePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    setFieldErrors({});
     if (newPassword !== confirmation) {
-      setError("Lösenorden matchar inte.");
+      setFieldErrors({ confirmation: "Lösenorden matchar inte." });
       return;
     }
     setPending(true);
@@ -228,9 +233,16 @@ function ChangePasswordForm({
         revokeOtherSessions: true,
       });
       if (result.error) {
-        setError(
-          authError(result.error, "Kunde inte ändra lösenordet. Försök igen."),
+        const message = authError(
+          result.error,
+          "Kunde inte ändra lösenordet. Försök igen.",
         );
+        if (
+          result.error.code === "INVALID_PASSWORD" &&
+          result.error.status !== 401
+        )
+          setFieldErrors({ currentPassword: message });
+        else setError(message);
         return;
       }
       notify("Lösenordet uppdaterat. Övriga enheter har loggats ut.");
@@ -245,14 +257,23 @@ function ChangePasswordForm({
   }
 
   return (
-    <form onSubmit={changePassword} className="space-y-4">
+    <Form
+      onSubmit={changePassword}
+      validate={(data) =>
+        matchingPasswords(data, "newPassword", "confirmation")
+      }
+      pending={pending}
+      error={error}
+      fieldErrors={fieldErrors}
+      className="space-y-4"
+    >
       <input
         type="hidden"
         name="username"
         autoComplete="username"
         value={email}
       />
-      <fieldset disabled={pending} className="space-y-4">
+      <FormSection title="Lösenord" disabled={pending}>
         <div className="ui-field">
           <Label htmlFor="current-password">Nuvarande lösenord</Label>
           <Input
@@ -299,15 +320,10 @@ function ChangePasswordForm({
         >
           Glömt lösenord?
         </Link>
-      </fieldset>
-      {error ? (
-        <p role="alert" className="ui-error">
-          {error}
-        </p>
-      ) : null}
+      </FormSection>
       <Button type="submit" disabled={pending} className="w-full">
         {pending ? "Sparar…" : "Spara nytt lösenord"}
       </Button>
-    </form>
+    </Form>
   );
 }

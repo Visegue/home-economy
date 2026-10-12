@@ -1,11 +1,14 @@
 "use client";
 
-import { ChoiceInput } from "@home-economy/ui/choice";
+import { validateMember } from "@/features/forms/validation";
+
+import { ChoiceInput } from "@home-economy/ui/form";
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Pencil, Save, Trash2, X } from "lucide-react";
 import { MemberAvatar } from "@/components/member-avatar";
 import { AddCardButton } from "@/components/add-card-button";
+import { Button } from "@/components/ui/button";
 import { ActionIconButton } from "@/components/action-icon-button";
 import {
   FormDialog,
@@ -16,7 +19,7 @@ import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
 import { useSaveNotice } from "@/components/save-notice";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Form, FormSection, Input } from "@home-economy/ui/form";
 import { Label } from "@/components/ui/label";
 import { defaultMemberColor, memberColors } from "./appearance";
 import type { HouseholdPerson } from "./model";
@@ -27,11 +30,7 @@ import {
 } from "./actions";
 
 function Feedback({ state }: { state: MemberFormState }) {
-  return state.error ? (
-    <p role="alert" className="ui-error">
-      {state.error}
-    </p>
-  ) : state.success ? (
+  return state.success ? (
     <output className="block text-sm text-accent-foreground">
       {state.success}
     </output>
@@ -102,27 +101,36 @@ function PersonForm({
   useCloseAfterSave(Boolean(state.success), pending, onSaved);
   useFormGuard({ name, color }, pending);
   return (
-    <form action={action} className="space-y-5">
+    <Form
+      action={action}
+      pending={pending}
+      error={state.error}
+      validate={validateMember}
+      fieldErrors={{ name: state.nameError, color: state.colorError }}
+      className="space-y-5"
+    >
       {person ? <input type="hidden" name="id" value={person.id} /> : null}
-      <div className="flex items-center gap-1">
-        <Label htmlFor="person-name">Medlemmens namn</Label>
-        <InfoButton title="Hushållets medlemmar">
-          <p>
-            Medlemmar kan anges som ägare på utgifter. Ett namn skapar inget
-            konto och ger ingen åtkomst till hushållet.
-          </p>
-        </InfoButton>
-      </div>
-      <Input
-        id="person-name"
-        name="name"
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-        maxLength={120}
-        required
-        disabled={pending}
-        placeholder="Till exempel Kim"
-      />
+      <FormSection title="Grunduppgifter">
+        <div className="flex items-center gap-1">
+          <Label htmlFor="person-name">Medlemmens namn</Label>
+          <InfoButton title="Hushållets medlemmar">
+            <p>
+              Medlemmar kan anges som ägare på utgifter. Ett namn skapar inget
+              konto och ger ingen åtkomst till hushållet.
+            </p>
+          </InfoButton>
+        </div>
+        <Input
+          id="person-name"
+          name="name"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          maxLength={120}
+          required
+          disabled={pending}
+          placeholder="Till exempel Kim"
+        />
+      </FormSection>
       <fieldset disabled={pending} className="space-y-3">
         <legend className="mb-3 text-sm font-medium">Ikonfärg</legend>
         <div className="flex items-center gap-3">
@@ -178,7 +186,7 @@ function PersonForm({
           <Save aria-hidden="true" />
         </ActionIconButton>
       </div>
-    </form>
+    </Form>
   );
 }
 
@@ -222,7 +230,12 @@ function RemovePersonForm({
   );
   useCloseAfterSave(Boolean(state.success), pending, onClose);
   return (
-    <form action={action} className="space-y-4">
+    <Form
+      action={action}
+      pending={pending}
+      error={state.error}
+      className="space-y-4"
+    >
       <input type="hidden" name="id" value={person.id} />
       <p>Vill du ta bort {person.name} från hushållet?</p>
       <p className="text-sm text-muted-foreground">
@@ -231,23 +244,26 @@ function RemovePersonForm({
       </p>
       <Feedback state={state} />
       <div className="flex justify-end gap-2">
-        <ActionIconButton
+        <Button
+          type="button"
           ref={cancelRef}
-          label="Avbryt"
+          aria-label="Avbryt"
           disabled={pending}
           onClick={onClose}
         >
           <X aria-hidden="true" />
-        </ActionIconButton>
-        <ActionIconButton
+          Avbryt
+        </Button>
+        <Button
           type="submit"
-          label={`Bekräfta borttagning av ${person.name}`}
-          tone="danger"
-          pending={pending}
+          aria-label={`Bekräfta borttagning av ${person.name}`}
+          variant="destructive"
+          disabled={pending}
         >
           <Trash2 aria-hidden="true" />
-        </ActionIconButton>
+          Ja, ta bort
+        </Button>
       </div>
-    </form>
+    </Form>
   );
 }

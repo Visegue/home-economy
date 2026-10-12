@@ -99,8 +99,16 @@ test("redigerar och tar bort medlemmar med bevarade utgifter", async ({
   await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(
     "Det finns redan en medlem med det namnet.",
   );
+  await expect(page.getByLabel("Medlemmens namn")).toBeFocused();
+  await expect(page.getByLabel("Medlemmens namn")).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
   await page.getByLabel("Medlemmens namn").fill("Kim Ny");
   await page.getByLabel("Egen färg").fill("#ffff00");
+  await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(
+    "Det finns redan en medlem med det namnet.",
+  );
   const previewIcon = page
     .getByRole("dialog")
     .locator('[data-slot="member-avatar"]');

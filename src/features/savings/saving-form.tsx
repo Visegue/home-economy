@@ -1,5 +1,7 @@
 "use client";
 
+import { validateSaving } from "@/features/forms/validation";
+
 import { FormActions } from "@home-economy/ui/layout";
 
 import { useActionState, useEffect, useId, useRef, useState } from "react";
@@ -13,9 +15,10 @@ import { savedMessage, useSaveNotice } from "@/components/save-notice";
 import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
 import { Pencil, Save, CircleStop, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ActionIconButton } from "@/components/action-icon-button";
 import { DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Form, FormSection, Input } from "@home-economy/ui/form";
 import { Label } from "@/components/ui/label";
 import {
   incomeToInput,
@@ -81,93 +84,83 @@ export function SavingForm({
   );
 
   return (
-    <form action={action} className="space-y-5">
-      <fieldset disabled={pending}>
-        <VersionFields version={saving} fields={versionFields} />
-      </fieldset>
-      <div className="ui-field">
-        <Label htmlFor={`${fieldId}-period`}>
-          {saving ? "Ändringen gäller från" : "Från och med"}
-        </Label>
-        <Input
-          id={`${fieldId}-period`}
-          name="period"
-          type="date"
-          required
-          value={effectivePeriod}
-          onChange={(event) => setEffectivePeriod(event.target.value)}
-          min={
-            saving
-              ? (versionBounds(saving).start ?? "1900-01-01")
-              : "1900-01-01"
-          }
-          max={
-            saving ? (versionBounds(saving).end ?? "2199-12-31") : "2199-12-31"
-          }
-          disabled={pending}
-        />
-      </div>
-      <div className="ui-field">
-        <Label htmlFor={`${fieldId}-name`}>Namn på sparandet</Label>
-        <Input
-          id={`${fieldId}-name`}
-          name="name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Till exempel buffert eller semester"
-          maxLength={160}
-          required
-          disabled={pending}
-          aria-invalid={Boolean(state.nameError)}
-          aria-describedby={
-            state.nameError ? `${fieldId}-name-error` : undefined
-          }
-        />
-        {state.nameError ? (
-          <p id={`${fieldId}-name-error`} role="alert" className="ui-error">
-            {state.nameError}
-          </p>
-        ) : null}
-      </div>
-      <div className="ui-field">
-        <div className="flex items-center gap-1">
-          <Label htmlFor={`${fieldId}-amount`}>Belopp per månad (kr)</Label>
-          <InfoButton title="Månadssparande">
-            <p>
-              Beloppet ingår i överföringen till sparande och dras från det du
-              har kvar efter utgifter.
-            </p>
-            <p>
-              Ändring och avslut gäller från valt datum. Tidigare perioders
-              belopp behålls.
-            </p>
-          </InfoButton>
+    <Form
+      action={action}
+      pending={pending}
+      error={state.error}
+      validate={validateSaving}
+      fieldErrors={{ name: state.nameError, amount: state.amountError }}
+      className="space-y-5"
+    >
+      <FormSection title="Grunduppgifter">
+        <div className="ui-field">
+          <Label htmlFor={`${fieldId}-name`}>Namn på sparandet</Label>
+          <Input
+            id={`${fieldId}-name`}
+            name="name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Till exempel buffert eller semester"
+            maxLength={160}
+            required
+            disabled={pending}
+          />
         </div>
-        <Input
-          id={`${fieldId}-amount`}
-          name="amount"
-          inputMode="decimal"
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-          placeholder="0,00"
-          required
-          disabled={pending}
-          aria-invalid={Boolean(state.amountError)}
-          aria-describedby={
-            state.amountError ? `${fieldId}-amount-error` : undefined
-          }
-        />
-        {state.amountError ? (
-          <p id={`${fieldId}-amount-error`} role="alert" className="ui-error">
-            {state.amountError}
-          </p>
-        ) : null}
-      </div>
-      {state.error ? (
-        <p role="alert" className="ui-error">
-          {state.error}
-        </p>
-      ) : null}
+        <div className="ui-field">
+          <div className="flex items-center gap-1">
+            <Label htmlFor={`${fieldId}-amount`}>Belopp per månad (kr)</Label>
+            <InfoButton title="Månadssparande">
+              <p>
+                Beloppet ingår i överföringen till sparande och dras från det du
+                har kvar efter utgifter.
+              </p>
+              <p>
+                Ändring och avslut gäller från valt datum. Tidigare perioders
+                belopp behålls.
+              </p>
+            </InfoButton>
+          </div>
+          <Input
+            id={`${fieldId}-amount`}
+            name="amount"
+            inputMode="decimal"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            placeholder="0,00"
+            required
+            disabled={pending}
+          />
+        </div>
+      </FormSection>
+      <FormSection title="Datum och giltighet">
+        <fieldset disabled={pending}>
+          <VersionFields version={saving} fields={versionFields} />
+        </fieldset>
+        <div className="ui-field">
+          <Label htmlFor={`${fieldId}-period`}>
+            {saving ? "Ändringen gäller från" : "Från och med"}
+          </Label>
+          <Input
+            id={`${fieldId}-period`}
+            name="period"
+            type="date"
+            required
+            value={effectivePeriod}
+            onChange={(event) => setEffectivePeriod(event.target.value)}
+            min={
+              saving
+                ? (versionBounds(saving).start ?? "1900-01-01")
+                : "1900-01-01"
+            }
+            max={
+              saving
+                ? (versionBounds(saving).end ?? "2199-12-31")
+                : "2199-12-31"
+            }
+            disabled={pending}
+          />
+        </div>
+      </FormSection>
       <FormActions>
         <ActionIconButton
           type="submit"
@@ -178,7 +171,7 @@ export function SavingForm({
           <Save aria-hidden="true" />
         </ActionIconButton>
       </FormActions>
-    </form>
+    </Form>
   );
 }
 
@@ -273,7 +266,12 @@ export function RemoveSavingForm({
   useFormGuard(null, pending);
   useCloseAfterSave(Boolean(state.success), pending, onRemoved);
   return (
-    <form action={action} className="space-y-4">
+    <Form
+      action={action}
+      pending={pending}
+      error={state.error}
+      className="space-y-4"
+    >
       <input type="hidden" name="revision" value={saving.revision} />
       <p>
         Avsluta {saving.name} från valt datum? Tidigare värden och kommande
@@ -291,29 +289,27 @@ export function RemoveSavingForm({
         max={versionBounds(saving).end ?? "2199-12-31"}
         disabled={pending}
       />
-      {state.error ? (
-        <p role="alert" className="ui-error">
-          {state.error}
-        </p>
-      ) : null}
       <div className="flex justify-end gap-2">
-        <ActionIconButton
+        <Button
+          type="button"
           ref={cancelRef}
-          label="Avbryt"
+          aria-label="Avbryt"
           disabled={pending}
           onClick={onCancel}
         >
           <X aria-hidden="true" />
-        </ActionIconButton>
-        <ActionIconButton
+          Avbryt
+        </Button>
+        <Button
           type="submit"
-          label={`Bekräfta avslut av ${saving.name}`}
-          tone="danger"
-          pending={pending}
+          aria-label={`Bekräfta avslut av ${saving.name}`}
+          variant="destructive"
+          disabled={pending}
         >
           <CircleStop aria-hidden="true" />
-        </ActionIconButton>
+          Ja, avsluta
+        </Button>
       </div>
-    </form>
+    </Form>
   );
 }

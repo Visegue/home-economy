@@ -12,6 +12,7 @@ import {
 import { PeriodWriteError } from "@/features/periods/write";
 import { addExpense, removeExpense, removeIncome, saveIncome } from "./data";
 import { expenseSchema, incomeSchema } from "./model";
+import { expenseFormValues } from "./form-data";
 
 export interface FormState {
   error?: string;
@@ -53,37 +54,7 @@ export async function addExpenseAction(
     .optional()
     .safeParse(id || undefined);
   if (!parsedId.success) return { error: "Utgiften kunde inte hittas." };
-  const parsed = expenseSchema.safeParse({
-    mode: data.get("mode") ?? undefined,
-    revision: data.get("revision") ?? undefined,
-    scheduledDay: data.get("scheduledDay") ?? undefined,
-    name: data.get("name"),
-    amount: data.get("amount"),
-    period: data.get("period"),
-    type: data.get("type"),
-    months: data.get("months"),
-    nextDueOn: data.get("nextDueOn") ?? "",
-    ownerIds: data.getAll("ownerIds"),
-    settlement:
-      data.get("type") === "settlement"
-        ? {
-            markupAmountInOre:
-              data.get("markupEnabled") === "on" &&
-              data.get("markupType") === "amount"
-                ? data.get("markup")
-                : null,
-            markupPercent:
-              data.get("markupEnabled") === "on" &&
-              data.get("markupType") === "percent"
-                ? data.get("markup")
-                : null,
-            inflationPercent:
-              data.get("inflationEnabled") === "on"
-                ? data.get("inflation")
-                : null,
-          }
-        : undefined,
-  });
+  const parsed = expenseSchema.safeParse(expenseFormValues(data));
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
   return mutate(async () => {
     const savedId = await addExpense(parsed.data, parsedId.data);

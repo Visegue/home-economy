@@ -1,15 +1,16 @@
 "use client";
 
+import { SelectTrigger } from "@home-economy/ui/form";
+
 import { ChoiceInput } from "@home-economy/ui/choice";
 
 import { z } from "zod";
-import { Input } from "@/components/ui/input";
+import { Input } from "@home-economy/ui/form";
 import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
-  SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { InfoButton } from "@/components/info-button";
@@ -60,7 +61,6 @@ export function SettlementFields({
     inflationPercent: draft.inflationEnabled ? draft.inflation : null,
   });
   let forecast: ReturnType<typeof settlementForecast> | undefined;
-  let error: string | undefined;
   if (
     parsedAmount.success &&
     parsedAmount.data > 0 &&
@@ -75,11 +75,8 @@ export function SettlementFields({
         nextDueOn,
         adjustments.data,
       );
-    } catch (caught) {
-      error =
-        caught instanceof Error
-          ? caught.message
-          : "Kontrollera beräkningsunderlaget.";
+    } catch {
+      // A partial/invalid forecast is unknown; submission supplies field feedback.
     }
   }
   return (
@@ -124,7 +121,11 @@ export function SettlementFields({
                   })
                 }
               >
-                <SelectTrigger id="settlement-markup-type" className="w-full">
+                <SelectTrigger
+                  name="markupType"
+                  id="settlement-markup-type"
+                  className="w-full"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -239,8 +240,11 @@ export function SettlementFields({
           </>
         ) : (
           <p className="text-muted-foreground">
-            {error ??
-              "Ange kostnad, datum och giltiga påslag för att se beräkningen."}
+            Behövs vid nästa utgift:{" "}
+            <output aria-label="Beräknat totalbelopp">—</output>
+            <br />
+            Att avsätta:{" "}
+            <output aria-label="Beräknad månadsavsättning">—</output> per månad
           </p>
         )}
       </div>

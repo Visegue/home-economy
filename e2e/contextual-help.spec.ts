@@ -50,6 +50,10 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
     .getByRole("radio", { name: "Avsatt utgift", exact: true })
     .check();
   await expense.getByLabel("Belopp per betalning (kr)").fill("1200");
+  await expect(
+    expense.getByLabel("Beräknad månadsavsättning", { exact: true }),
+  ).toHaveText("—");
+  await expense.getByLabel("Nästa betalning").fill("2099-01-01");
   await expect(expense).toContainText("100,00 kr per månad");
   await expense
     .getByRole("button", { name: "Information om månadsavsättningen" })

@@ -1,4 +1,4 @@
-import { Input } from "@/components/ui/input";
+import { Input } from "@home-economy/ui/form";
 import { Label } from "@/components/ui/label";
 import { InfoButton } from "@/components/info-button";
 
@@ -41,7 +41,7 @@ export function IncomeField({
           aria-describedby={error ? "income-error" : undefined}
           className="pr-20"
         />
-        <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
+        <span className="pointer-events-none absolute top-0 right-3 flex h-11 items-center text-xs text-muted-foreground">
           kr/mån
         </span>
       </div>

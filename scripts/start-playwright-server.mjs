@@ -19,6 +19,15 @@ try {
         [0, 1, 2].map((retry) => `theme-${theme}-${retry}`),
       ),
       "overview-0",
+      ...["light", "dark"].flatMap((theme) =>
+        [0, 1, 2].map((retry) => `form-validation-${theme}-${retry}`),
+      ),
+      ...["light", "dark"].flatMap((theme) =>
+        [0, 1, 2].map((retry) => `form-reflow-${theme}-${retry}`),
+      ),
+      "form-hierarchy-0",
+      "form-hierarchy-1",
+      "form-hierarchy-2",
       "overview-1",
       "overview-2",
       "onboarding-0",

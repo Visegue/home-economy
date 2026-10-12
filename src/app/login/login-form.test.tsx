@@ -42,6 +42,24 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("LoginForm", () => {
+  it("shows local field feedback only after submit and corrects it on blur without auth requests", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm emailConfigured googleConfigured />);
+    const email = screen.getByLabelText("E-postadress");
+    await user.type(email, "fel");
+    await user.tab();
+    expect(email).not.toHaveAttribute("aria-invalid", "true");
+    await user.click(screen.getByRole("button", { name: "Logga in" }));
+    expect(email).toHaveAttribute("aria-invalid", "true");
+    expect(email).toHaveFocus();
+    expect(email).toHaveAccessibleDescription("Ange en giltig e-postadress.");
+    await user.clear(email);
+    await user.type(email, "ada@example.test");
+    await user.tab();
+    expect(email).not.toHaveAttribute("aria-invalid", "true");
+    expect(authMocks.signInEmail).not.toHaveBeenCalled();
+  });
+
   it("creates a password account and explains verification", async () => {
     authMocks.signUpEmail.mockResolvedValue({ data: {}, error: null });
     const user = userEvent.setup();
@@ -86,6 +104,10 @@ describe("LoginForm", () => {
 
     expect(authMocks.signUpEmail).not.toHaveBeenCalled();
     expect(screen.getByText("Lösenorden matchar inte.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Upprepa")).toHaveFocus();
+    expect(screen.getByLabelText("Upprepa")).toHaveAccessibleDescription(
+      "Lösenorden matchar inte.",
+    );
   });
 
   it("recovers when Google sign-in rejects", async () => {
