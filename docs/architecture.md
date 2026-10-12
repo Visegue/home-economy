@@ -16,6 +16,10 @@ flowchart LR
   RLS --> DB["Miljöns Neon-branch"]
 ```
 
+## Gemensam UI-presentation
+
+Appen konsumerar det privata workspace-paketet `@home-economy/ui` från `packages/ui`. Paketet äger tokens, basprimitiver och delade presentationsmönster, utan routing, auth eller ekonomiska regler/data. Källexports behåller separata server-/klientgränser och följer samma apprelease. Rootlayouten initierar webbläsarens System/Ljust/Mörkt före målning; den efterföljande lyssnaren följer OS- och lagringsändringar. Se [UI-regler och konsumentinventering](ui-components.md) och [ADR 0006](adr/0006-private-ui-workspace-package.md).
+
 ## Säkerhetsgränser
 
 - OAuth- och auth-hemligheter samt databasanslutningar finns bara på servern.

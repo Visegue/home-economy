@@ -15,6 +15,9 @@ try {
     await migrate(drizzle(database), { migrationsFolder: "drizzle" });
     const passwordHash = await hashPassword("synthetic-account-password-123");
     for (const id of [
+      ...["light", "dark"].flatMap((theme) =>
+        [0, 1, 2].map((retry) => `theme-${theme}-${retry}`),
+      ),
       "overview-0",
       "overview-1",
       "overview-2",

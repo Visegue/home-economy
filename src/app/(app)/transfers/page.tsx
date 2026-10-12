@@ -1,3 +1,4 @@
+import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,24 +30,22 @@ export default async function TransfersPage({
         <Link href={`/?month=${period}`} className="text-sm underline">
           Till månadsöversikten
         </Link>
-        <h1 className="mt-3 text-2xl font-semibold">Överföringar och värden</h1>
         <p className="text-muted-foreground">
           Bekräftade insättningar och uttag per ändamål.
         </p>
       </div>
       <form className="flex flex-wrap items-end gap-3">
-        <label htmlFor="funding-month" className="space-y-1">
+        <Label htmlFor="funding-month" className="grid gap-2">
           Avser månad
           <Input
             id="funding-month"
             aria-label="Avser månad"
-            className="block rounded-md border p-2"
             type="month"
             name="month"
             defaultValue={period}
             required
           />
-        </label>
+        </Label>
         <Button>Visa</Button>
       </form>
       {purposes.length ? (

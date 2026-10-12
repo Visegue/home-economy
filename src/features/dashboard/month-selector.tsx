@@ -36,7 +36,7 @@ export function MonthSelector({ period }: { period: string }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="ui-field">
       <Label htmlFor="overview-month">Välj månad</Label>
       <div className="flex flex-wrap items-center gap-2">
         <Button

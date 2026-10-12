@@ -1,5 +1,7 @@
 "use client";
 
+import { ChoiceInput } from "@home-economy/ui/choice";
+
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Pencil, Save, Trash2, X } from "lucide-react";
 import { MemberAvatar } from "@/components/member-avatar";
@@ -26,7 +28,7 @@ import {
 
 function Feedback({ state }: { state: MemberFormState }) {
   return state.error ? (
-    <p role="alert" className="text-sm text-destructive">
+    <p role="alert" className="ui-error">
       {state.error}
     </p>
   ) : state.success ? (
@@ -131,8 +133,8 @@ function PersonForm({
         </div>
         <div className="grid w-fit grid-cols-4 gap-2 sm:grid-cols-6">
           {memberColors.map((preset) => (
-            <label key={preset.value} className="relative cursor-pointer">
-              <input
+            <Label key={preset.value} className="relative cursor-pointer">
+              <ChoiceInput
                 type="radio"
                 name="colorPreset"
                 value={preset.value}
@@ -146,11 +148,11 @@ function PersonForm({
                 title={preset.name}
               >
                 <span
-                  className="size-8 rounded-full ring-1 ring-black/10 ring-inset"
+                  className="size-8 rounded-full ring-1 ring-foreground/15 ring-inset"
                   style={{ backgroundColor: preset.value }}
                 />
               </span>
-            </label>
+            </Label>
           ))}
         </div>
         <div className="flex items-center gap-3">

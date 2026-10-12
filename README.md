@@ -220,3 +220,5 @@ Under **Inställningar → Konto** visas kopplade inloggningssätt. Befintligt l
 ## Licens
 
 [MIT](LICENSE): programvaran ges i befintligt skick, utan garanti. Ansvarsfriskrivningen garanterar inte ansvarsfrihet i alla jurisdiktioner.
+
+Gemensam UI-grund, teman och regler för nya sidor beskrivs i [docs/ui-components.md](docs/ui-components.md). Under Inställningar kan System, Ljust eller Mörkt väljas för denna webbläsare.

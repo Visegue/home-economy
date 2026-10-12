@@ -42,10 +42,7 @@ describe("AppShell", () => {
       within(desktopNavigation).getByRole("link", { name: "Balans" }),
     ).toHaveAttribute("href", "/balance");
     expect(
-      within(screen.getByRole("navigation", { name: "Kontomeny" })).getByRole(
-        "link",
-        { name: "Inställningar" },
-      ),
+      within(desktopNavigation).getByRole("link", { name: "Inställningar" }),
     ).toHaveAttribute("href", "/settings");
     expect(screen.getByText("Ada")).toBeInTheDocument();
     expect(
@@ -73,4 +70,20 @@ describe("AppShell", () => {
     expect(screen.getByText("Testhushållet")).toBeInTheDocument();
     expect(screen.getByText("Sidinnehåll")).toBeInTheDocument();
   });
+});
+
+it.each([
+  ["/history", "Historik och kommande ändringar"],
+  ["/transfers", "Överföringar och värden"],
+])("shows one explicit page heading for %s", (pathname, title) => {
+  navigationMocks.pathname = pathname;
+  render(
+    <AppShell householdName="Testhushållet" userName="Ada">
+      <p>Innehåll</p>
+    </AppShell>,
+  );
+  expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+  expect(
+    screen.getByRole("heading", { level: 1, name: title }),
+  ).toBeInTheDocument();
 });

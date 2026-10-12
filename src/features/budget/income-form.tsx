@@ -1,5 +1,8 @@
 "use client";
 
+import { FormActions } from "@home-economy/ui/layout";
+import { ChoiceInput } from "@home-economy/ui/choice";
+
 import { useActionState, useEffect, useRef, useState } from "react";
 import { AddCardButton } from "@/components/add-card-button";
 import {
@@ -131,7 +134,7 @@ function IncomeForm({
     <form action={action} className="space-y-4">
       {income ? <input type="hidden" name="id" value={income.id} /> : null}
       <fieldset disabled={pending} className="space-y-4">
-        <div className="space-y-2">
+        <div className="ui-field">
           <Label htmlFor="income-name">Namn på inkomsten</Label>
           <Input
             id="income-name"
@@ -143,7 +146,7 @@ function IncomeForm({
             required
           />
         </div>
-        <div className="space-y-2">
+        <div className="ui-field">
           <div className="flex items-center gap-1">
             <Label htmlFor="income-amount">
               Belopp per månad efter skatt (kr)
@@ -169,17 +172,17 @@ function IncomeForm({
             required
           />
         </div>
-        <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-          <input
+        <Label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+          <ChoiceInput
             type="checkbox"
             checked={ongoing}
             onChange={(event) => setOngoing(event.target.checked)}
             className="size-4 accent-primary"
           />
           Gäller tills vidare
-        </label>
+        </Label>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
+          <div className="ui-field">
             <Label htmlFor="income-start">
               {income ? "Ändringen gäller från" : "Från och med"}
             </Label>
@@ -205,7 +208,7 @@ function IncomeForm({
           {ongoing ? (
             <input type="hidden" name="endsOn" value="" />
           ) : (
-            <div className="space-y-2">
+            <div className="ui-field">
               <Label htmlFor="income-end">Till och med</Label>
               <Input
                 id="income-end"
@@ -229,11 +232,11 @@ function IncomeForm({
         ) : null}
       </fieldset>
       {state.error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="ui-error">
           {state.error}
         </p>
       ) : null}
-      <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-popover pt-3">
+      <FormActions>
         <ActionIconButton
           type="submit"
           label="Spara inkomst"
@@ -242,7 +245,7 @@ function IncomeForm({
         >
           <Save aria-hidden="true" />
         </ActionIconButton>
-      </div>
+      </FormActions>
     </form>
   );
 }
@@ -287,7 +290,7 @@ function RemoveIncomeForm({
         versioner behålls.
       </p>
       {state.error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="ui-error">
           {state.error}
         </p>
       ) : null}

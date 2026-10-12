@@ -1,3 +1,4 @@
+import { AuthLayout } from "@home-economy/ui/layout";
 import { KeyRound } from "lucide-react";
 import Link from "next/link";
 
@@ -25,13 +26,15 @@ export default async function ResetPasswordPage({
   const invalid = firstValue(query.error) === "INVALID_TOKEN" || !token;
 
   return (
-    <main className="grid min-h-screen place-items-center px-4 py-12">
+    <AuthLayout compact>
       <Card className="w-full max-w-md shadow-xl shadow-primary/10">
         <CardHeader className="text-center">
           <div className="mx-auto mb-3 grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground">
             <KeyRound aria-hidden="true" />
           </div>
-          <CardTitle className="text-xl">Välj nytt lösenord</CardTitle>
+          <CardTitle as="h1" className="text-xl">
+            Välj nytt lösenord
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {invalid ? (
@@ -46,6 +49,6 @@ export default async function ResetPasswordPage({
           )}
         </CardContent>
       </Card>
-    </main>
+    </AuthLayout>
   );
 }

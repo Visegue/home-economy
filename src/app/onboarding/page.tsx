@@ -1,3 +1,4 @@
+import { AuthLayout } from "@home-economy/ui/layout";
 import { CircleDollarSign } from "lucide-react";
 import { redirect } from "next/navigation";
 
@@ -17,21 +18,20 @@ export default async function OnboardingPage() {
   if (household) redirect("/");
 
   return (
-    <main className="min-h-screen px-4 py-6 sm:px-6 sm:py-10">
-      <div className="mx-auto flex max-w-lg justify-end pb-6">
-        <UserMenu name={session.user.name} />
-      </div>
+    <AuthLayout header={<UserMenu name={session.user.name} />}>
       <Card className="mx-auto w-full max-w-lg shadow-xl shadow-primary/10">
         <CardHeader>
           <div className="mb-3 grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground">
             <CircleDollarSign aria-hidden="true" />
           </div>
-          <CardTitle className="text-xl">Skapa ditt hushåll</CardTitle>
+          <CardTitle as="h1" className="text-xl">
+            Skapa ditt hushåll
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <OnboardingForm />
         </CardContent>
       </Card>
-    </main>
+    </AuthLayout>
   );
 }

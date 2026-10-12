@@ -1,4 +1,5 @@
 "use client";
+
 import {
   createContext,
   useContext,
@@ -74,7 +75,7 @@ export function VersionFields({
         <input type="hidden" name="revision" value={version.revision} />
       ) : null}
       {version ? (
-        <div className="space-y-2">
+        <div className="ui-field">
           <Label htmlFor={`${id}-mode`}>Typ av ändring</Label>
           <Select
             name="mode"
@@ -95,7 +96,7 @@ export function VersionFields({
           </p>
         </div>
       ) : null}
-      <div className="space-y-2">
+      <div className="ui-field">
         <Label htmlFor={`${id}-day`}>Planerad dag i månaden</Label>
         <Input
           id={`${id}-day`}

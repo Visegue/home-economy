@@ -33,6 +33,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Validate app version
         run: pnpm check:version
+      - name: Verify UI package boundary
+        run: pnpm check:ui
       - name: Enforce PR version bump
         if: github.event_name == 'pull_request'
         env:

@@ -1,5 +1,8 @@
 "use client";
 
+import { FormActions } from "@home-economy/ui/layout";
+import { ChoiceInput } from "@home-economy/ui/choice";
+
 import Link from "next/link";
 import { MemberAvatar } from "@/components/member-avatar";
 import type { HouseholdPerson } from "@/features/households/members/model";
@@ -57,7 +60,7 @@ const expenseTypes = [
 
 function Feedback({ state }: { state: FormState }) {
   return state.error ? (
-    <p role="alert" className="text-sm text-destructive">
+    <p role="alert" className="ui-error">
       {state.error}
     </p>
   ) : state.success ? (
@@ -247,7 +250,7 @@ export function ExpenseForm({
       {expense ? <input type="hidden" name="id" value={expense.id} /> : null}
       <fieldset disabled={pending} className="space-y-5">
         <VersionFields version={expense} fields={versionFields} />
-        <div className="space-y-2">
+        <div className="ui-field">
           <Label htmlFor="expense-period">
             {expense ? "Ändringen gäller från" : "Från och med"}
           </Label>
@@ -308,12 +311,12 @@ export function ExpenseForm({
             </>
           ) : (
             expenseTypes.map((option) => (
-              <label
+              <Label
                 key={option.value}
                 aria-label={option.label}
                 className="flex cursor-pointer items-start gap-2 rounded-lg border p-3 has-checked:border-primary has-checked:bg-primary/5"
               >
-                <input
+                <ChoiceInput
                   type="radio"
                   name="type"
                   value={option.value}
@@ -329,11 +332,11 @@ export function ExpenseForm({
                     {option.description}
                   </span>
                 </span>
-              </label>
+              </Label>
             ))
           )}
         </fieldset>
-        <div className="space-y-2">
+        <div className="ui-field">
           <Label htmlFor="expense-name">Namn på utgiften</Label>
           <Input
             id="expense-name"
@@ -345,7 +348,7 @@ export function ExpenseForm({
             required
           />
         </div>
-        <div className="space-y-2">
+        <div className="ui-field">
           <Label htmlFor="expense-amount">
             {type === "settlement"
               ? "Kostnad i dag (kr)"
@@ -364,7 +367,7 @@ export function ExpenseForm({
         {type === "allocated" ? (
           <>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
+              <div className="ui-field">
                 <Label htmlFor="expense-months">Hur ofta?</Label>
                 <Select name="months" value={months} onValueChange={setMonths}>
                   <SelectTrigger id="expense-months" className="w-full">
@@ -382,7 +385,7 @@ export function ExpenseForm({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
+              <div className="ui-field">
                 <Label htmlFor="expense-due">Nästa betalning</Label>
                 <Input
                   id="expense-due"
@@ -435,7 +438,7 @@ export function ExpenseForm({
             onDraftChange={setSettlementDraft}
           />
         ) : null}
-        <fieldset className="space-y-2">
+        <fieldset className="ui-field">
           <legend className="mb-2 text-sm font-medium">
             <span className="inline-flex items-center gap-1">
               Ägare (frivilligt)
@@ -451,11 +454,11 @@ export function ExpenseForm({
             <>
               <div className="flex flex-wrap gap-2">
                 {people.map((person) => (
-                  <label
+                  <Label
                     key={person.id}
                     className="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 has-checked:border-primary has-checked:bg-primary/5"
                   >
-                    <input
+                    <ChoiceInput
                       type="checkbox"
                       name="ownerIds"
                       value={person.id}
@@ -475,7 +478,7 @@ export function ExpenseForm({
                       className="size-7 text-[10px]"
                     />
                     {person.name}
-                  </label>
+                  </Label>
                 ))}
               </div>
             </>
@@ -489,7 +492,7 @@ export function ExpenseForm({
         </fieldset>
       </fieldset>
       <Feedback state={state} />
-      <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-popover pt-3">
+      <FormActions>
         <ActionIconButton
           type="submit"
           label={type === "settlement" ? "Spara avräkning" : "Spara utgift"}
@@ -498,7 +501,7 @@ export function ExpenseForm({
         >
           <Save aria-hidden="true" />
         </ActionIconButton>
-      </div>
+      </FormActions>
     </form>
   );
 }

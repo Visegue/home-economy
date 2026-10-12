@@ -1,3 +1,4 @@
+import { AuthLayout } from "@home-economy/ui/layout";
 import { KeyRound } from "lucide-react";
 import { redirect } from "next/navigation";
 
@@ -20,13 +21,15 @@ export default async function ForgotPasswordPage() {
   if (session) redirect("/");
 
   return (
-    <main className="grid min-h-screen place-items-center px-4 py-12">
+    <AuthLayout compact>
       <Card className="w-full max-w-md shadow-xl shadow-primary/10">
         <CardHeader className="text-center">
           <div className="mx-auto mb-3 grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground">
             <KeyRound aria-hidden="true" />
           </div>
-          <CardTitle className="text-xl">Återställ lösenordet</CardTitle>
+          <CardTitle as="h1" className="text-xl">
+            Återställ lösenordet
+          </CardTitle>
           <CardDescription>
             Vi skickar en tidsbegränsad länk till din verifierade e-postadress.
           </CardDescription>
@@ -35,6 +38,6 @@ export default async function ForgotPasswordPage() {
           <ForgotPasswordForm configured={isEmailAuthConfigured()} />
         </CardContent>
       </Card>
-    </main>
+    </AuthLayout>
   );
 }

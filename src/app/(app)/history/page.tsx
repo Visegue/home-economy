@@ -43,9 +43,6 @@ export default async function HistoryPage() {
         <Link className="underline" href="/">
           Till månadsöversikten
         </Link>
-        <h1 className="text-2xl font-semibold">
-          Historik och kommande ändringar
-        </h1>
         <p className="text-sm text-muted-foreground">
           Välj den version du vill ändra eller rätta. Senare versioner ligger
           kvar.

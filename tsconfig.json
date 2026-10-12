@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@home-economy/ui": ["./packages/ui/src"],
+      "@home-economy/ui/*": ["./packages/ui/src/*"]
     }
   },
   "include": [
