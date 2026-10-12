@@ -190,7 +190,7 @@ export function AccountSettings({
         </output>
       ) : null}
       {error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="ui-error">
           {error}
         </p>
       ) : null}
@@ -253,7 +253,7 @@ function ChangePasswordForm({
         value={email}
       />
       <fieldset disabled={pending} className="space-y-4">
-        <div className="space-y-2">
+        <div className="ui-field">
           <Label htmlFor="current-password">Nuvarande lösenord</Label>
           <Input
             id="current-password"
@@ -265,7 +265,7 @@ function ChangePasswordForm({
             onChange={(event) => setCurrentPassword(event.target.value)}
           />
         </div>
-        <div className="space-y-2">
+        <div className="ui-field">
           <Label htmlFor="account-new-password">Nytt lösenord</Label>
           <Input
             id="account-new-password"
@@ -279,7 +279,7 @@ function ChangePasswordForm({
             onChange={(event) => setNewPassword(event.target.value)}
           />
         </div>
-        <div className="space-y-2">
+        <div className="ui-field">
           <Label htmlFor="account-confirm-password">Upprepa lösenordet</Label>
           <Input
             id="account-confirm-password"
@@ -301,7 +301,7 @@ function ChangePasswordForm({
         </Link>
       </fieldset>
       {error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="ui-error">
           {error}
         </p>
       ) : null}

@@ -8,6 +8,9 @@ import {
 describe("PR version gate", () => {
   it.each([
     "src/app/page.tsx",
+    "packages/ui/src/button.tsx",
+    "packages/ui/styles.css",
+    "packages/ui/package.json",
     "src/db/schema/household.ts",
     "public/logo.svg",
     "drizzle/0001.sql",
@@ -41,6 +44,7 @@ describe("PR version gate", () => {
     "src/lib/money.test.ts",
     "scripts/check-pr-version.test.mjs",
     "e2e/household.spec.ts",
+    "packages/ui/src/theme.test.tsx",
   ])("allows %s without a bump", (path) => {
     expect(needsVersionBump(path)).toBe(false);
   });

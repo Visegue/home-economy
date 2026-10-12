@@ -1,3 +1,4 @@
+import { ThemePicker } from "@home-economy/ui/theme";
 import { MemberAvatar } from "@/components/member-avatar";
 import {
   CardManagement,
@@ -47,6 +48,14 @@ export default async function SettingsPage({
   return (
     <DayDefaultsProvider days={household}>
       <div className="max-w-4xl space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Utseende</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ThemePicker />
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader>
             <CardTitle>Standarddagar</CardTitle>

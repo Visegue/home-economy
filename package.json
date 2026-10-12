@@ -1,6 +1,6 @@
 {
   "name": "home-economy",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -26,11 +26,13 @@
     "db:migrate": "bun scripts/migrate.mjs",
     "db:check": "bun scripts/check-database.mjs",
     "db:studio": "bun --bun drizzle-kit studio",
-    "check": "pnpm check:version && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build:check"
+    "check": "pnpm check:version && pnpm check:ui && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build:check",
+    "check:ui": "bun scripts/check-ui-boundary.mjs"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.5",
     "@electric-sql/pglite": "0.5.8",
+    "@home-economy/ui": "workspace:*",
     "@next/env": "16.3.6",
     "@vercel/functions": "^3.9.9",
     "better-auth": "1.7.5",

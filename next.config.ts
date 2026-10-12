@@ -17,8 +17,10 @@ const contentSecurityPolicy = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  devIndicators: { position: "top-left" },
   allowedDevOrigins: ["127.0.0.1"],
   poweredByHeader: false,
+  transpilePackages: ["@home-economy/ui"],
   serverExternalPackages: ["@electric-sql/pglite"],
   async headers() {
     return [

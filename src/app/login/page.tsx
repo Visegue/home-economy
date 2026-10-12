@@ -1,3 +1,4 @@
+import { AuthLayout } from "@home-economy/ui/layout";
 import { CircleDollarSign } from "lucide-react";
 import { redirect } from "next/navigation";
 
@@ -20,13 +21,15 @@ export default async function LoginPage() {
   const googleConfigured = isGoogleAuthConfigured();
 
   return (
-    <main className="grid min-h-screen place-items-center px-4 py-12">
+    <AuthLayout>
       <Card className="w-full max-w-lg shadow-xl shadow-primary/10">
         <CardHeader className="text-center">
           <div className="mx-auto mb-3 grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground">
             <CircleDollarSign aria-hidden="true" />
           </div>
-          <CardTitle className="text-xl">Välkommen tillbaka</CardTitle>
+          <CardTitle as="h1" className="text-xl">
+            Välkommen tillbaka
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <LoginForm
@@ -35,6 +38,6 @@ export default async function LoginPage() {
           />
         </CardContent>
       </Card>
-    </main>
+    </AuthLayout>
   );
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { ChoiceInput } from "@home-economy/ui/choice";
+
 import { z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,7 +84,7 @@ export function SettlementFields({
   }
   return (
     <>
-      <div className="space-y-2">
+      <div className="ui-field">
         <Label htmlFor="settlement-due">Nästa utgiftsdatum</Label>
         <Input
           id="settlement-due"
@@ -96,8 +98,8 @@ export function SettlementFields({
         />
       </div>
       <div className="space-y-3">
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input
+        <Label className="flex items-center gap-2 text-sm font-medium">
+          <ChoiceInput
             type="checkbox"
             name="markupEnabled"
             checked={draft.markupEnabled}
@@ -107,10 +109,10 @@ export function SettlementFields({
             className="size-4 accent-primary"
           />
           Lägg till påslag
-        </label>
+        </Label>
         {draft.markupEnabled ? (
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
+            <div className="ui-field">
               <Label htmlFor="settlement-markup-type">Typ av påslag</Label>
               <Select
                 name="markupType"
@@ -131,7 +133,7 @@ export function SettlementFields({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div className="ui-field">
               <Label htmlFor="settlement-markup">
                 {draft.markupType === "percent" ? "Påslag (%)" : "Påslag (kr)"}
               </Label>
@@ -150,8 +152,8 @@ export function SettlementFields({
         ) : null}
       </div>
       <div className="space-y-3">
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <input
+        <Label className="flex items-center gap-2 text-sm font-medium">
+          <ChoiceInput
             type="checkbox"
             name="inflationEnabled"
             checked={draft.inflationEnabled}
@@ -164,9 +166,9 @@ export function SettlementFields({
             className="size-4 accent-primary"
           />
           Räkna med inflation
-        </label>
+        </Label>
         {draft.inflationEnabled ? (
-          <div className="space-y-2">
+          <div className="ui-field">
             <Label htmlFor="settlement-inflation">Inflation per år (%)</Label>
             <Input
               id="settlement-inflation"

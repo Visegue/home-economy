@@ -58,7 +58,7 @@ export function ForgotPasswordForm({ configured }: { configured: boolean }) {
 
   return (
     <form className="space-y-4" onSubmit={requestReset}>
-      <div className="space-y-2">
+      <div className="ui-field">
         <Label htmlFor="reset-email">E-postadress</Label>
         <Input
           id="reset-email"
@@ -70,7 +70,7 @@ export function ForgotPasswordForm({ configured }: { configured: boolean }) {
         />
       </div>
       {message ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="ui-error">
           {message}
         </p>
       ) : null}

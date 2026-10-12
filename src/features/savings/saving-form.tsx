@@ -1,5 +1,7 @@
 "use client";
 
+import { FormActions } from "@home-economy/ui/layout";
+
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { AddCardButton } from "@/components/add-card-button";
 import {
@@ -83,7 +85,7 @@ export function SavingForm({
       <fieldset disabled={pending}>
         <VersionFields version={saving} fields={versionFields} />
       </fieldset>
-      <div className="space-y-2">
+      <div className="ui-field">
         <Label htmlFor={`${fieldId}-period`}>
           {saving ? "Ändringen gäller från" : "Från och med"}
         </Label>
@@ -105,7 +107,7 @@ export function SavingForm({
           disabled={pending}
         />
       </div>
-      <div className="space-y-2">
+      <div className="ui-field">
         <Label htmlFor={`${fieldId}-name`}>Namn på sparandet</Label>
         <Input
           id={`${fieldId}-name`}
@@ -122,16 +124,12 @@ export function SavingForm({
           }
         />
         {state.nameError ? (
-          <p
-            id={`${fieldId}-name-error`}
-            role="alert"
-            className="text-sm text-destructive"
-          >
+          <p id={`${fieldId}-name-error`} role="alert" className="ui-error">
             {state.nameError}
           </p>
         ) : null}
       </div>
-      <div className="space-y-2">
+      <div className="ui-field">
         <div className="flex items-center gap-1">
           <Label htmlFor={`${fieldId}-amount`}>Belopp per månad (kr)</Label>
           <InfoButton title="Månadssparande">
@@ -160,21 +158,17 @@ export function SavingForm({
           }
         />
         {state.amountError ? (
-          <p
-            id={`${fieldId}-amount-error`}
-            role="alert"
-            className="text-sm text-destructive"
-          >
+          <p id={`${fieldId}-amount-error`} role="alert" className="ui-error">
             {state.amountError}
           </p>
         ) : null}
       </div>
       {state.error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="ui-error">
           {state.error}
         </p>
       ) : null}
-      <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t bg-popover pt-3">
+      <FormActions>
         <ActionIconButton
           type="submit"
           label="Spara sparande"
@@ -183,7 +177,7 @@ export function SavingForm({
         >
           <Save aria-hidden="true" />
         </ActionIconButton>
-      </div>
+      </FormActions>
     </form>
   );
 }
@@ -298,7 +292,7 @@ export function RemoveSavingForm({
         disabled={pending}
       />
       {state.error ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="ui-error">
           {state.error}
         </p>
       ) : null}

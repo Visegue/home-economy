@@ -31,7 +31,7 @@ export function SaveNoticeProvider({ children }: { children: ReactNode }) {
       <output
         aria-live="polite"
         aria-atomic="true"
-        className="pointer-events-none fixed inset-x-4 bottom-24 z-[60] flex justify-center lg:bottom-6"
+        className="pointer-events-none fixed inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-[60] flex justify-center lg:bottom-6"
       >
         {notice ? (
           <span className="pointer-events-auto flex max-w-md items-center gap-3 rounded-xl border bg-card px-4 py-2 text-sm text-card-foreground shadow-lg">

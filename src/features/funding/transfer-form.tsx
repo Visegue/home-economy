@@ -1,4 +1,6 @@
 "use client";
+
+import { ChoiceInput } from "@home-economy/ui/choice";
 import { useActionState, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,7 +75,7 @@ function TransferForm({ purpose }: { purpose: Purpose }) {
         disabled={pending || Boolean(state.success)}
         className="space-y-4"
       >
-        <div className="space-y-2">
+        <div className="ui-field">
           <Label htmlFor={`${field}-kind`}>Händelse</Label>
           <Select
             name="kind"
@@ -96,7 +98,7 @@ function TransferForm({ purpose }: { purpose: Purpose }) {
             </SelectContent>
           </Select>
         </div>
-        <div className="space-y-2">
+        <div className="ui-field">
           <Label htmlFor={`${field}-date`}>Utfört datum</Label>
           <Input
             id={`${field}-date`}
@@ -109,7 +111,7 @@ function TransferForm({ purpose }: { purpose: Purpose }) {
             onChange={(e) => setDate(e.target.value)}
           />
         </div>
-        <div className="space-y-2">
+        <div className="ui-field">
           <Label htmlFor={`${field}-amount`}>Faktiskt belopp (kr)</Label>
           <Input
             id={`${field}-amount`}
@@ -125,7 +127,7 @@ function TransferForm({ purpose }: { purpose: Purpose }) {
             onChange={(e) => setAmount(e.target.value)}
           />
         </div>
-        <div className="space-y-2">
+        <div className="ui-field">
           <Label htmlFor={`${field}-month`}>Avser månad</Label>
           <Input
             id={`${field}-month`}
@@ -139,17 +141,17 @@ function TransferForm({ purpose }: { purpose: Purpose }) {
             Styr planuppföljningen. Värdet ändras på utfört datum.
           </p>
         </div>
-        <div className="space-y-2">
+        <div className="ui-field">
           <Label htmlFor={`${field}-note`}>Anteckning</Label>
           <Input id={`${field}-note`} name="note" maxLength={500} />
         </div>
         {state.warning ? (
           <div role="alert" className="space-y-2 rounded-md border p-3">
             <p>{state.warning}</p>
-            <label className="flex gap-2">
-              <input type="checkbox" name="confirmNegative" required />
+            <Label className="flex gap-2">
+              <ChoiceInput type="checkbox" name="confirmNegative" required />
               Jag bekräftar registreringen trots negativt värde
-            </label>
+            </Label>
           </div>
         ) : null}
         <Button type="submit">

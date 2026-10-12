@@ -173,7 +173,7 @@ export function LoginForm({
 
         <TabsContent value="sign-in" className="pt-3">
           <form className="space-y-4" onSubmit={signInWithEmail}>
-            <div className="space-y-2">
+            <div className="ui-field">
               <Label htmlFor="sign-in-email">E-postadress</Label>
               <Input
                 id="sign-in-email"
@@ -184,7 +184,7 @@ export function LoginForm({
                 disabled={!emailConfigured || pending}
               />
             </div>
-            <div className="space-y-2">
+            <div className="ui-field">
               <div className="flex items-center justify-between gap-4">
                 <Label htmlFor="sign-in-password">Lösenord</Label>
                 <Button asChild variant="link" size="xs" className="px-0">
@@ -214,7 +214,7 @@ export function LoginForm({
 
         <TabsContent value="sign-up" className="pt-3">
           <form className="space-y-4" onSubmit={signUpWithEmail}>
-            <div className="space-y-2">
+            <div className="ui-field">
               <Label htmlFor="sign-up-name">Namn</Label>
               <Input
                 id="sign-up-name"
@@ -226,7 +226,7 @@ export function LoginForm({
                 disabled={!emailConfigured || pending}
               />
             </div>
-            <div className="space-y-2">
+            <div className="ui-field">
               <Label htmlFor="sign-up-email">E-postadress</Label>
               <Input
                 id="sign-up-email"
@@ -238,7 +238,7 @@ export function LoginForm({
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
+              <div className="ui-field">
                 <Label htmlFor="sign-up-password">Lösenord</Label>
                 <Input
                   id="sign-up-password"
@@ -251,7 +251,7 @@ export function LoginForm({
                   disabled={!emailConfigured || pending}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="ui-field">
                 <Label htmlFor="sign-up-password-confirmation">Upprepa</Label>
                 <Input
                   id="sign-up-password-confirmation"

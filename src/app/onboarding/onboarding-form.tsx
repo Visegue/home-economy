@@ -21,7 +21,7 @@ export function OnboardingForm() {
 
   return (
     <form action={formAction} className="space-y-5">
-      <div className="space-y-2">
+      <div className="ui-field">
         <Label htmlFor="household-name">Namn på hushållet</Label>
         <Input
           id="household-name"
@@ -45,11 +45,7 @@ export function OnboardingForm() {
       />
 
       {state.error ? (
-        <p
-          id="household-error"
-          role="alert"
-          className="text-sm text-destructive"
-        >
+        <p id="household-error" role="alert" className="ui-error">
           {state.error}
           {state.errorReference ? (
             <span className="mt-1 block font-mono text-xs">

@@ -68,7 +68,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
   return (
     <form className="space-y-4" onSubmit={resetPassword}>
-      <div className="space-y-2">
+      <div className="ui-field">
         <Label htmlFor="new-password">Nytt lösenord</Label>
         <Input
           id="new-password"
@@ -81,7 +81,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
           disabled={pending}
         />
       </div>
-      <div className="space-y-2">
+      <div className="ui-field">
         <Label htmlFor="new-password-confirmation">Upprepa lösenordet</Label>
         <Input
           id="new-password-confirmation"
@@ -96,7 +96,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
       </div>
       <p className="text-xs text-muted-foreground">Minst 12 tecken.</p>
       {message ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="ui-error">
           {message}
         </p>
       ) : null}

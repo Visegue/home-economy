@@ -14,7 +14,7 @@ export function IncomeField({
   disabled: boolean;
 }) {
   return (
-    <div className="space-y-2">
+    <div className="ui-field">
       <div className="flex items-center gap-1">
         <Label htmlFor="monthly-net-income">
           Din månadsinkomst efter skatt (valfritt)
@@ -46,7 +46,7 @@ export function IncomeField({
         </span>
       </div>
       {error ? (
-        <p id="income-error" role="alert" className="text-sm text-destructive">
+        <p id="income-error" role="alert" className="ui-error">
           {error}
         </p>
       ) : null}
