@@ -105,3 +105,9 @@ Lokalt primärunderlag: `/Users/alexanderfridlund/.codex/visualizations/2026/10/
 ## Tillgänglighetsunderlag
 
 Ikonåtgärder behöver ett tillgängligt namn som beskriver syftet enligt [WCAG 1.1.1](https://www.w3.org/WAI/WCAG22/Understanding/non-text-content.html). Produktens befintliga ActionIconButton har aria-label, tooltip och pending-spärrning och ska återanvändas eller motsvaras av samma kontrakt i UI-paketet. Hjälp måste kunna nås med tangentbord och touch, inte bara hover. Kontrast verifieras för text och faktiskt använda ytor enligt [WCAG 1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html); klickytor och mellanrum enligt [WCAG 2.5.8](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html). Den föreslagna designen ska gå att förstå utan att enbart tolka färg.
+
+## Genomfört formulärsteg (#83)
+
+Formulärens gemensamma klientexport i `packages/ui/src/form.tsx` delar namngivna grupper, lokal submit/blur-feedback, aria-koppling och fokus. Appens `src/features/forms/validation.ts` återanvänder ekonomiska scheman, och lösenordsjämförelsen ligger i appens authpresentation. Servervalidering, generiska autentiseringsfel och behörigheter är fortsatt auktoritativa. Kompakt typval ligger först, med bevarade gemensamma/typegna utkast och låst typ vid redigering. Avsatt/avräkning visar — för ogiltigt beräkningsunderlag.
+
+Konsumenter, avsiktlig serverrenderad filterform, giltiga nollvärden och ADR-bedömning finns i [UI-komponenternas kontrakt](ui-components.md#formulärkontrakt-83). Den bekräftade paletten och navigationen från #97 gäller oförändrat.

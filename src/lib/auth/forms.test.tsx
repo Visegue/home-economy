@@ -26,6 +26,38 @@ import { ResetPasswordForm } from "@/app/reset-password/reset-password-form";
 beforeEach(() => vi.resetAllMocks());
 afterEach(cleanup);
 
+it("preserves password content and delegates its policy to auth", async () => {
+  requests.signIn.mockResolvedValue({ error: { status: 401 } });
+  const user = userEvent.setup();
+  render(<LoginForm emailConfigured googleConfigured={false} />);
+  await user.type(screen.getByLabelText("E-postadress"), "test@example.test");
+  await user.type(screen.getByLabelText("Lösenord"), " ".repeat(12));
+  await user.click(screen.getByRole("button", { name: "Logga in" }));
+  expect(requests.signIn).toHaveBeenCalledWith(
+    expect.objectContaining({ password: " ".repeat(12) }),
+  );
+});
+
+it("keeps a reachable generic server error until an explicit retry, without blur requests", async () => {
+  requests.signIn.mockResolvedValue({ error: { status: 401 } });
+  const user = userEvent.setup();
+  render(<LoginForm emailConfigured googleConfigured={false} />);
+  const email = screen.getByLabelText("E-postadress");
+  await user.type(email, "test@example.test");
+  await user.type(screen.getByLabelText("Lösenord"), "synthetic-password");
+  await user.click(screen.getByRole("button", { name: "Logga in" }));
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("E-postadressen eller lösenordet är fel.");
+  expect(alert).toHaveFocus();
+  await user.clear(email);
+  await user.type(email, "other@example.test");
+  await user.tab();
+  expect(alert).toHaveTextContent("E-postadressen eller lösenordet är fel.");
+  expect(requests.signIn).toHaveBeenCalledTimes(1);
+  await user.click(screen.getByRole("button", { name: "Logga in" }));
+  expect(requests.signIn).toHaveBeenCalledTimes(2);
+});
+
 it("reenables email login after a network failure and allows retry", async () => {
   requests.signIn
     .mockRejectedValueOnce(new TypeError("offline"))

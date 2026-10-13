@@ -1,5 +1,7 @@
 "use client";
 
+import { SelectTrigger } from "@home-economy/ui/form";
+
 import {
   createContext,
   useContext,
@@ -8,13 +10,13 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
+import { InfoButton } from "@/components/info-button";
+import { Input } from "@home-economy/ui/form";
 import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
-  SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { dateLabel, type VersionMetadata } from "./model";
@@ -82,7 +84,7 @@ export function VersionFields({
             value={fields.mode}
             onValueChange={fields.setMode}
           >
-            <SelectTrigger id={`${id}-mode`} className="w-full">
+            <SelectTrigger name="mode" id={`${id}-mode`} className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -90,14 +92,32 @@ export function VersionFields({
               <SelectItem value="correct">Rätta denna version</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-sm text-muted-foreground">
-            En rättelse behåller versionens startdatum och uppdaterar även
-            historiska månadsbelopp.
-          </p>
+          {fields.mode === "correct" ? (
+            <p className="border-warning/40 bg-warning/10 rounded-lg border p-3 text-sm">
+              En rättelse behåller versionens startdatum och uppdaterar även
+              historiska månadsbelopp.
+            </p>
+          ) : (
+            <InfoButton title="Ändring och rättelse">
+              <p>
+                Ändra från valt datum bevarar tidigare värden. En rättelse
+                behåller versionens startdatum och uppdaterar även historiska
+                månadsbelopp.
+              </p>
+            </InfoButton>
+          )}
         </div>
       ) : null}
       <div className="ui-field">
-        <Label htmlFor={`${id}-day`}>Planerad dag i månaden</Label>
+        <div className="flex items-center gap-1">
+          <Label htmlFor={`${id}-day`}>Planerad dag i månaden</Label>
+          <InfoButton title="Planerad dag">
+            <p>
+              Sista dagen används i kortare månader. Ingen överföring görs
+              automatiskt.
+            </p>
+          </InfoButton>
+        </div>
         <Input
           id={`${id}-day`}
           name="scheduledDay"
@@ -108,10 +128,6 @@ export function VersionFields({
           onChange={(event) => fields.setScheduledDay(event.target.value)}
           required
         />
-        <p className="text-sm text-muted-foreground">
-          Sista dagen används i kortare månader. Ingen överföring görs
-          automatiskt.
-        </p>
       </div>
       {version?.effectiveThrough ? (
         <p className="rounded-md bg-muted p-3 text-sm">

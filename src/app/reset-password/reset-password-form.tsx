@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Form, FormSection, Input } from "@home-economy/ui/form";
 import { Label } from "@/components/ui/label";
+import { matchingPasswords } from "@/lib/auth/form-validation";
 import { authClient } from "@/lib/auth/client";
 
 export function ResetPasswordForm({ token }: { token: string }) {
@@ -67,42 +68,45 @@ export function ResetPasswordForm({ token }: { token: string }) {
   }
 
   return (
-    <form className="space-y-4" onSubmit={resetPassword}>
-      <div className="ui-field">
-        <Label htmlFor="new-password">Nytt lösenord</Label>
-        <Input
-          id="new-password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={12}
-          maxLength={128}
-          required
-          disabled={pending}
-        />
-      </div>
-      <div className="ui-field">
-        <Label htmlFor="new-password-confirmation">Upprepa lösenordet</Label>
-        <Input
-          id="new-password-confirmation"
-          name="password-confirmation"
-          type="password"
-          autoComplete="new-password"
-          minLength={12}
-          maxLength={128}
-          required
-          disabled={pending}
-        />
-      </div>
-      <p className="text-xs text-muted-foreground">Minst 12 tecken.</p>
-      {message ? (
-        <p role="alert" className="ui-error">
-          {message}
-        </p>
-      ) : null}
+    <Form
+      className="space-y-4"
+      onSubmit={resetPassword}
+      validate={matchingPasswords}
+      pending={pending}
+      error={message}
+    >
+      <FormSection title="Lösenord">
+        <div className="ui-field">
+          <Label htmlFor="new-password">Nytt lösenord</Label>
+          <Input
+            id="new-password"
+            name="password"
+            type="password"
+            autoComplete="new-password"
+            minLength={12}
+            maxLength={128}
+            required
+            disabled={pending}
+          />
+        </div>
+        <div className="ui-field">
+          <Label htmlFor="new-password-confirmation">Upprepa lösenordet</Label>
+          <Input
+            id="new-password-confirmation"
+            name="password-confirmation"
+            type="password"
+            autoComplete="new-password"
+            minLength={12}
+            maxLength={128}
+            required
+            disabled={pending}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">Minst 12 tecken.</p>
+      </FormSection>
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Sparar…" : "Spara nytt lösenord"}
       </Button>
-    </form>
+    </Form>
   );
 }

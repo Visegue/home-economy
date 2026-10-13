@@ -9,6 +9,8 @@ import { memberIdSchema, memberSchema } from "./model";
 
 export interface MemberFormState {
   error?: string;
+  nameError?: string;
+  colorError?: string;
   success?: string;
 }
 
@@ -45,11 +47,17 @@ export async function saveMemberAction(
     name: data.get("name"),
     color: data.get("color") ?? undefined,
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+  if (!parsed.success)
+    return {
+      nameError: parsed.error.issues.find((issue) => issue.path[0] === "name")
+        ?.message,
+      colorError: parsed.error.issues.find((issue) => issue.path[0] === "color")
+        ?.message,
+    };
   return mutate(async () =>
     (await saveMember(parsed.data))
       ? { success: "Medlemmen har sparats." }
-      : { error: "Det finns redan en medlem med det namnet." },
+      : { nameError: "Det finns redan en medlem med det namnet." },
   );
 }
 

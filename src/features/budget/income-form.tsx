@@ -1,7 +1,9 @@
 "use client";
 
+import { validateIncome } from "@/features/forms/validation";
+
 import { FormActions } from "@home-economy/ui/layout";
-import { ChoiceInput } from "@home-economy/ui/choice";
+import { ChoiceInput } from "@home-economy/ui/form";
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { AddCardButton } from "@/components/add-card-button";
@@ -14,9 +16,10 @@ import { savedMessage, useSaveNotice } from "@/components/save-notice";
 import { FormDialogContent } from "@/components/form-dialog-content";
 import { InfoButton } from "@/components/info-button";
 import { Pencil, Save, Trash2, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ActionIconButton } from "@/components/action-icon-button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Form, FormSection, Input } from "@home-economy/ui/form";
 import { Label } from "@/components/ui/label";
 import { VersionFields, useVersionFields } from "@/features/periods/fields";
 import { formDate, versionBounds, currentDate } from "@/features/periods/model";
@@ -131,111 +134,116 @@ function IncomeForm({
     pending,
   );
   return (
-    <form action={action} className="space-y-4">
+    <Form
+      action={action}
+      pending={pending}
+      error={state.error}
+      validate={validateIncome}
+      className="space-y-4"
+    >
       {income ? <input type="hidden" name="id" value={income.id} /> : null}
       <fieldset disabled={pending} className="space-y-4">
-        <div className="ui-field">
-          <Label htmlFor="income-name">Namn på inkomsten</Label>
-          <Input
-            id="income-name"
-            name="name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            maxLength={160}
-            placeholder="Till exempel lön, barnbidrag eller uthyrning"
-            required
-          />
-        </div>
-        <div className="ui-field">
-          <div className="flex items-center gap-1">
-            <Label htmlFor="income-amount">
-              Belopp per månad efter skatt (kr)
-            </Label>
-            <InfoButton title="Inkomster">
-              <p>
-                Beloppet vid den planerade dagen räknas i månadsbudgeten. Välj
-                tills vidare om den saknar slutdatum.
-              </p>
-              <p>
-                Välj vilket datum ändringen börjar gälla. Det gamla beloppet
-                avslutas dagen före. Då behålls tidigare perioders belopp.
-              </p>
-            </InfoButton>
-          </div>
-          <Input
-            id="income-amount"
-            name="amount"
-            inputMode="decimal"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            placeholder="0,00"
-            required
-          />
-        </div>
-        <Label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-          <ChoiceInput
-            type="checkbox"
-            checked={ongoing}
-            onChange={(event) => setOngoing(event.target.checked)}
-            className="size-4 accent-primary"
-          />
-          Gäller tills vidare
-        </Label>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <FormSection title="Grunduppgifter">
           <div className="ui-field">
-            <Label htmlFor="income-start">
-              {income ? "Ändringen gäller från" : "Från och med"}
-            </Label>
+            <Label htmlFor="income-name">Namn på inkomsten</Label>
             <Input
-              id="income-start"
-              name="startsOn"
-              type="date"
-              min={
-                income
-                  ? (versionBounds(income).start ?? "1900-01-01")
-                  : "1900-01-01"
-              }
-              max={
-                income
-                  ? (versionBounds(income).end ?? "2199-12-31")
-                  : "2199-12-31"
-              }
-              value={startsOn}
-              onChange={(event) => setStartsOn(event.target.value)}
+              id="income-name"
+              name="name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              maxLength={160}
+              placeholder="Till exempel lön, barnbidrag eller uthyrning"
               required
             />
           </div>
-          {ongoing ? (
-            <input type="hidden" name="endsOn" value="" />
-          ) : (
+          <div className="ui-field">
+            <div className="flex items-center gap-1">
+              <Label htmlFor="income-amount">
+                Belopp per månad efter skatt (kr)
+              </Label>
+              <InfoButton title="Inkomster">
+                <p>
+                  Beloppet vid den planerade dagen räknas i månadsbudgeten. Välj
+                  tills vidare om den saknar slutdatum.
+                </p>
+                <p>
+                  Välj vilket datum ändringen börjar gälla. Det gamla beloppet
+                  avslutas dagen före. Då behålls tidigare perioders belopp.
+                </p>
+              </InfoButton>
+            </div>
+            <Input
+              id="income-amount"
+              name="amount"
+              inputMode="decimal"
+              value={amount}
+              onChange={(event) => setAmount(event.target.value)}
+              placeholder="0,00"
+              required
+            />
+          </div>
+        </FormSection>
+        <FormSection title="Datum och giltighet">
+          <Label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+            <ChoiceInput
+              type="checkbox"
+              checked={ongoing}
+              onChange={(event) => setOngoing(event.target.checked)}
+              className="size-4 accent-primary"
+            />
+            Gäller tills vidare
+          </Label>
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="ui-field">
-              <Label htmlFor="income-end">Till och med</Label>
+              <Label htmlFor="income-start">
+                {income ? "Ändringen gäller från" : "Från och med"}
+              </Label>
               <Input
-                id="income-end"
-                name="endsOn"
+                id="income-start"
+                name="startsOn"
                 type="date"
-                min={startsOn || "1900-01-01"}
-                max="2199-12-31"
-                value={endsOn}
-                onChange={(event) => setEndsOn(event.target.value)}
+                min={
+                  income
+                    ? (versionBounds(income).start ?? "1900-01-01")
+                    : "1900-01-01"
+                }
+                max={
+                  income
+                    ? (versionBounds(income).end ?? "2199-12-31")
+                    : "2199-12-31"
+                }
+                value={startsOn}
+                onChange={(event) => setStartsOn(event.target.value)}
                 required
               />
             </div>
-          )}
-        </div>
-        <VersionFields version={income} fields={versionFields} />
-        {income ? (
-          <p className="text-sm text-muted-foreground">
-            Tidigare värden bevaras vid en ny ändring. En rättelse uppdaterar
-            den valda versionen.
-          </p>
-        ) : null}
+            {ongoing ? (
+              <input type="hidden" name="endsOn" value="" />
+            ) : (
+              <div className="ui-field">
+                <Label htmlFor="income-end">Till och med</Label>
+                <Input
+                  id="income-end"
+                  name="endsOn"
+                  type="date"
+                  min={startsOn || "1900-01-01"}
+                  max="2199-12-31"
+                  value={endsOn}
+                  onChange={(event) => setEndsOn(event.target.value)}
+                  required
+                />
+              </div>
+            )}
+          </div>
+          <VersionFields version={income} fields={versionFields} />
+          {income ? (
+            <p className="text-sm text-muted-foreground">
+              Tidigare värden bevaras vid en ny ändring. En rättelse uppdaterar
+              den valda versionen.
+            </p>
+          ) : null}
+        </FormSection>
       </fieldset>
-      {state.error ? (
-        <p role="alert" className="ui-error">
-          {state.error}
-        </p>
-      ) : null}
       <FormActions>
         <ActionIconButton
           type="submit"
@@ -246,7 +254,7 @@ function IncomeForm({
           <Save aria-hidden="true" />
         </ActionIconButton>
       </FormActions>
-    </form>
+    </Form>
   );
 }
 
@@ -272,7 +280,12 @@ function RemoveIncomeForm({
     {},
   );
   return (
-    <form action={action} className="space-y-4">
+    <Form
+      action={action}
+      pending={pending}
+      error={state.error}
+      className="space-y-4"
+    >
       <input type="hidden" name="id" value={income.id} />
       <input type="hidden" name="revision" value={income.revision} />
       <Label htmlFor={`income-stop-${income.id}`}>Avsluta från</Label>
@@ -289,29 +302,27 @@ function RemoveIncomeForm({
         Avsluta {income.name} från valt datum. Tidigare värden och kommande
         versioner behålls.
       </p>
-      {state.error ? (
-        <p role="alert" className="ui-error">
-          {state.error}
-        </p>
-      ) : null}
       <div className="flex justify-end gap-2">
-        <ActionIconButton
+        <Button
+          type="button"
           ref={cancelRef}
-          label="Avbryt"
+          aria-label="Avbryt"
           disabled={pending}
           onClick={onCancel}
         >
           <X aria-hidden="true" />
-        </ActionIconButton>
-        <ActionIconButton
+          Avbryt
+        </Button>
+        <Button
           type="submit"
-          label="Bekräfta avslut"
-          tone="danger"
-          pending={pending}
+          aria-label="Bekräfta avslut"
+          variant="destructive"
+          disabled={pending}
         >
           <Trash2 aria-hidden="true" />
-        </ActionIconButton>
+          Ja, avsluta
+        </Button>
       </div>
-    </form>
+    </Form>
   );
 }

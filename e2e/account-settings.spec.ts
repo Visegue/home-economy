@@ -43,9 +43,18 @@ test("byter lösenord, behåller hushållet och loggar ut andra enheter", async 
     await expect(dialog.getByRole("alert")).toHaveText(
       "Det nuvarande lösenordet stämmer inte.",
     );
+    await expect(dialog.getByLabel("Nuvarande lösenord")).toBeFocused();
+    await expect(dialog.getByLabel("Nuvarande lösenord")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
     await dialog
       .getByLabel("Nuvarande lösenord")
       .fill("synthetic-account-password-123");
+    await dialog.getByLabel("Nuvarande lösenord").blur();
+    await expect(dialog.getByRole("alert")).toHaveText(
+      "Det nuvarande lösenordet stämmer inte.",
+    );
     await dialog.getByRole("button", { name: "Spara nytt lösenord" }).click();
     await expect(dialog).toHaveCount(0);
     await expect(

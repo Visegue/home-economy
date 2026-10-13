@@ -5,11 +5,12 @@ import { CircleAlert, CircleCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Form, FormSection, FormMessage, Input } from "@home-economy/ui/form";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth/client";
+import { matchingPasswords } from "@/lib/auth/form-validation";
 
 function GoogleIcon() {
   return (
@@ -172,36 +173,42 @@ export function LoginForm({
         </TabsList>
 
         <TabsContent value="sign-in" className="pt-3">
-          <form className="space-y-4" onSubmit={signInWithEmail}>
-            <div className="ui-field">
-              <Label htmlFor="sign-in-email">E-postadress</Label>
-              <Input
-                id="sign-in-email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                disabled={!emailConfigured || pending}
-              />
-            </div>
-            <div className="ui-field">
-              <div className="flex items-center justify-between gap-4">
-                <Label htmlFor="sign-in-password">Lösenord</Label>
-                <Button asChild variant="link" size="xs" className="px-0">
-                  <Link href="/forgot-password">Glömt lösenord?</Link>
-                </Button>
+          <Form
+            className="space-y-4"
+            pending={pending}
+            onSubmit={signInWithEmail}
+          >
+            <FormSection title="Kontouppgifter" disabled={pending}>
+              <div className="ui-field">
+                <Label htmlFor="sign-in-email">E-postadress</Label>
+                <Input
+                  id="sign-in-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  disabled={!emailConfigured || pending}
+                />
               </div>
-              <Input
-                id="sign-in-password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                minLength={12}
-                maxLength={128}
-                required
-                disabled={!emailConfigured || pending}
-              />
-            </div>
+              <div className="ui-field">
+                <div className="flex items-center justify-between gap-4">
+                  <Label htmlFor="sign-in-password">Lösenord</Label>
+                  <Button asChild variant="link" size="xs" className="px-0">
+                    <Link href="/forgot-password">Glömt lösenord?</Link>
+                  </Button>
+                </div>
+                <Input
+                  id="sign-in-password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  minLength={12}
+                  maxLength={128}
+                  required
+                  disabled={!emailConfigured || pending}
+                />
+              </div>
+            </FormSection>
             <Button
               type="submit"
               className="w-full"
@@ -209,63 +216,72 @@ export function LoginForm({
             >
               {pendingAction === "sign-in" ? "Loggar in…" : "Logga in"}
             </Button>
-          </form>
+          </Form>
         </TabsContent>
 
         <TabsContent value="sign-up" className="pt-3">
-          <form className="space-y-4" onSubmit={signUpWithEmail}>
-            <div className="ui-field">
-              <Label htmlFor="sign-up-name">Namn</Label>
-              <Input
-                id="sign-up-name"
-                name="name"
-                autoComplete="name"
-                minLength={2}
-                maxLength={120}
-                required
-                disabled={!emailConfigured || pending}
-              />
-            </div>
-            <div className="ui-field">
-              <Label htmlFor="sign-up-email">E-postadress</Label>
-              <Input
-                id="sign-up-email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                disabled={!emailConfigured || pending}
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+          <Form
+            className="space-y-4"
+            pending={pending}
+            onSubmit={signUpWithEmail}
+            validate={matchingPasswords}
+          >
+            <FormSection title="Grunduppgifter" disabled={pending}>
               <div className="ui-field">
-                <Label htmlFor="sign-up-password">Lösenord</Label>
+                <Label htmlFor="sign-up-name">Namn</Label>
                 <Input
-                  id="sign-up-password"
-                  name="password"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={12}
-                  maxLength={128}
+                  id="sign-up-name"
+                  name="name"
+                  autoComplete="name"
+                  minLength={2}
+                  maxLength={120}
                   required
                   disabled={!emailConfigured || pending}
                 />
               </div>
               <div className="ui-field">
-                <Label htmlFor="sign-up-password-confirmation">Upprepa</Label>
+                <Label htmlFor="sign-up-email">E-postadress</Label>
                 <Input
-                  id="sign-up-password-confirmation"
-                  name="password-confirmation"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={12}
-                  maxLength={128}
+                  id="sign-up-email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
                   required
                   disabled={!emailConfigured || pending}
                 />
               </div>
-            </div>
-            <p className="text-xs text-muted-foreground">Minst 12 tecken.</p>
+            </FormSection>
+            <FormSection title="Lösenord" disabled={pending}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="ui-field">
+                  <Label htmlFor="sign-up-password">Lösenord</Label>
+                  <Input
+                    id="sign-up-password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={12}
+                    maxLength={128}
+                    required
+                    disabled={!emailConfigured || pending}
+                  />
+                </div>
+                <div className="ui-field">
+                  <Label htmlFor="sign-up-password-confirmation">Upprepa</Label>
+                  <Input
+                    id="sign-up-password-confirmation"
+                    name="password-confirmation"
+                    type="password"
+                    autoComplete="new-password"
+                    minLength={12}
+                    maxLength={128}
+                    required
+                    disabled={!emailConfigured || pending}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">Minst 12 tecken.</p>
+            </FormSection>
             <Button
               type="submit"
               className="w-full"
@@ -273,13 +289,15 @@ export function LoginForm({
             >
               {pendingAction === "sign-up" ? "Skapar konto…" : "Skapa konto"}
             </Button>
-          </form>
+          </Form>
         </TabsContent>
       </Tabs>
 
       {message ? (
-        <output
-          role={success ? "status" : "alert"}
+        <FormMessage
+          message={message}
+          success={success}
+          pending={pending}
           className={
             success
               ? "flex items-start gap-2.5 rounded-lg border border-accent-foreground/20 bg-accent px-3 py-2.5 text-sm text-accent-foreground"
@@ -305,7 +323,7 @@ export function LoginForm({
             ) : null}
             {message}
           </span>
-        </output>
+        </FormMessage>
       ) : null}
 
       {!emailConfigured ? (

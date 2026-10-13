@@ -1,15 +1,18 @@
 "use client";
 
-import { ChoiceInput } from "@home-economy/ui/choice";
+import { SelectTrigger } from "@home-economy/ui/form";
+
+import { validateTransfer } from "@/features/forms/validation";
+
+import { ChoiceInput } from "@home-economy/ui/form";
 import { useActionState, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Form, FormSection, Input } from "@home-economy/ui/form";
 import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
-  SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { DialogTrigger } from "@/components/ui/dialog";
@@ -55,8 +58,11 @@ function TransferForm({ purpose }: { purpose: Purpose }) {
           : monthlyExpenseAmount(date.slice(0, 7), version)
       : version.amountInOre;
   return (
-    <form
+    <Form
       action={action}
+      pending={pending}
+      error={state.error}
+      validate={validateTransfer}
       // A warning is not a completed confirmation. Also stop native Select reset listeners.
       onResetCapture={(event) => {
         event.preventDefault();
@@ -75,76 +81,82 @@ function TransferForm({ purpose }: { purpose: Purpose }) {
         disabled={pending || Boolean(state.success)}
         className="space-y-4"
       >
-        <div className="ui-field">
-          <Label htmlFor={`${field}-kind`}>Händelse</Label>
-          <Select
-            name="kind"
-            value={kind}
-            disabled={pending || Boolean(state.success)}
-            onValueChange={(value) => {
-              setKind(value);
-              setAmount(null);
-            }}
-          >
-            <SelectTrigger id={`${field}-kind`} className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="deposit">Insättning</SelectItem>
-              <SelectItem value="withdrawal">Uttag</SelectItem>
-              {!purpose.hasOpening ? (
-                <SelectItem value="opening">Ingående värde</SelectItem>
-              ) : null}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="ui-field">
-          <Label htmlFor={`${field}-date`}>Utfört datum</Label>
-          <Input
-            id={`${field}-date`}
-            type="date"
-            name="occurredOn"
-            value={date}
-            max={currentDate()}
-            min="1900-01-01"
-            required
-            onChange={(e) => setDate(e.target.value)}
-          />
-        </div>
-        <div className="ui-field">
-          <Label htmlFor={`${field}-amount`}>Faktiskt belopp (kr)</Label>
-          <Input
-            id={`${field}-amount`}
-            name="amount"
-            inputMode="decimal"
-            value={
-              amount ??
-              ((kind === "opening" ? 0 : suggested) / 100)
-                .toFixed(2)
-                .replace(".", ",")
-            }
-            required
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </div>
-        <div className="ui-field">
-          <Label htmlFor={`${field}-month`}>Avser månad</Label>
-          <Input
-            id={`${field}-month`}
-            type="month"
-            name="attributionMonth"
-            value={month ?? date.slice(0, 7)}
-            required
-            onChange={(e) => setMonth(e.target.value)}
-          />
-          <p className="text-sm text-muted-foreground">
-            Styr planuppföljningen. Värdet ändras på utfört datum.
-          </p>
-        </div>
-        <div className="ui-field">
-          <Label htmlFor={`${field}-note`}>Anteckning</Label>
-          <Input id={`${field}-note`} name="note" maxLength={500} />
-        </div>
+        <FormSection title="Överföring">
+          <div className="ui-field">
+            <Label htmlFor={`${field}-kind`}>Händelse</Label>
+            <Select
+              name="kind"
+              value={kind}
+              disabled={pending || Boolean(state.success)}
+              onValueChange={(value) => {
+                setKind(value);
+                setAmount(null);
+              }}
+            >
+              <SelectTrigger
+                name="kind"
+                id={`${field}-kind`}
+                className="w-full"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="deposit">Insättning</SelectItem>
+                <SelectItem value="withdrawal">Uttag</SelectItem>
+                {!purpose.hasOpening ? (
+                  <SelectItem value="opening">Ingående värde</SelectItem>
+                ) : null}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="ui-field">
+            <Label htmlFor={`${field}-date`}>Utfört datum</Label>
+            <Input
+              id={`${field}-date`}
+              type="date"
+              name="occurredOn"
+              value={date}
+              max={currentDate()}
+              min="1900-01-01"
+              required
+              onChange={(e) => setDate(e.target.value)}
+            />
+          </div>
+          <div className="ui-field">
+            <Label htmlFor={`${field}-amount`}>Faktiskt belopp (kr)</Label>
+            <Input
+              id={`${field}-amount`}
+              name="amount"
+              inputMode="decimal"
+              value={
+                amount ??
+                ((kind === "opening" ? 0 : suggested) / 100)
+                  .toFixed(2)
+                  .replace(".", ",")
+              }
+              required
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+          <div className="ui-field">
+            <Label htmlFor={`${field}-month`}>Avser månad</Label>
+            <Input
+              id={`${field}-month`}
+              type="month"
+              name="attributionMonth"
+              value={month ?? date.slice(0, 7)}
+              required
+              onChange={(e) => setMonth(e.target.value)}
+            />
+            <p className="text-sm text-muted-foreground">
+              Styr planuppföljningen. Värdet ändras på utfört datum.
+            </p>
+          </div>
+          <div className="ui-field">
+            <Label htmlFor={`${field}-note`}>Anteckning</Label>
+            <Input id={`${field}-note`} name="note" maxLength={500} />
+          </div>
+        </FormSection>
         {state.warning ? (
           <div role="alert" className="space-y-2 rounded-md border p-3">
             <p>{state.warning}</p>
@@ -158,12 +170,7 @@ function TransferForm({ purpose }: { purpose: Purpose }) {
           {pending ? "Sparar…" : "Bekräfta registrering"}
         </Button>
       </fieldset>
-      {state.error ? (
-        <p role="alert" className="text-destructive">
-          {state.error}
-        </p>
-      ) : null}
       {state.success ? <output>{state.success}</output> : null}
-    </form>
+    </Form>
   );
 }
