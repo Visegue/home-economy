@@ -121,7 +121,11 @@ export function AccountSettings({
         {hasPassword ? (
           <FormDialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button variant="secondary" disabled={pending !== null}>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={pending !== null}
+              >
                 <KeyRound aria-hidden="true" />
                 Ändra lösenord
               </Button>
@@ -140,6 +144,7 @@ export function AccountSettings({
           </FormDialog>
         ) : (
           <Button
+            type="button"
             variant="secondary"
             disabled={!emailConfigured || pending !== null || sent}
             onClick={sendPasswordLink}
@@ -176,6 +181,7 @@ export function AccountSettings({
         </div>
         {!googleLinked ? (
           <Button
+            type="button"
             variant="outline"
             disabled={!googleConfigured || pending !== null}
             onClick={linkGoogle}

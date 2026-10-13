@@ -46,7 +46,7 @@ export default async function TransfersPage({
             required
           />
         </Label>
-        <Button>Visa</Button>
+        <Button type="submit">Visa</Button>
       </form>
       {purposes.length ? (
         purposes.map((purpose) => (

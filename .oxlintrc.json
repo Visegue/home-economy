@@ -1,11 +1,14 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["import", "jsx-a11y", "nextjs", "promise", "react", "vitest"],
+  "jsPlugins": ["./scripts/button-type.mjs"],
   "categories": {
     "correctness": "error",
     "suspicious": "warn"
   },
   "rules": {
+    "react/button-has-type": "error",
+    "home-economy/button-has-type": "error",
     "import/no-unassigned-import": "off",
     "react/no-unstable-nested-components": "off",
     "react/react-in-jsx-scope": "off",
