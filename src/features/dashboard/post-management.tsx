@@ -198,13 +198,18 @@ export function PostManagement({
               </SheetDescription>
             </SheetHeader>
             <SheetClose asChild>
-              <Button variant="outline" className="absolute top-3 right-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="absolute top-3 right-3"
+              >
                 Stäng
               </Button>
             </SheetClose>
             <div className="min-h-0 overflow-y-auto p-4 [overflow-wrap:anywhere]">
               <div className="mb-4 flex flex-wrap gap-2">
                 <Button
+                  type="button"
                   ref={edit}
                   onClick={() => {
                     if (selected) setSelection(selected);
@@ -214,6 +219,7 @@ export function PostManagement({
                   Ändra
                 </Button>
                 <Button
+                  type="button"
                   ref={end}
                   variant="outline"
                   onClick={() => {

@@ -13,6 +13,7 @@ export function ActionIconButton({
   children,
   className,
   disabled,
+  type = "button",
   ...props
 }: Omit<React.ComponentProps<typeof Button>, "size" | "variant"> & {
   label: string;
@@ -26,7 +27,6 @@ export function ActionIconButton({
     <Tooltip open={tooltipOpen && !expanded} onOpenChange={setTooltipOpen}>
       <TooltipTrigger asChild>
         <Button
-          type="button"
           size="icon"
           variant={
             tone === "danger"
@@ -48,6 +48,7 @@ export function ActionIconButton({
           aria-busy={pending || undefined}
           disabled={disabled || pending}
           {...props}
+          type={type}
         >
           {pending ? (
             <LoaderCircle

@@ -29,7 +29,9 @@ export function TransferDialog({ purpose }: { purpose: Purpose }) {
   return (
     <FormDialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Registrera för {purpose.name}</Button>
+        <Button type="button" variant="outline">
+          Registrera för {purpose.name}
+        </Button>
       </DialogTrigger>
       <FormDialogContent title={`Registrera för ${purpose.name}`}>
         {open ? <TransferForm purpose={purpose} /> : null}
