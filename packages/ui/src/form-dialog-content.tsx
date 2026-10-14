@@ -94,7 +94,7 @@ export function FormDialogContent({
     <DialogContent
       {...props}
       ref={attachContent}
-      className="max-h-[90dvh] scroll-py-4 overflow-y-auto overscroll-contain sm:max-w-lg"
+      className="max-h-[90dvh] scroll-py-4 overflow-y-auto overscroll-contain transition-none sm:max-w-lg"
       onOpenAutoFocus={(event) => {
         onOpenAutoFocus?.(event);
         if (event.defaultPrevented) return;

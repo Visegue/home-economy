@@ -97,6 +97,13 @@ for (const theme of ["light", "dark"] as const) {
         });
         window.visualViewport!.dispatchEvent(new Event("resize"));
       });
+      // Check field visibility after the dialog has reached the keyboard viewport.
+      await expect
+        .poll(async () => {
+          const bounds = await dialog.boundingBox();
+          return !!bounds && bounds.y >= 16 && bounds.y + bounds.height <= 284;
+        })
+        .toBe(true);
       const save = dialog.getByRole("button", { name: form.save, exact: true });
       await expect
         .poll(async () => {
