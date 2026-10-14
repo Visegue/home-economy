@@ -77,6 +77,11 @@ function validType(value) {
     return ["button", "submit", "reset"].includes(value.value);
   if (value.type === "ConditionalExpression")
     return validType(value.consequent) && validType(value.alternate);
+  if (
+    value.type === "LogicalExpression" &&
+    ["??", "||"].includes(value.operator)
+  )
+    return validType(value.left) && validType(value.right);
   // Explicit forwarding is checked by the caller's TypeScript contract.
   return (
     (value.type === "Identifier" && value.name !== "undefined") ||

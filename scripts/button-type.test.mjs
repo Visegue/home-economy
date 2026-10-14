@@ -165,6 +165,33 @@ export function Unsafe(props) { return <Button {...props} />; }`).status,
   ).toBe(1);
 });
 
+it.each([
+  'props.type ?? "button"',
+  'type ?? "button"',
+  'props.type || "button"',
+  'type || "button"',
+])("accepts safe wrapper fallback forwarding with %s", (expression) => {
+  expect(
+    lint(`import { Button } from "@home-economy/ui/button";
+export function Safe({ type, ...props }) { return <Button {...props} type={${expression}} />; }`)
+      .status,
+  ).toBe(0);
+});
+
+it.each(['type ?? "invalid"', "type || undefined", 'type && "button"'])(
+  "rejects unsafe wrapper fallback forwarding with %s",
+  (expression) => {
+    const result = lint(`import { Button } from "@home-economy/ui/button";
+export function Unsafe({ type, ...props }) { return <Button {...props} type={${expression}} />; }`);
+    expect(result.status).toBe(1);
+    expect(result.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "home-economy(button-has-type)" }),
+      ]),
+    );
+  },
+);
+
 it("requires type or literal asChild after any potentially overriding spread", () => {
   expect(
     lint(`import { Button } from "@home-economy/ui/button";
