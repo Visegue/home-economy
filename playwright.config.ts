@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
@@ -8,6 +9,11 @@ export default defineConfig({
   reporter: [
     ["html", { open: "never" }],
     ["json", { outputFile: "test-results/report.json" }],
+    [
+      fileURLToPath(
+        new URL("./scripts/server-diagnostics-reporter.mjs", import.meta.url),
+      ),
+    ],
   ],
   use: {
     baseURL: "http://127.0.0.1:3000",
@@ -26,6 +32,8 @@ export default defineConfig({
     command: "node scripts/start-playwright-server.mjs",
     url: "http://127.0.0.1:3000",
     reuseExistingServer: false,
+    stdout: "pipe",
+    stderr: "pipe",
     gracefulShutdown: { signal: "SIGTERM", timeout: 10_000 },
     env: {
       DATABASE_PROVIDER: "pglite",

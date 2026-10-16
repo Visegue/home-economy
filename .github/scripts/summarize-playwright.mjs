@@ -1,9 +1,20 @@
 import { appendFileSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 try {
-  const report = JSON.parse(
-    readFileSync(process.argv[2] ?? "test-results/report.json", "utf8"),
+  const reportFile = process.argv[2] ?? "test-results/report.json";
+  const report = JSON.parse(readFileSync(reportFile, "utf8"));
+  const server = JSON.parse(
+    readFileSync(join(dirname(reportFile), "server/report.json"), "utf8"),
   );
+  if (
+    !server.runId ||
+    server.runId !== report.config?.metadata?.serverDiagnosticsRunId ||
+    !["passed", "failed"].includes(server.serverStatus) ||
+    !Array.isArray(server.findings) ||
+    !/^[a-f0-9]{40}$/.test(server.sourceRevision)
+  )
+    throw new Error("Invalid server diagnostics");
   const { stats, suites, errors } = report;
   if (
     !Array.isArray(suites) ||
@@ -34,7 +45,11 @@ try {
     0,
   );
   const retain =
-    retries > 0 || stats.flaky > 0 || stats.unexpected > 0 || errors.length > 0;
+    retries > 0 ||
+    stats.flaky > 0 ||
+    stats.unexpected > 0 ||
+    errors.length > 0 ||
+    server.serverStatus === "failed";
   const lines = [
     "## Playwright",
     "",
@@ -44,6 +59,13 @@ try {
     `- Överhoppade: **${stats.skipped}**`,
     `- Omförsök totalt: **${retries}**`,
     `- Globala testfel: **${errors.length}**`,
+    `- Serverutfall: **${server.serverStatus}**`,
+    `- Oväntade serverfel: **${server.findings.length}**`,
+    `- Insamlingsfel: **${server.captureFailed ? "ja" : "nej"}**`,
+    `- Körning: <code>${server.runId}</code>`,
+    `- Källversion: <code>${server.sourceRevision}</code>${server.sourceDirty ? " (lokala ändringar)" : ""}`,
+    `- Workers, faktisk/gräns: **${server.actualWorkers ?? "okänt"}/${server.workers ?? "okänt"}**`,
+    `- Serverlogg: <code>server/${server.logFile}</code>`,
   ];
   const affected = tests.filter(
     (test) => test.status === "unexpected" || retried.includes(test),
@@ -70,7 +92,7 @@ try {
   console.log(summary);
 } catch {
   console.error(
-    "Playwright-rapport saknas, är ogiltig eller kunde inte sparas.",
+    "Playwright-rapport saknas, är ogiltig eller kunde inte sparas. Även matchande serverdiagnostik krävs.",
   );
   process.exitCode = 1;
 }

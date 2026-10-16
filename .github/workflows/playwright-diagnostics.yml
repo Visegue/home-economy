@@ -9,6 +9,7 @@ on:
       - ".github/fixtures/playwright/**"
       - "playwright.config.ts"
       - "scripts/playwright-diagnostics.test.mjs"
+      - "scripts/server-diagnostics*"
 
 permissions:
   contents: read

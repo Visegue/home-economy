@@ -1,15 +1,13 @@
-import { PGlite } from "@electric-sql/pglite";
 import { attachDatabasePool } from "@vercel/functions";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
 import { getDatabaseConfig } from "./config";
-import { preparePgliteDataDir } from "./pglite";
+import { createPgliteClient } from "./pglite";
 import { schema } from "./schema";
 
 const globalDatabase = globalThis as typeof globalThis & {
-  homeEconomyPglite?: PGlite;
   homeEconomyPostgres?: Pool;
 };
 
@@ -36,15 +34,7 @@ function createDatabase() {
     return drizzlePostgres(pool, { schema });
   }
 
-  const client =
-    globalDatabase.homeEconomyPglite ??
-    new PGlite(preparePgliteDataDir(config.dataDir));
-
-  if (process.env.NODE_ENV !== "production") {
-    globalDatabase.homeEconomyPglite = client;
-  }
-
-  return drizzlePglite(client, { schema });
+  return drizzlePglite({ client: createPgliteClient(config.dataDir), schema });
 }
 
 export const db = createDatabase();
