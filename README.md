@@ -88,6 +88,8 @@ CI kör även `pnpm db:generate` och stoppar PR:er med saknade migrationsfiler. 
 
 Lokalt finns rapporterna i `playwright-report/` och `test-results/report.json`. Kör `bun .github/scripts/summarize-playwright.mjs` för samma sammanfattning. `pnpm test scripts/playwright-diagnostics.test.mjs` verifierar kontrollerat lyckat, flaky och misslyckat utfall med den installerade Playwright-CLI:n, utan appserver, browser eller auth. Felsimuleringen ligger utanför appens ordinarie E2E-suite. Serverfel utan browserfel hanteras separat i #113.
 
+När diagnostikens konfiguration, tester eller CI-filer ändras kör **Verify Playwright diagnostics** dessutom ett isolerat fall i Actions som avsiktligt fallerar först och lyckas på retry. Det gröna kontraktsjobbet sparar `playwright-diagnostics-contract-<körningsförsök>` med rapport och båda traces i sju dagar. Detta verifierar själva uppladdningen även när appens tester passerar direkt. Det kräver ingen browserinstallation eller databas och körs endast för berörda PR-ändringar.
+
 ## Deploy och release
 
 GitHub Actions sköter all deploy. Vercels automatiska Git-deploys är avstängda i `vercel.json`.
