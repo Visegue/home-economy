@@ -61,7 +61,7 @@ function redact(line) {
     .replace(/\?[^\s"'<>]+/g, "?[REDACTED]")
     .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[REDACTED_EMAIL]")
     .replace(
-      /\b(authorization|cookie|set-cookie|password|token|secret|api[-_]?key)(["']?\s*[:=]\s*)[^\r\n]+/gi,
+      /\b([\w.-]*(?:authorization|cookie|password|token|secret|api[-_]?key)[\w.-]*)(["']?\s*[:=]\s*)[^\r\n]+/gi,
       "$1$2[REDACTED]",
     );
 }

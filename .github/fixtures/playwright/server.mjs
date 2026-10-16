@@ -40,6 +40,19 @@ if (scenario === "redaction") {
     "GET /api/auth/callback/google?state=synthetic-relative-state&error=access_denied 302\n",
   );
   process.stdout.write("environment-value synthetic-environment-secret\n");
+  for (const field of [
+    "access_token",
+    "refresh_token",
+    "id_token",
+    "accessToken",
+    "refreshToken",
+    "idToken",
+    "client_secret",
+    "clientSecret",
+    "sessionToken",
+  ]) {
+    console.log(JSON.stringify({ [field]: `synthetic-oauth-${field}` }));
+  }
 }
 console.log("SERVER_READY");
 setInterval(() => {}, 1_000);

@@ -152,6 +152,7 @@ it("redacts credentials, email addresses and URL parameters before saving logs",
     "synthetic-relative-state",
     "synthetic-environment-secret",
     "synthetic:password",
+    "synthetic-oauth-",
   ])
     expect(log).not.toContain(sensitive);
 }, 30_000);
