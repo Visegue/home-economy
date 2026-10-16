@@ -82,7 +82,13 @@ Databastesterna kör migrationer och RLS med en begränsad roll i PGlite. PGlite
 
 Vitest använder högst två testprocesser lokalt eftersom varje databastestfil startar en egen PGlite-instans. Ändra vid behov med `pnpm test --maxWorkers=4` eller `VITEST_MAX_WORKERS=4 pnpm check`. I CI väljer Vitest antalet automatiskt utifrån tillgängliga processorer.
 
-CI kör även `pnpm db:generate` och stoppar PR:er med saknade migrationsfiler. Vid Playwright-fel sparas rapporter och traces i sju dagar. CI och rapporter använder Actions-tid och lagring.
+CI kör även `pnpm db:generate` och stoppar PR:er med saknade migrationsfiler. Vid Playwright-fel eller omförsök sparas HTML-/JSON-rapport och traces som `playwright-diagnostics-<körningsförsök>` i sju dagar, även om slutresultatet är grönt. Separata namn bevarar tidigare underlag när hela jobbet körs om. Körningssammanfattningen visar direkt godkända tester, lyckade omförsök, slutliga fel och berörda testnamn. En lyckad retry betyder inte att orsaken är rättad.
+
+`retain-on-failure-and-retries` spelar in varje första försök för att kunna behålla det ursprungliga felet och alla retries. Traces från direkt lyckade försök kastas, källkodsinbäddning är avstängd och helt rena körningar laddar inte upp någon diagnostikartefakt. Rapporteringen använder befintlig Actions-lagring; den tillfälliga inspelningen har ändå en tids-/diskkostnad. E2E-miljön använder endast isolerade syntetiska sessioner och data, inga produktionsnycklar eller verkliga hushållsdata.
+
+Lokalt finns rapporterna i `playwright-report/` och `test-results/report.json`. Kör `bun .github/scripts/summarize-playwright.mjs` för samma sammanfattning. `pnpm test scripts/playwright-diagnostics.test.mjs` verifierar kontrollerat lyckat, flaky och misslyckat utfall med den installerade Playwright-CLI:n, utan appserver, browser eller auth. Felsimuleringen ligger utanför appens ordinarie E2E-suite. Serverfel utan browserfel hanteras separat i #113.
+
+När diagnostikens konfiguration, tester eller CI-filer ändras kör **Verify Playwright diagnostics** dessutom ett isolerat fall i Actions som avsiktligt fallerar först och lyckas på retry. Det gröna kontraktsjobbet sparar `playwright-diagnostics-contract-<körningsförsök>` med rapport och båda traces i sju dagar. Detta verifierar själva uppladdningen även när appens tester passerar direkt. Det kräver ingen browserinstallation eller databas och körs endast för berörda PR-ändringar.
 
 ## Deploy och release
 

@@ -80,10 +80,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: bun --bun playwright install --with-deps chromium
       - run: pnpm test:e2e
+        id: e2e
+      - name: Summarize Playwright results
+        id: e2e_report
+        if: ${{ !cancelled() && (steps.e2e.outcome == 'success' || steps.e2e.outcome == 'failure') }}
+        run: bun .github/scripts/summarize-playwright.mjs
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        if: failure()
+        if: ${{ !cancelled() && (failure() || steps.e2e_report.outputs.retain == 'true') }}
         with:
-          name: playwright-failure-report
+          name: playwright-diagnostics-${{ github.run_attempt }}
           path: |
             playwright-report/
             test-results/
