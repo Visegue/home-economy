@@ -31,6 +31,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Agent skills
 
+### Automated delivery
+
+For user-requested issue implementations, automatically continue through push, PR creation, independent review in a separate session, comment resolution, and merge when review and required checks pass. This is the user's standing authorization for Home-Economy; follow `docs/agents/delivery.md` for scope, review evidence, continuation, and production verification.
+
 ### Issue tracker
 
 Issues are tracked in this repository's GitHub Issues. See `docs/agents/issue-tracker.md`.
