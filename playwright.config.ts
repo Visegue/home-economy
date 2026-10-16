@@ -5,13 +5,16 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
-  reporter: "html",
+  reporter: [
+    ["html", { open: "never" }],
+    ["json", { outputFile: "test-results/report.json" }],
+  ],
   use: {
     baseURL: "http://127.0.0.1:3000",
     launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
       : undefined,
-    trace: "on-first-retry",
+    trace: { mode: "retain-on-failure-and-retries", sources: false },
   },
   projects: [
     {
