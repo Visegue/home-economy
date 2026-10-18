@@ -1,6 +1,6 @@
 # Lokal E2E och resursdelning
 
-Kör förtestet i [README](../README.md#kvalitetskontroller) före längre jobb. Använd Node 24 för Playwright/PGlite och Vitest, Bun för de kompatibla verktygen och pnpm för projektkommandon.
+Kör förtestet i [testguiden](testing.md#förtest) före längre jobb. Använd Node 24 för Playwright/PGlite och Vitest, Bun för de kompatibla verktygen och pnpm för projektkommandon.
 
 ## Workers och resultat
 

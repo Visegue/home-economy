@@ -1,5 +1,7 @@
 # Månadsöversikt: design för issue #63
 
+Historiskt krav- och intervjuunderlag. För appens nuvarande beteende, se [användarguiden](usage.md); för implementation och regler, se [arkitekturen](architecture.md).
+
 Fastställd design för [issue #63](https://github.com/Visegue/home-economy/issues/63),
 bekräftad av användaren den 4 oktober 2026 efter designintervjun.
 Dokumentet beskriver avsedd förändring; implementationen ingår inte i intervjun.

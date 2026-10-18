@@ -1,5 +1,7 @@
 # Gemensamt UI och formulärdesign
 
+Historiskt kravunderlag för #97/#83. Båda stegen är genomförda; se [aktuella UI- och formulärregler](ui-components.md). Den ursprungliga intervjun och införandeordningen bevaras nedan.
+
 Bekräftad kravspecifikation för [#97](https://github.com/Visegue/home-economy/issues/97) och [#83](https://github.com/Visegue/home-economy/issues/83). Kravintervjun avslutades med användarens bekräftelse av helheten, Q20, den 2026-10-10. Issues är specificerade för senare implementation i ordningen #97 → #83. Specifikationen är kravunderlag; leveransmandatet lämnas separat av användaren. #97:s gemensamma UI-grund är implementerad enligt [UI-regler och inventering](ui-components.md). #83:s ändrade formulärbeteende följer i ett separat steg.
 
 ## Bekräftade beslut
