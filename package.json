@@ -1,6 +1,6 @@
 {
   "name": "home-economy",
-  "version": "0.16.6",
+  "version": "0.16.7",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -28,7 +28,8 @@
     "db:check": "bun scripts/check-database.mjs",
     "db:studio": "bun --bun drizzle-kit studio",
     "check": "pnpm check:version && pnpm check:ui && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build:check",
-    "check:ui": "bun scripts/check-ui-boundary.mjs"
+    "check:ui": "bun scripts/check-ui-boundary.mjs",
+    "agent:job": "bun scripts/agent-job.mjs"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.5",
