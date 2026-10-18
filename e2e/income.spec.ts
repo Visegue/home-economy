@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test } from "./helpers/session";
 import { dateLabel, monthEnd } from "../src/features/periods/model";
 import {
   currentPeriod,
@@ -8,10 +7,11 @@ import {
 } from "../src/features/budget/model";
 
 test("sparar valfri nettoinkomst vid onboarding och i inställningarna", async ({
+  session,
   page,
   context,
-}, testInfo) => {
-  await setSession(context, `income-${testInfo.retry}`);
+}) => {
+  await setSession(context, session.token);
   await page.goto("/onboarding");
   await page
     .getByRole("textbox", { name: "Namn på hushållet" })

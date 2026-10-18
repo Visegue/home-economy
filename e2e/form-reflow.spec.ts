@@ -1,8 +1,8 @@
-import { expect, test } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test } from "./helpers/session";
 
 for (const theme of ["light", "dark"] as const) {
   test(`${theme}: fältfel och åtgärder ryms i förstorad reflow-viewport`, async ({
+    session,
     browser,
   }, testInfo) => {
     const context = await browser.newContext({
@@ -10,7 +10,7 @@ for (const theme of ["light", "dark"] as const) {
       deviceScaleFactor: 2,
     });
     try {
-      await setSession(context, `form-reflow-${theme}-${testInfo.retry}`);
+      await setSession(context, session.token);
       await context.addInitScript(
         (value) => localStorage.setItem("home-economy-theme-v1", value),
         theme,

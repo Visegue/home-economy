@@ -1,8 +1,8 @@
-import { expect, test } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test } from "./helpers/session";
 
 for (const system of ["light", "dark"] as const) {
   test(`theme, navigation and guarded dialogs with ${system} system`, async ({
+    session,
     page,
     context,
   }, testInfo) => {
@@ -26,7 +26,7 @@ for (const system of ["light", "dark"] as const) {
       path: testInfo.outputPath(`login-${system}-320.png`),
       fullPage: true,
     });
-    await setSession(context, `theme-${system}-${testInfo.retry}`);
+    await setSession(context, session.token);
     await page.goto("/onboarding");
     await expect(page.locator("h1")).toHaveText("Skapa ditt hushåll");
     await expect(page.locator("html")).toHaveCSS("color-scheme", system);

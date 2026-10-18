@@ -1,14 +1,14 @@
-import { expect, test } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
 
 test("öppnar postdetaljer från belopp och återför fokus till namnet", async ({
+  session,
   page,
   context,
   browser,
 }, testInfo) => {
   test.slow(); // This journey provisions the household through public forms.
-  await setSession(context, `row-details-${testInfo.retry}`);
+  await setSession(context, session.token);
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Radtest");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
@@ -211,7 +211,7 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
     hasTouch: true,
   });
   try {
-    await setSession(mobileContext, `row-details-${testInfo.retry}`);
+    await setSession(mobileContext, session.token);
     const mobile = await mobileContext.newPage();
     await mobile.goto("/");
     for (const item of cases) {
@@ -286,11 +286,12 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
 });
 
 test("visar rätt identitet och datumversion för likadana namn vid historiknavigation", async ({
+  session,
   page,
   context,
-}, testInfo) => {
+}) => {
   test.slow();
-  await setSession(context, `row-identities-${testInfo.retry}`);
+  await setSession(context, session.token);
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Identitetstest");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();

@@ -1,12 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
-import { setSession } from "./helpers/session";
 
 test("kompakt typval först, tydliga grupper, giltiga förhandsbelopp och bevarade utkast", async ({
+  session,
   page,
   context,
 }, testInfo) => {
-  await setSession(context, `form-hierarchy-${testInfo.retry}`);
+  await setSession(context, session.token);
   await page.setViewportSize({ width: 320, height: 720 });
   await page.goto("/onboarding");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();

@@ -1,12 +1,12 @@
-import { expect, test } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test } from "./helpers/session";
 
 test("skyddar formulärändringar och bekräftar endast lyckad sparning", async ({
+  session,
   page,
   context,
 }, testInfo) => {
   test.slow();
-  await setSession(context, `form-feedback-${testInfo.retry}`);
+  await setSession(context, session.token);
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Formulärtest");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();

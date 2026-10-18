@@ -1,13 +1,13 @@
-import { expect, test } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test } from "./helpers/session";
 
 for (const theme of ["light", "dark"] as const) {
   test(`${theme}: lokala fältfel, blur, nollbelopp och nåbara mobila åtgärder`, async ({
+    session,
     page,
     context,
   }, testInfo) => {
     test.setTimeout(120_000);
-    await setSession(context, `form-validation-${theme}-${testInfo.retry}`);
+    await setSession(context, session.token);
     await page.addInitScript(
       (value) => localStorage.setItem("home-economy-theme-v1", value),
       theme,
