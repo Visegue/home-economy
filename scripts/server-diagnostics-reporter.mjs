@@ -81,6 +81,11 @@ export default class ServerDiagnosticsReporter {
       startedAt: new Date().toISOString(),
       sourceRevision: null,
       sourceDirty: null,
+      command: [
+        "node",
+        "scripts/run-playwright.mjs",
+        ...JSON.parse(process.env.PLAYWRIGHT_TEST_ARGS ?? "[]"),
+      ].map(redact),
       workers: null,
       actualWorkers: null,
       workerIndices: [],
@@ -182,6 +187,9 @@ export default class ServerDiagnosticsReporter {
       writeFileSync(
         join(this.directory, "report.json"),
         `${JSON.stringify(this.report, null, 2)}\n`,
+      );
+      console.log(
+        `Kommando: ${this.report.command.map((arg) => (/^[\w./:=+%-]+$/.test(arg) ? arg : "'" + arg.replaceAll("'", "'\\''") + "'")).join(" ")}`,
       );
       console.log(
         `Serverdiagnostik: ${this.report.serverStatus}; browser: ${result.status}; workers: ${this.report.actualWorkers ?? "okänt"}/${this.report.workers ?? "okänt"}; ${join(this.directory, "report.json")}`,

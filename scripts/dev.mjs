@@ -1,11 +1,12 @@
 import nextEnv from "@next/env";
-import { spawnSync } from "node:child_process";
+import { withNextOutput } from "./with-next-output.mjs";
 
 nextEnv.loadEnvConfig(process.cwd(), true);
 
 // PGlite-backed Next flows fail under Bun; keep the verified Node runtime.
 const needsNode = process.env.DATABASE_PROVIDER === "pglite";
-const result = spawnSync(
+process.exitCode = await withNextOutput(
+  "dev",
   needsNode ? "node" : process.execPath,
   [
     ...(needsNode ? [] : ["--bun"]),
@@ -13,8 +14,4 @@ const result = spawnSync(
     "dev",
     ...process.argv.slice(2),
   ],
-  { stdio: "inherit", env: process.env },
 );
-
-if (result.error) throw result.error;
-process.exitCode = result.status ?? 1;
