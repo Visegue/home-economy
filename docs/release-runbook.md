@@ -10,6 +10,26 @@ GitHub Actions sköter releasen. Efter merge till `main`:
 
 Betrodda PR:er måste klara migration, databaskontroll och smoketest i staging före merge.
 
+## Miljöinställningar
+
+GitHub Actions sköter all deploy; Vercels automatiska Git-deploys är avstängda i `vercel.json`. [Arkitekturens deployavsnitt](architecture.md#deploy) beskriver preview- och produktionsflödet samt Vercel-API:ts kontroll av projekt och testad commit.
+
+`vercel.json` väljer Buns körmiljö med `bunVersion: "1.x"`, vid införandet Bun 1.3.14. Vercel hanterar versionsuppdateringar; stödet är i [beta](https://vercel.com/docs/functions/runtimes/bun). Next.js bygg- och startskript använder också Bun. Produktionsdeployens Vercel-CLI körs med Bun, medan pnpm hanterar installationen.
+
+Både GitHub-miljöerna `staging` och `production` behöver:
+
+| Secret                   | Innehåll                                                              |
+| ------------------------ | --------------------------------------------------------------------- |
+| `DATABASE_URL`           | Poolad anslutning med `home_economy_runtime` till miljöns Neon-branch |
+| `DATABASE_MIGRATION_URL` | Direkt ägaranslutning till samma branch, utan pooler                  |
+| `VERCEL_TOKEN`           | Token med deploybehörighet till projektet                             |
+| `VERCEL_ORG_ID`          | Vercel-teamets ID                                                     |
+| `VERCEL_PROJECT_ID`      | Vercel-projektets ID                                                  |
+
+Projekt- och branch-ID för Neon finns som variabler i respektive GitHub-miljö. Auth- och mejlinställningar finns i Vercels motsvarande miljö. Migrationsanslutningen får inte ligga i Vercel.
+
+Se [inloggningsguiden](authentication.md) för Google OAuth Proxy, miljöernas auth-hemligheter och mejlinställningar.
+
 ## Version och GitHub Release
 
 `package.json.version` är appens SemVer-version. I produktion visas den under **Inställningar**; öppna raden för deployad commit och releaselänk. Preview visar gren och exakt byggcommit, inte planerad version eller versionen på `main`. Deployjobben skickar uppgifterna. Saknad commit visas som `okänd`.
