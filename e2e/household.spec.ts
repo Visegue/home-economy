@@ -1,12 +1,12 @@
-import { expect, test } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test } from "./helpers/session";
 
 test("skapar hushåll och behåller det vid återbesök", async ({
+  session,
   page,
   context,
   browser,
-}, testInfo) => {
-  const token = `onboarding-${testInfo.retry}`;
+}) => {
+  const token = session.token;
   await setSession(context, token);
   await page.goto("/");
   await expect(page).toHaveURL(/\/onboarding$/);
@@ -69,15 +69,21 @@ test("skapar hushåll och behåller det vid återbesök", async ({
 });
 
 for (const token of ["expired", "missing-session"]) {
-  test(`nekar databassessionen ${token} trots signerad cookie`, async ({
-    page,
-    context,
-  }) => {
-    await setSession(context, token);
-    await page.goto("/");
-    await expect(page).toHaveURL(/\/login$/);
-    await expect(
-      page.getByRole("heading", { name: "Välkommen tillbaka" }),
-    ).toBeVisible();
-  });
+  test(
+    `nekar databassessionen ${token} trots signerad cookie`,
+    {
+      annotation: {
+        type: "session-profile",
+        description: token === "expired" ? "expired" : "missing",
+      },
+    },
+    async ({ session, page, context }) => {
+      await setSession(context, session.token);
+      await page.goto("/");
+      await expect(page).toHaveURL(/\/login$/);
+      await expect(
+        page.getByRole("heading", { name: "Välkommen tillbaka" }),
+      ).toBeVisible();
+    },
+  );
 }

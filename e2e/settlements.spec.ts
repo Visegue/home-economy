@@ -1,15 +1,15 @@
 import { openPostAction, closePostDetails } from "./helpers/post-management";
-import { expect, test } from "@playwright/test";
+import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
 import { formatBudgetSek } from "../src/lib/money";
-import { setSession } from "./helpers/session";
 
 test("planerar avräkningar med påslag, inflation och separata månadsöverföringar", async ({
+  session,
   page,
   context,
 }, testInfo) => {
   const period = currentPeriod();
-  await setSession(context, `settlement-${testInfo.retry}`);
+  await setSession(context, session.token);
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Avräkningsfamiljen");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();

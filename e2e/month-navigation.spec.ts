@@ -1,12 +1,12 @@
-import { expect, test, type Page } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test, type Page } from "./helpers/session";
 import { currentPeriod } from "../src/features/budget/model";
 
 test("väljer månad direkt och bevarar parametrar, data och historik", async ({
+  session,
   page,
   context,
-}, testInfo) => {
-  await setSession(context, `month-navigation-${testInfo.retry}`);
+}) => {
+  await setSession(context, session.token);
   await createJanuarySaving(page);
 
   await page.goto("/?month=2026-12&view=compact&view=other");
@@ -78,6 +78,7 @@ test("väljer månad direkt och bevarar parametrar, data och historik", async ({
 });
 
 test("visar diskret vänteläge på mobil och bevarar fokus även efter avbruten navigation", async ({
+  session,
   browser,
 }, testInfo) => {
   test.setTimeout(60_000);
@@ -88,7 +89,7 @@ test("visar diskret vänteläge på mobil och bevarar fokus även efter avbruten
     reducedMotion: "reduce",
   });
   try {
-    await setSession(context, `month-pending-${testInfo.retry}`);
+    await setSession(context, session.token);
     const page = await context.newPage();
     await createJanuarySaving(page);
     await page.goto("/?month=2026-12");

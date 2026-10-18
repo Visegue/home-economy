@@ -1,7 +1,6 @@
 import { closePostDetails } from "./helpers/post-management";
-import { expect, test } from "@playwright/test";
+import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
-import { setSession } from "./helpers/session";
 
 for (const [type, label] of [
   ["direct", "Direkt utgift"],
@@ -9,12 +8,13 @@ for (const [type, label] of [
   ["settlement", "Avräkning"],
 ] as const) {
   test(`${label}: typen väljs vid skapande och är låst vid ändring och rättelse`, async ({
+    session,
     page,
     context,
-  }, testInfo) => {
+  }) => {
     const period = currentPeriod();
     const name = `Typtest ${type}`;
-    await setSession(context, `expense-types-${type}-${testInfo.retry}`);
+    await setSession(context, session.token);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/onboarding");
     await page.getByLabel("Namn på hushållet").fill("Typtestfamiljen");

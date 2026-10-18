@@ -1,15 +1,15 @@
 import { openPostAction, closePostDetails } from "./helpers/post-management";
-import { expect, test } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
 import { dateLabel } from "../src/features/periods/model";
 
 test("inaktiv avsatt utgift behåller överföringar men visar inget förväntat uttag", async ({
+  session,
   page,
   context,
-}, testInfo) => {
+}) => {
   const period = currentPeriod();
-  await setSession(context, `funding-expense-${testInfo.retry}`);
+  await setSession(context, session.token);
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Avsättningstest");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
@@ -40,15 +40,17 @@ test("inaktiv avsatt utgift behåller överföringar men visar inget förväntat
 });
 
 test("bekräftade överföringar är skilda från planen och hänförs till valfri månad", async ({
+  session,
   page,
   context,
-}, testInfo) => {
+}) => {
   test.slow();
   const period = currentPeriod(),
     previous = shiftPeriod(period, -1),
     next = shiftPeriod(period, 1);
-  await setSession(context, `funding-${testInfo.retry}`);
+  await setSession(context, session.token);
   await page.goto("/onboarding");
+  await expect(page).toHaveURL(/\/onboarding$/);
   await page.getByLabel("Namn på hushållet").fill("Överföringstest");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
   await page.getByRole("button", { name: "Lägg till sparande" }).click();

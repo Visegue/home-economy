@@ -1,10 +1,10 @@
 import { openPostAction, closePostDetails } from "./helpers/post-management";
-import { expect, test } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
 import { monthEnd } from "../src/features/periods/model";
 
 test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
+  session,
   page,
   context,
   browser,
@@ -13,7 +13,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   test.slow();
   const period = currentPeriod();
   const nextPeriod = shiftPeriod(period, 1);
-  await setSession(context, `budget-${testInfo.retry}`);
+  await setSession(context, session.token);
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Budgetfamiljen");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
@@ -404,7 +404,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
 
   const outsiderContext = await browser.newContext();
   try {
-    await setSession(outsiderContext, `budget-outsider-${testInfo.retry}`);
+    await setSession(outsiderContext, session.outsider.token);
     const outsider = await outsiderContext.newPage();
     const origin = new URL(page.url()).origin;
     await outsider.goto(`${origin}/onboarding`);

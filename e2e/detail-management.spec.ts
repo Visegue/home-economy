@@ -1,12 +1,12 @@
-import { expect, test, type Page } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test, type Page } from "./helpers/session";
 
 test("återgår från ändring till uppdaterade detaljer för samma sparande", async ({
+  session,
   page,
   context,
-}, testInfo) => {
+}) => {
   test.slow();
-  await setSession(context, `detail-management-${testInfo.retry}`);
+  await setSession(context, session.token);
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Detaljhantering");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
@@ -103,11 +103,12 @@ async function holdAction(page: Page) {
 }
 
 test("skyddar ändring och avslut för alla posttyper med en modal och rätt fokus", async ({
+  session,
   page,
   context,
 }, testInfo) => {
   test.slow();
-  await setSession(context, `detail-guards-${testInfo.retry}`);
+  await setSession(context, session.token);
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Formulärskydd för detaljer");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
@@ -289,123 +290,132 @@ test("skyddar ändring och avslut för alla posttyper med en modal och rätt fok
   }
 });
 
-test("följer äldre identitet vid första skrivning och bevarar senare versioner", async ({
-  page,
-  context,
-}, testInfo) => {
-  test.slow();
-  await setSession(context, `detail-legacy-${testInfo.retry}`);
-  await page.goto("/?month=2026-01");
-  for (const item of [
-    {
-      year: 2026,
-      table: "Månadssparande",
-      name: "Äldre sparande",
-      field: "Namn på sparandet",
-      amount: "Belopp per månad (kr)",
-      save: "Spara sparande",
-      title: "Ändra sparande",
-      end: "Avsluta sparande",
-    },
-    {
-      year: 2027,
-      table: "Direkta utgifter",
-      name: "Äldre utgift",
-      field: "Namn på utgiften",
-      amount: "Belopp per betalning (kr)",
-      save: "Spara utgift",
-      title: "Ändra utgift",
-      end: "Avsluta utgift",
-    },
-  ]) {
-    await page.getByLabel("Välj månad").fill(`${item.year}-01`);
-    await expect(page.getByLabel("Välj månad")).toHaveValue(`${item.year}-01`);
-    const table = page.getByRole("table", { name: item.table, exact: true });
-    const original = table.getByRole("row").filter({
-      has: page.getByRole("cell", { name: "100,00 kr", exact: true }),
-    });
-    const independent = table.getByRole("row").filter({
-      has: page.getByRole("cell", { name: "200,00 kr", exact: true }),
-    });
-    await original
-      .getByRole("button", { name: item.name, exact: true })
-      .click();
-    await page
-      .getByRole("dialog", { name: item.name, exact: true })
-      .getByRole("button", { name: "Ändra", exact: true })
-      .click();
-    const form = page.getByRole("dialog", { name: item.title, exact: true });
-    await form.getByLabel(item.field).fill(item.name + " ny");
-    await form.getByLabel(item.amount).fill("300");
-    await form.getByLabel("Ändringen gäller från").fill(`${item.year}-01-15`);
-    await form.getByRole("button", { name: item.save, exact: true }).click();
-    const details = page.getByRole("dialog", {
-      name: item.name + " ny",
-      exact: true,
-    });
-    await expect(
-      details.getByRole("button", { name: "Ändra", exact: true }),
-    ).toBeFocused();
-    await expect(details).toContainText("300,00 kr");
-    await details.getByRole("button", { name: "Stäng", exact: true }).click();
-    await expect(
-      table.getByRole("button", { name: item.name + " ny", exact: true }),
-    ).toBeFocused();
-    await expect(independent).toContainText(item.name);
-    await expect(independent).not.toContainText(item.name + " ny");
-    await table
-      .getByRole("button", { name: item.name + " ny", exact: true })
-      .click();
-    await details.getByRole("button", { name: "Ändra", exact: true }).click();
-    await form.getByLabel(item.field).fill(item.name + " framtid");
-    await form.getByLabel(item.amount).fill("400");
-    await form.getByLabel("Ändringen gäller från").fill(`${item.year}-02-01`);
-    await form.getByRole("button", { name: item.save, exact: true }).click();
-    await expect(
-      details.getByRole("button", { name: "Ändra", exact: true }),
-    ).toBeFocused();
-    await expect(details).toContainText(`31 jan. ${item.year}`);
-    await details.getByRole("button", { name: "Ändra", exact: true }).click();
-    await expect(form.getByLabel("Ändringen gäller från")).toHaveValue(
-      `${item.year}-01-15`,
-    );
-    await expect(form).toContainText("Senare ändringar bevaras");
-    await form.getByRole("combobox", { name: "Typ av ändring" }).click();
-    await page
-      .getByRole("option", { name: "Rätta denna version", exact: true })
-      .click();
-    await form.getByLabel(item.amount).fill("350");
-    await form.getByRole("button", { name: item.save, exact: true }).click();
-    await expect(details).toContainText("350,00 kr");
-    await details.getByRole("button", { name: "Avsluta", exact: true }).click();
-    const end = page.getByRole("dialog", { name: item.end, exact: true });
-    await expect(end.getByLabel("Avsluta från")).toHaveValue(
-      `${item.year}-01-15`,
-    );
-    await end
-      .getByRole("button", {
-        name: `Bekräfta avslut av ${item.name} ny`,
+test(
+  "följer äldre identitet vid första skrivning och bevarar senare versioner",
+  { annotation: { type: "session-profile", description: "legacy" } },
+  async ({ session, page, context }) => {
+    test.slow();
+    await setSession(context, session.token);
+    await page.goto("/?month=2026-01");
+    for (const item of [
+      {
+        year: 2026,
+        table: "Månadssparande",
+        name: "Äldre sparande",
+        field: "Namn på sparandet",
+        amount: "Belopp per månad (kr)",
+        save: "Spara sparande",
+        title: "Ändra sparande",
+        end: "Avsluta sparande",
+      },
+      {
+        year: 2027,
+        table: "Direkta utgifter",
+        name: "Äldre utgift",
+        field: "Namn på utgiften",
+        amount: "Belopp per betalning (kr)",
+        save: "Spara utgift",
+        title: "Ändra utgift",
+        end: "Avsluta utgift",
+      },
+    ]) {
+      await page.getByLabel("Välj månad").fill(`${item.year}-01`);
+      await expect(page.getByLabel("Välj månad")).toHaveValue(
+        `${item.year}-01`,
+      );
+      const table = page.getByRole("table", { name: item.table, exact: true });
+      const original = table.getByRole("row").filter({
+        has: page.getByRole("cell", { name: "100,00 kr", exact: true }),
+      });
+      const independent = table.getByRole("row").filter({
+        has: page.getByRole("cell", { name: "200,00 kr", exact: true }),
+      });
+      await original
+        .getByRole("button", { name: item.name, exact: true })
+        .click();
+      await page
+        .getByRole("dialog", { name: item.name, exact: true })
+        .getByRole("button", { name: "Ändra", exact: true })
+        .click();
+      const form = page.getByRole("dialog", { name: item.title, exact: true });
+      await form.getByLabel(item.field).fill(item.name + " ny");
+      await form.getByLabel(item.amount).fill("300");
+      await form.getByLabel("Ändringen gäller från").fill(`${item.year}-01-15`);
+      await form.getByRole("button", { name: item.save, exact: true }).click();
+      const details = page.getByRole("dialog", {
+        name: item.name + " ny",
         exact: true,
-      })
-      .click();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-    await page.getByLabel("Välj månad").fill(`${item.year}-02`);
-    await expect(page.getByLabel("Välj månad")).toHaveValue(`${item.year}-02`);
-    await table
-      .getByRole("button", { name: item.name + " framtid", exact: true })
-      .click();
-    const future = page.getByRole("dialog", {
-      name: item.name + " framtid",
-      exact: true,
-    });
-    await expect(future).toContainText("400,00 kr");
-    await future.getByRole("button", { name: "Ändra", exact: true }).click();
-    await expect(form.getByLabel("Ändringen gäller från")).toHaveValue(
-      `${item.year}-02-01`,
-    );
-    await form.getByRole("button", { name: "Stäng", exact: true }).click();
-    await future.getByRole("button", { name: "Stäng", exact: true }).click();
-    await page.getByLabel("Välj månad").fill(`${item.year}-01`);
-    await expect(page.getByLabel("Välj månad")).toHaveValue(`${item.year}-01`);
-  }
-});
+      });
+      await expect(
+        details.getByRole("button", { name: "Ändra", exact: true }),
+      ).toBeFocused();
+      await expect(details).toContainText("300,00 kr");
+      await details.getByRole("button", { name: "Stäng", exact: true }).click();
+      await expect(
+        table.getByRole("button", { name: item.name + " ny", exact: true }),
+      ).toBeFocused();
+      await expect(independent).toContainText(item.name);
+      await expect(independent).not.toContainText(item.name + " ny");
+      await table
+        .getByRole("button", { name: item.name + " ny", exact: true })
+        .click();
+      await details.getByRole("button", { name: "Ändra", exact: true }).click();
+      await form.getByLabel(item.field).fill(item.name + " framtid");
+      await form.getByLabel(item.amount).fill("400");
+      await form.getByLabel("Ändringen gäller från").fill(`${item.year}-02-01`);
+      await form.getByRole("button", { name: item.save, exact: true }).click();
+      await expect(
+        details.getByRole("button", { name: "Ändra", exact: true }),
+      ).toBeFocused();
+      await expect(details).toContainText(`31 jan. ${item.year}`);
+      await details.getByRole("button", { name: "Ändra", exact: true }).click();
+      await expect(form.getByLabel("Ändringen gäller från")).toHaveValue(
+        `${item.year}-01-15`,
+      );
+      await expect(form).toContainText("Senare ändringar bevaras");
+      await form.getByRole("combobox", { name: "Typ av ändring" }).click();
+      await page
+        .getByRole("option", { name: "Rätta denna version", exact: true })
+        .click();
+      await form.getByLabel(item.amount).fill("350");
+      await form.getByRole("button", { name: item.save, exact: true }).click();
+      await expect(details).toContainText("350,00 kr");
+      await details
+        .getByRole("button", { name: "Avsluta", exact: true })
+        .click();
+      const end = page.getByRole("dialog", { name: item.end, exact: true });
+      await expect(end.getByLabel("Avsluta från")).toHaveValue(
+        `${item.year}-01-15`,
+      );
+      await end
+        .getByRole("button", {
+          name: `Bekräfta avslut av ${item.name} ny`,
+          exact: true,
+        })
+        .click();
+      await expect(page.getByRole("dialog")).toHaveCount(0);
+      await page.getByLabel("Välj månad").fill(`${item.year}-02`);
+      await expect(page.getByLabel("Välj månad")).toHaveValue(
+        `${item.year}-02`,
+      );
+      await table
+        .getByRole("button", { name: item.name + " framtid", exact: true })
+        .click();
+      const future = page.getByRole("dialog", {
+        name: item.name + " framtid",
+        exact: true,
+      });
+      await expect(future).toContainText("400,00 kr");
+      await future.getByRole("button", { name: "Ändra", exact: true }).click();
+      await expect(form.getByLabel("Ändringen gäller från")).toHaveValue(
+        `${item.year}-02-01`,
+      );
+      await form.getByRole("button", { name: "Stäng", exact: true }).click();
+      await future.getByRole("button", { name: "Stäng", exact: true }).click();
+      await page.getByLabel("Välj månad").fill(`${item.year}-01`);
+      await expect(page.getByLabel("Välj månad")).toHaveValue(
+        `${item.year}-01`,
+      );
+    }
+  },
+);

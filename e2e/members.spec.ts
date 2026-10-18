@@ -1,12 +1,12 @@
-import { expect, test } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test } from "./helpers/session";
 
 test("redigerar och tar bort medlemmar med bevarade utgifter", async ({
+  session,
   page,
   context,
 }, testInfo) => {
   test.slow();
-  await setSession(context, `members-${testInfo.retry}`);
+  await setSession(context, session.token);
   await page.goto("/onboarding");
   await expect(page).toHaveURL(/\/onboarding$/);
   await page.getByLabel("Namn på hushållet").fill("Medlemstest");

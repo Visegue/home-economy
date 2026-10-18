@@ -1,13 +1,13 @@
-import { expect, test } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test } from "./helpers/session";
 
 test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning", async ({
+  session,
   page,
   context,
   browser,
 }, testInfo) => {
   test.setTimeout(120_000);
-  const token = `help-${testInfo.retry}`;
+  const token = session.token;
   await setSession(context, token);
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Hjälptest");

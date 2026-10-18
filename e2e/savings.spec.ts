@@ -1,14 +1,14 @@
 import { openPostAction, closePostDetails } from "./helpers/post-management";
-import { expect, test } from "@playwright/test";
-import { setSession } from "./helpers/session";
+import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
 
 test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma", async ({
+  session,
   page,
   context,
 }, testInfo) => {
   const start = currentPeriod();
-  await setSession(context, `savings-${testInfo.retry}`);
+  await setSession(context, session.token);
   await page.goto("/onboarding");
   await page
     .getByRole("textbox", { name: "Namn på hushållet" })
@@ -200,10 +200,11 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
 });
 
 test("månadsöversikten rymmer långa namn och stora belopp på mobil", async ({
+  session,
   page,
   context,
 }, testInfo) => {
-  await setSession(context, `overview-${testInfo.retry}`);
+  await setSession(context, session.token);
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Mobilöversikt");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();

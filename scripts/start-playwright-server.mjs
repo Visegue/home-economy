@@ -2,10 +2,27 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { hashPassword } from "better-auth/crypto";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const testArgs = JSON.parse(process.env.PLAYWRIGHT_TEST_ARGS ?? "null");
+if (!Array.isArray(testArgs))
+  throw new Error("Start Playwright with pnpm test:e2e");
+const sessions = JSON.parse(
+  execFileSync(
+    process.execPath,
+    [
+      fileURLToPath(import.meta.resolve("@playwright/test/cli")),
+      ...testArgs,
+      "--list",
+      `--reporter=${fileURLToPath(new URL("./playwright-session-reporter.mjs", import.meta.url))}`,
+    ],
+    { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 },
+  ),
+);
 
 // Seed before Next starts: only one process may own a PGlite data directory.
 const dataDir = await mkdtemp(join(tmpdir(), "hemekonomi-playwright-"));
@@ -14,105 +31,27 @@ try {
   try {
     await migrate(drizzle(database), { migrationsFolder: "drizzle" });
     const passwordHash = await hashPassword("synthetic-account-password-123");
-    for (const id of [
-      ...["light", "dark"].flatMap((theme) =>
-        [0, 1, 2].map((retry) => `theme-${theme}-${retry}`),
-      ),
-      "overview-0",
-      ...["light", "dark"].flatMap((theme) =>
-        [0, 1, 2].map((retry) => `form-validation-${theme}-${retry}`),
-      ),
-      ...["light", "dark"].flatMap((theme) =>
-        [0, 1, 2].map((retry) => `form-reflow-${theme}-${retry}`),
-      ),
-      "form-hierarchy-0",
-      "form-hierarchy-1",
-      "form-hierarchy-2",
-      "overview-1",
-      "overview-2",
-      "onboarding-0",
-      "onboarding-1",
-      "onboarding-2",
-      "budget-0",
-      "detail-legacy-0",
-      "detail-legacy-1",
-      "detail-legacy-2",
-      "detail-guards-0",
-      "detail-guards-1",
-      "detail-guards-2",
-      "detail-management-0",
-      "detail-management-1",
-      "detail-management-2",
-      "row-identities-0",
-      "row-identities-1",
-      "row-identities-2",
-      "row-details-0",
-      "row-details-1",
-      "row-details-2",
-      "month-navigation-0",
-      "month-navigation-1",
-      "month-navigation-2",
-      "month-pending-0",
-      "month-pending-1",
-      "month-pending-2",
-      "funding-0",
-      "funding-1",
-      "funding-2",
-      "funding-expense-0",
-      "funding-expense-1",
-      "funding-expense-2",
-      "budget-1",
-      "budget-2",
-      "budget-outsider-0",
-      "budget-outsider-1",
-      "budget-outsider-2",
-      "budget-preview",
-      "expense-types-direct-0",
-      "expense-types-direct-1",
-      "expense-types-direct-2",
-      "expense-types-allocated-0",
-      "expense-types-allocated-1",
-      "expense-types-allocated-2",
-      "expense-types-settlement-0",
-      "expense-types-settlement-1",
-      "expense-types-settlement-2",
-      "form-feedback-0",
-      "form-feedback-1",
-      "form-feedback-2",
-      "members-0",
-      "members-1",
-      "members-2",
-      "account-password-0",
-      "account-password-1",
-      "account-password-2",
-      "account-google-0",
-      "account-google-1",
-      "account-google-2",
-      "help-0",
-      "help-1",
-      "help-2",
-      "expired",
-      "income-0",
-      "income-1",
-      "income-2",
-      "savings-0",
-      "savings-1",
-      "savings-2",
-      "settlement-0",
-      "settlement-1",
-      "settlement-2",
-    ]) {
+    for (const { userId: id, token, otherToken, profile } of sessions) {
+      if (profile === "missing") continue;
       await database.query(
         `insert into public."user" (id, name, email, email_verified)
          values ($1, 'Testanvändare', $2, true)`,
         [id, `${id}@example.test`],
       );
-      await database.query(
-        `insert into public.session (id, token, user_id, expires_at, updated_at)
-         values ($1, $1, $1, $2, now())`,
-        [id, new Date(Date.now() + (id === "expired" ? -1 : 1) * 86_400_000)],
-      );
-      if (id.startsWith("detail-legacy-")) {
+      for (const sessionToken of [token, otherToken]) {
+        await database.query(
+          `insert into public.session (id, token, user_id, expires_at, updated_at)
+           values ($1, $1, $2, $3, now())`,
+          [
+            sessionToken,
+            id,
+            new Date(
+              Date.now() + (profile === "expired" ? -1 : 1) * 86_400_000,
+            ),
+          ],
+        );
+      }
+      if (profile === "legacy") {
         // Synthetic legacy versions cannot be created through the modern UI.
         // Seed them before Next starts; assertions use only the public app.
         await database.query("select set_config('app.user_id', $1, false)", [
@@ -139,8 +78,8 @@ try {
           );
         }
       }
-      if (id.startsWith("account-")) {
-        const credential = id.startsWith("account-password-");
+      if (["credential", "google"].includes(profile)) {
+        const credential = profile === "credential";
         await database.query(
           `insert into public.account (id, account_id, provider_id, user_id, password)
            values ($1, $1, $2, $1, $3)`,
@@ -149,11 +88,6 @@ try {
             credential ? "credential" : "google",
             credential ? passwordHash : null,
           ],
-        );
-        await database.query(
-          `insert into public.session (id, token, user_id, expires_at, updated_at)
-           values ($1, $1, $2, $3, now())`,
-          [`${id}-other`, id, new Date(Date.now() + 86_400_000)],
         );
       }
     }
