@@ -86,6 +86,8 @@ Två kontroller körs separat:
 
 Databastesterna kör migrationer och RLS med en begränsad roll i PGlite. PGlite- och Playwright-tester använder ingen Neon-kvot och skickar inga mejl. Google OAuth och mejlleverans kräver separat kontroll i webbläsaren. `db:check` använder Neon-kvot även när testdata rullas tillbaka.
 
+För lokal E2E-workerstandard, override, mätunderlag och vilka jobb som kan dela ett worktree, se [Lokal E2E och resursdelning](docs/e2e-resources.md).
+
 Vitest använder högst två testprocesser lokalt eftersom varje databastestfil startar en egen PGlite-instans. Ändra vid behov med `pnpm test --maxWorkers=4` eller `VITEST_MAX_WORKERS=4 pnpm check`. I CI väljer Vitest antalet automatiskt utifrån tillgängliga processorer.
 
 CI kör även `pnpm db:generate` och stoppar PR:er med saknade migrationsfiler. Vid Playwright-fel eller omförsök sparas HTML-/JSON-rapport och traces som `playwright-diagnostics-<körningsförsök>` i sju dagar, även om slutresultatet är grönt. Separata namn bevarar tidigare underlag när hela jobbet körs om. Körningssammanfattningen visar direkt godkända tester, lyckade omförsök, slutliga fel och berörda testnamn. En lyckad retry betyder inte att orsaken är rättad.

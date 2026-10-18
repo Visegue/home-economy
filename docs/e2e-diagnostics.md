@@ -2,7 +2,7 @@
 
 `pnpm test:e2e` bedömer browserassertioner och serverutfall separat. Playwright-reportern fångar den pipade testserverns stdout/stderr från seedning och uppstart till avslutad nedstängning. Även en körning med godkända assertioner får exitkod 1 vid oväntade serverfel eller misslyckad diagnostikinsamling.
 
-`test-results/server/report.json` innehåller körnings-ID, tidsintervall, Git-commit, markering för lokala ändringar, konfigurerad worker-gräns, faktisk planerad parallellitet och startade worker-index. Den sanerade loggen ligger bredvid, med körnings-ID som filnamn. Browserrapportens metadata innehåller samma ID. Vid `PLAYWRIGHT_JSON_OUTPUT_FILE` placeras serverdiagnostiken bredvid den rapporten. Saknad eller omatchad serverrapport får inte sammanfattas som en ren körning.
+`test-results/server/report.json` innehåller körnings-ID, tidsintervall, Git-commit, markering för lokala ändringar, sanerat kommando som argumentlista, konfigurerad worker-gräns, faktisk planerad parallellitet och startade worker-index. Den sanerade loggen ligger bredvid, med körnings-ID som filnamn. Browserrapportens metadata innehåller samma ID. Vid `PLAYWRIGHT_JSON_OUTPUT_FILE` placeras serverdiagnostiken bredvid den rapporten. Saknad eller omatchad serverrapport får inte sammanfattas som en ren körning.
 
 Felgrinden känner igen unhandled rejection/exception, uncaught error/exception, fatal error, FATAL, Aborted(), out-of-memory, inledande Error/TypeError/ReferenceError/SyntaxError/RangeError/RuntimeError och appens fem strukturerade skrivfelshändelser. ANSI-färger tas bort och ofullständiga rader fogas samman per ström före bedömning. En överstor rad eller logg ger insamlingsfel i stället för tyst bortfall. Regeln matchar inte godtyckliga förekomster av ordet `error`.
 

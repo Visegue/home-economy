@@ -13,7 +13,7 @@ afterEach(() => {
     rmSync(directory, { recursive: true, force: true });
 });
 
-function runScenario(scenario) {
+function runScenario(scenario, args = []) {
   const directory = mkdtempSync(join(tmpdir(), "server-diagnostics-"));
   directories.push(directory);
   if (scenario === "capture-failure")
@@ -24,6 +24,7 @@ function runScenario(scenario) {
       "scripts/run-playwright.mjs",
       "test",
       "--config=.github/fixtures/playwright/server.config.ts",
+      ...args,
     ],
     {
       cwd: root,
@@ -60,6 +61,15 @@ it("fails a green browser run when the server reports an unhandled rejection", (
   expect(server.serverStatus).toBe("failed");
   expect(server.workers).toBe(1);
   expect(server.actualWorkers).toBe(1);
+  expect(server.command).toEqual([
+    "node",
+    "scripts/run-playwright.mjs",
+    "test",
+    "--config=.github/fixtures/playwright/server.config.ts",
+  ]);
+  expect(result.stdout).toContain(
+    "Kommando: node scripts/run-playwright.mjs test",
+  );
   expect(server.sourceRevision).toMatch(/^[a-f0-9]{40}$/);
   expect(server.runId).toBe(browser.config.metadata.serverDiagnosticsRunId);
   expect(
@@ -187,3 +197,16 @@ it.each(["missing", "mismatched"])(
   },
   30_000,
 );
+
+it("sanitizes invocation arguments before saving or printing them", () => {
+  const { directory, result } = runScenario("clean", [
+    "--grep=synthetic-environment-secret|.*",
+  ]);
+  expect(result.status).toBe(0);
+  const report = JSON.parse(
+    readFileSync(join(directory, "server/report.json"), "utf8"),
+  );
+  expect(report.command).toContain("--grep=[REDACTED]|.*");
+  expect(result.stdout).toContain("'--grep=[REDACTED]|.*'");
+  expect(result.stdout).not.toContain("synthetic-environment-secret");
+}, 30_000);

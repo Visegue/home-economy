@@ -4,6 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
+  workers: process.env.CI ? undefined : 2,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: [
@@ -29,7 +30,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "node scripts/start-playwright-server.mjs",
+    command:
+      "node scripts/with-next-output.mjs test:e2e node scripts/start-playwright-server.mjs",
     url: "http://127.0.0.1:3000",
     reuseExistingServer: false,
     stdout: "pipe",

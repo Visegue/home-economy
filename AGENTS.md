@@ -13,6 +13,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - UI copy is Swedish; identifiers and commits are English.
 - Use `pnpm` for package management and Bun for the app, builds and compatible tools. Verified Bun compatibility failures require Node.js 24 for Vitest/jsdom, Playwright's test runner and Next.js with PGlite. Runtime versions are in `.tool-versions`.
 - Run `pnpm check` before handoff and `pnpm test:e2e` for user-visible flows.
+- For local verification scheduling, worker overrides and Next-output conflicts, follow [docs/e2e-resources.md](docs/e2e-resources.md).
 - Default to Server Components; use `"use client"` only for interactive UI.
 - Use `src/components/ui` shadcn/ui primitives and `src/app/globals.css` tokens.
 - Store money as integer öre in code and `numeric(14,2)` in Postgres.
