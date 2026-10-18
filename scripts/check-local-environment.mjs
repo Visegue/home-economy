@@ -1,6 +1,14 @@
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  accessSync,
+  constants,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+} from "node:fs";
 
 const timeout = 2000;
 // Version shims may otherwise download the requested package manager implicitly.
@@ -31,6 +39,32 @@ function probe(command, args) {
             ? "misslyckades"
             : null;
   return { failure, output: result.stdout?.trim() ?? "" };
+}
+function browserVersion(executable) {
+  try {
+    accessSync(executable, constants.X_OK);
+    const bundle = /^(.*\.app\/Contents)\/MacOS\/[^/]+$/.exec(
+      realpathSync(executable),
+    );
+    if (bundle) {
+      // macOS Chrome does not reliably exit for --version; read its app metadata.
+      const result = probe("plutil", [
+        "-extract",
+        "CFBundleShortVersionString",
+        "raw",
+        "-o",
+        "-",
+        join(bundle[1], "Info.plist"),
+      ]);
+      return { ...result, output: `Chromium ${result.output}` };
+    }
+  } catch (error) {
+    return {
+      failure: error.code === "ENOENT" ? "saknas" : "nekad behörighet",
+      output: "",
+    };
+  }
+  return probe(executable, ["--version"]);
 }
 function matches(version, requirement) {
   const parts = requirement.replace(/\.x$/, "").split(".");
@@ -113,7 +147,7 @@ try {
       report("Browser", "ogiltigt Playwright-svar", "", nextBrowser);
     } else {
       const override = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
-      const browser = probe(override || selected.executable, ["--version"]);
+      const browser = browserVersion(override || selected.executable);
       const version =
         /^(?:Chromium|Google Chrome(?: for Testing)?|Chrome(?: for Testing)?) (\d+\.\d+\.\d+\.\d+)\s*$/.exec(
           browser.output,

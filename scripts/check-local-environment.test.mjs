@@ -254,3 +254,27 @@ test.each([
     expect(result.stdout).not.toContain(root);
   },
 );
+
+test("accepts an executable macOS Chrome bundle without starting its browser process", () => {
+  const { root, cache, executable } = browserFixture();
+  browser(executable, browserSpec.browserVersion);
+  const contents = join(root, "Installed Chrome.app", "Contents");
+  mkdirSync(join(contents, "MacOS"), { recursive: true });
+  const override = join(contents, "MacOS", "Chrome");
+  writeFileSync(override, `#!${process.execPath}\nprocess.exit(7);\n`, {
+    mode: 0o755,
+  });
+  writeFileSync(join(contents, "Info.plist"), "synthetic plist fixture");
+  tool(
+    root,
+    "plutil",
+    'console.log(process.argv[2] === "-extract" && process.argv[3] === "CFBundleShortVersionString" ? "154.0.8037.98" : "invalid")',
+  );
+  const result = run(root, {
+    PLAYWRIGHT_BROWSERS_PATH: cache,
+    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: override,
+  });
+  expect(result.status).toBe(0);
+  expect(result.stdout).toContain("Browser: OK (explicit override");
+  expect(result.stdout).toContain("154.0.8037.98");
+});
