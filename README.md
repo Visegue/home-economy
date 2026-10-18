@@ -59,6 +59,12 @@ pnpm dev
 
 ## Kvalitetskontroller
 
+Kör `bun scripts/check-local-environment.mjs` i repots rot före längre verifieringsjobb; när pnpm redan fungerar finns även `pnpm check:local`. Om Bun saknas kan en redan installerad Node köra samma `.mjs`-fil. Direktkommandot låter diagnostiken starta även när pnpm/Corepack annars försöker hämta rätt version före ett npm-skript.
+
+Förtestet läser `.tool-versions`, `package.json` och installerad Playwright. Det kontrollerar Node/Bun/pnpm i aktuell PATH, den headless-shell som E2E faktiskt väljer (inklusive `PLAYWRIGHT_BROWSERS_PATH`) eller befintlig `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`, samt skrivbarhet i worktreet och befintliga verifieringskataloger. För körbara macOS-appbundlar läses versionen med systemets `plutil` i stället för att starta Chrome med `--version`. Varje processuppslag begränsas till två sekunder. Exit 0 betyder stödd miljö, exit 1 ofullständig miljö med nästa steg. Kontrollen startar ingen browser och ersätter inte kvalitetskontroller eller E2E; en explicit override måste fortfarande verifieras med E2E.
+
+Diagnostiken laddar inte ned verktyg/browser eller ändrar globala trust-inställningar. Den spärrar automatisk installation via Corepack, pnpm och mise i sina uppslag och skapar/tar bort tomma temporära kataloger för skrivkontrollen. Vid shim-, timeout- eller behörighetsfel: välj redan installerade binärer i PATH och kör direktkommandot igen inom tillåten sandbox. Installation eller utökad behörighet är ett separat, uttryckligt steg. Inga personliga sökvägar eller `.tmp`-wrappers behövs. CI:s pinnade installationer och Node 24-undantagen ovan behålls.
+
 Efter `pnpm install` kan `pnpm check` köras utan `.env.local`, databas eller egna auth-nycklar. Kommandot kontrollerar versionsformat och kör format, lint, typkontroll, tester och verifieringsbygge. Kör enskilt med:
 
 ```bash

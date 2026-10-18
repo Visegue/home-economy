@@ -1,6 +1,6 @@
 {
   "name": "home-economy",
-  "version": "0.16.4",
+  "version": "0.16.5",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -16,6 +16,7 @@
     "lint:fix": "bun --bun oxlint --fix .",
     "format": "bun --bun prettier --write .",
     "format:check": "bun --bun prettier --check .",
+    "check:local": "bun scripts/check-local-environment.mjs",
     "check:version": "bun scripts/check-app-version.mjs",
     "typecheck": "bun --bun tsc --noEmit",
     "test": "node scripts/run-vitest.mjs run",
