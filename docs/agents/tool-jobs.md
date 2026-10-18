@@ -18,7 +18,7 @@ Runnern stöder POSIX-värdar. Kommandot och barnen måste stanna i dess process
 
 ## Begränsad utskrift och återhämtning
 
-Runnern visar högst 4 000 tecken från loggen plus kort identitet/slutstatus. `--limit` kan sättas till högst 20 000. Full kombinerad stdout/stderr skrivs direkt till `output.log` i en privat temporär katalog (0700, fil 0600); strömmarnas inbördes ordning beror på operativsystemets skrivningar. `result.json` innehåller slutstatus och processidentitet. Inga sessionsloggar ska läggas i Git.
+Runnern visar högst 4 000 tecken från loggen plus kort identitet/slutstatus. `--limit` kan sättas till 256–20 000; mindre gränser avvisas före start så att fortsättningsmarkören alltid kan göra framsteg. Full kombinerad stdout/stderr skrivs direkt till `output.log` i en privat temporär katalog (0700, fil 0600); strömmarnas inbördes ordning beror på operativsystemets skrivningar. `result.json` innehåller slutstatus och processidentitet. Inga sessionsloggar ska läggas i Git.
 
 Visade utdrag saneras med projektets befintliga diagnostikregler. Råloggen är fullständig och kan innehålla känsliga värden; behandla den som privat och öppna den inte genom en osanerad massutskrift. Sanering är ingen garanti för godtyckliga okända hemlighetsformat: använd syntetiska data och undvik kommandon som skriver hemligheter. Behåll underlaget tills utfallet är utrett, ta sedan bort just den utskrivna temporära katalogen när det är lämpligt.
 

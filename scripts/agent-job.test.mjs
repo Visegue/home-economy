@@ -200,3 +200,18 @@ test("preserves the conventional exit status when the command dies from SIGKILL"
     if (directory) rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("rejects a tiny excerpt budget with a useful bound before starting a job", () => {
+  const result = run([
+    "run",
+    "--limit",
+    "1",
+    "--",
+    process.execPath,
+    "-e",
+    'console.log("diagnostic")',
+  ]);
+  expect(result.status).toBe(1);
+  expect(result.stderr).toContain("256");
+  expect(result.stdout).not.toContain("Evidence:");
+});

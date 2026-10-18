@@ -36,12 +36,13 @@ if (
   ![limit, from, column, timeout, quiet].every(
     (n) => Number.isSafeInteger(n) && n > 0,
   ) ||
+  limit < 256 ||
   limit > 20000 ||
   timeout > 2147483647 ||
   quiet > 2147483647
 )
   throw new Error(
-    "Use positive integer bounds; --limit must be at most 20000.",
+    "Use positive integer bounds; --limit must be between 256 and 20000.",
   );
 
 async function excerpt(directory) {
