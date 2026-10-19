@@ -11,7 +11,7 @@ import { migrateWithHistoryCheck } from "./migration-history.mjs";
 let client;
 let folder;
 beforeEach(async () => {
-  client = new PGlite("memory://");
+  client = await PGlite.create("memory://");
   folder = await mkdtemp(join(tmpdir(), "migration-history-"));
   await mkdir(join(folder, "meta"));
 });

@@ -9,7 +9,7 @@ allowBuilds:
 
 overrides:
   # Update with better-auth: the adapter's core peer must match the runtime.
-  "@better-auth/core": 1.7.5
+  "@better-auth/core": 1.7.10
   # Security patches for shadcn's transitive dependencies.
   "brace-expansion@5": 5.0.12
   esbuild: 0.28.2

@@ -44,7 +44,7 @@ if (config.provider === "postgres") {
   if (!dataDir.includes("://")) {
     mkdirSync(dirname(resolve(dataDir)), { recursive: true });
   }
-  const client = new PGlite(dataDir);
+  const client = await PGlite.create(dataDir);
   try {
     await migrateWithHistoryCheck(
       async (query) => (await client.query(query)).rows,
