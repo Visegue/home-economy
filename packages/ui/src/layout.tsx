@@ -9,7 +9,7 @@ export function PageHeading({
   return (
     <h1
       className={cn(
-        "text-2xl font-semibold tracking-tight sm:text-3xl",
+        "max-w-full min-w-0 text-2xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-3xl",
         className,
       )}
       {...props}
