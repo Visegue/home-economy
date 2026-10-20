@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRightLeft, ReceiptText, Scale } from "lucide-react";
+import { ArrowRightLeft, ReceiptText, Scale, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import { ExpenseDialog } from "@/features/budget/forms";
@@ -333,8 +333,15 @@ export async function OverviewDashboard({ period }: { period: string }) {
               </div>
             </CollapsibleCard>
           </section>
-          <Button variant="link" asChild>
-            <Link href="/settings">Hushållets medlemmar och inkomster</Link>
+          <Button
+            variant="link"
+            className="h-auto min-h-11 max-w-full py-2 whitespace-normal"
+            asChild
+          >
+            <Link href="/settings">
+              <Settings aria-hidden="true" />
+              <span>Hushållets medlemmar och inkomster</span>
+            </Link>
           </Button>
         </div>
       </PostManagement>

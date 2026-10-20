@@ -10,6 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "./button";
 import { Dialog } from "./dialog";
 import { FormDialogContent } from "./form-dialog-content";
@@ -75,24 +76,28 @@ export function FormDialog({
               if (!discarded.current) previousFocus.current?.focus();
             }}
           >
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
               <Button
+                className="h-auto min-h-11 min-w-0 flex-wrap py-2 whitespace-normal"
                 ref={continueButton}
                 type="button"
                 onClick={() => setConfirmDiscard(false)}
               >
-                Fortsätt redigera
+                <Pencil aria-hidden="true" />
+                <span className="min-w-0">Fortsätt redigera</span>
               </Button>
               <Button
                 type="button"
                 variant="outline"
+                className="h-auto min-h-11 min-w-0 flex-wrap py-2 whitespace-normal"
                 onClick={() => {
                   discarded.current = true;
                   setConfirmDiscard(false);
                   onOpenChange(false);
                 }}
               >
-                Kasta ändringar
+                <Trash2 aria-hidden="true" />
+                <span className="min-w-0">Kasta ändringar</span>
               </Button>
             </div>
           </FormDialogContent>

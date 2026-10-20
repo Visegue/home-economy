@@ -133,6 +133,13 @@ test("visar diskret vänteläge på mobil och bevarar fokus även efter avbruten
         path: testInfo.outputPath("month-navigation-pending-mobile.png"),
         animations: "disabled",
       });
+      await page.emulateMedia({ colorScheme: "dark" });
+      await expect(page.locator("html")).toHaveCSS("color-scheme", "dark");
+      await page.screenshot({
+        path: testInfo.outputPath("month-navigation-pending-mobile-dark.png"),
+        animations: "disabled",
+      });
+      await page.emulateMedia({ colorScheme: "light" });
       await page.evaluate((y) => window.scrollTo(0, y), scroll);
       expect(await page.evaluate(() => window.scrollY)).toBe(scroll);
     } finally {

@@ -13,6 +13,7 @@ export function FormDialogContent({
   description,
   children,
   onOpenAutoFocus,
+  showCloseButton = true,
   ...props
 }: {
   title: string;
@@ -94,6 +95,7 @@ export function FormDialogContent({
     <DialogContent
       {...props}
       ref={attachContent}
+      showCloseButton={showCloseButton}
       className="max-h-[90dvh] scroll-py-4 overflow-y-auto overscroll-contain transition-none sm:max-w-lg"
       onOpenAutoFocus={(event) => {
         onOpenAutoFocus?.(event);
@@ -104,7 +106,7 @@ export function FormDialogContent({
         }
       }}
     >
-      <DialogHeader className="pr-8">
+      <DialogHeader className={showCloseButton ? "pr-8" : undefined}>
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription className={description ? undefined : "sr-only"}>
           {description ?? title}

@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  LoaderCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,10 +87,11 @@ export function MonthSelector({ period }: { period: string }) {
           type="button"
           variant="outline"
           aria-disabled={isPending}
-          className={disabledControl}
+          className={`${disabledControl} h-auto min-h-11 max-w-full flex-wrap py-2 whitespace-normal`}
           onClick={() => navigate(currentPeriod())}
         >
-          Denna månad
+          <CalendarDays aria-hidden="true" />
+          <span>Denna månad</span>
         </Button>
       </div>
       <output
