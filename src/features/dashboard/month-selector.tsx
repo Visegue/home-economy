@@ -87,11 +87,11 @@ export function MonthSelector({ period }: { period: string }) {
           type="button"
           variant="outline"
           aria-disabled={isPending}
-          className={disabledControl}
+          className={`${disabledControl} h-auto min-h-11 max-w-full flex-wrap py-2 whitespace-normal`}
           onClick={() => navigate(currentPeriod())}
         >
           <CalendarDays aria-hidden="true" />
-          Denna månad
+          <span>Denna månad</span>
         </Button>
       </div>
       <output
