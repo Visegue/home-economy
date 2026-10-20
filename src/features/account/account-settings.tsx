@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { KeyRound, Link2 } from "lucide-react";
+import { KeyRound, Link2, Save } from "lucide-react";
 import { FormDialog, useFormGuard } from "@/components/form-dialog";
 import { FormDialogContent } from "@/components/form-dialog-content";
 import { useSaveNotice } from "@/components/save-notice";
@@ -327,7 +327,12 @@ function ChangePasswordForm({
           Glömt lösenord?
         </Link>
       </FormSection>
-      <Button type="submit" disabled={pending} className="w-full">
+      <Button
+        type="submit"
+        disabled={pending}
+        className="h-auto min-h-11 w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
+      >
+        <Save aria-hidden="true" />
         {pending ? "Sparar…" : "Spara nytt lösenord"}
       </Button>
     </Form>

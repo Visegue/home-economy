@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowLeft, Mail } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -49,8 +50,15 @@ export function ForgotPasswordForm({ configured }: { configured: boolean }) {
         <p>
           Om adressen finns hos oss har vi skickat en länk för nytt lösenord.
         </p>
-        <Button asChild variant="outline" className="w-full">
-          <Link href="/login">Tillbaka till inloggningen</Link>
+        <Button
+          asChild
+          variant="outline"
+          className="h-auto min-h-11 w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
+        >
+          <Link href="/login">
+            <ArrowLeft aria-hidden="true" />
+            Tillbaka till inloggningen
+          </Link>
         </Button>
       </div>
     );
@@ -78,9 +86,10 @@ export function ForgotPasswordForm({ configured }: { configured: boolean }) {
       </FormSection>
       <Button
         type="submit"
-        className="w-full"
+        className="h-auto min-h-11 w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
         disabled={!configured || pending}
       >
+        <Mail aria-hidden="true" />
         {pending ? "Skickar…" : "Skicka återställningslänk"}
       </Button>
       {!configured ? (
@@ -88,8 +97,15 @@ export function ForgotPasswordForm({ configured }: { configured: boolean }) {
           Återställning via e-post är inte tillgänglig just nu.
         </p>
       ) : null}
-      <Button asChild variant="link" className="w-full">
-        <Link href="/login">Tillbaka till inloggningen</Link>
+      <Button
+        asChild
+        variant="link"
+        className="h-auto min-h-11 w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
+      >
+        <Link href="/login">
+          <ArrowLeft aria-hidden="true" />
+          Tillbaka till inloggningen
+        </Link>
       </Button>
     </Form>
   );

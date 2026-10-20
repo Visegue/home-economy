@@ -52,6 +52,14 @@ Detaljpanelens Ändra, Avsluta och Stäng använder `Pencil`, `CircleStop` respe
 
 Inventering: sex nya ikoner i `post-management.tsx`, `transfer-form.tsx` och `defaults-form.tsx`. Befintliga `ActionIconButton` för Spara/Ändra, skapa-/hjälp-/stängknappar, `X` + Avbryt, `CircleStop` + Ja, avsluta och borttagningens ikon + Ja, ta bort är redan täckta. Postnamn, överföringshistorikens summary, vanliga navigationslänkar (inklusive Registrera överföring för … i detaljerna) och typ-/datumval behåller text: deras mål eller svar framgår redan och ytterligare symbol tillför ingen tydlig hjälp. Ingen ny ikonabstraktion behövs. ADR 0004/0005/0006 och ekonomiska skriv-/fokus-/varningskontrakt gäller oförändrat.
 
+## Auth- och kontoåtgärder (#110)
+
+`LogIn` betyder Logga in i både inloggningsformuläret och efter återställt lösenord. `UserPlus` kompletterar Skapa konto och `HousePlus` Skapa mitt hushåll. `Mail` används för Skicka återställningslänk och Begär en ny länk; `ArrowLeft` för Tillbaka till inloggningen, före och efter begäran. Spara nytt lösenord använder samma `Save` i återställning och kontodialog. Ikonerna är statiska och dekorativa även när den befintliga pendingtexten visas.
+
+Inventering: tio nya ikoner i sex filer, inklusive båda återgångslägena. Officiella Google-symbolen, Logga ut, `KeyRound` för Ändra/Lägg till lösenord och `Link2` för Koppla Google är redan täckta. Login-/skapa-konto-flikarnas val och vanliga Glömt lösenord?-länkar förblir text: etiketten anger redan valet eller målet. Ingen ny ikonabstraktion behövs.
+
+Fullbreddsåtgärder radbryter hela texten och växer på höjden. Inloggningens flikar och lösenordsrad får också radbrytas vid textförstoring. AuthLayouts innehåll tillåter minskad bredd och radbrytning av långa ord så att kortets minsta innehållsbredd inte skjuter kontroller utanför skärmen. Onboardingens inkomstfält låter hjälpen och enheten kr/mån radbrytas i normalt flöde; enheten täcker därför inte inmatningen vid textförstoring. Input och dess fältfeedback hålls i samma block så att feedback inte blir ett separat flexbarn bredvid enheten. Svenska etiketter, tillgängliga namn, knapptyp/länksemantik, credentialinnehåll, generiska authfel, pending-/dubbelanropsspärrar och fokus-/återgångsskydd bevaras. ADR 0001/0006 gäller; ingen auth-, databas- eller integrationsändring och ingen ny ADR behövs.
+
 ## Explicit knapptyp (#104)
 
 `pnpm lint` aktiverar Oxlints `react/button-has-type` för native `<button>` och den lokala syntaxregeln `home-economy/button-has-type` i `scripts/button-type.mjs` för delad `Button`. Samma lint körs i `pnpm check` och CI. Diagnostiken anger fil, rad och kolumn. Kontrollens CLI-fixtures körs med `pnpm test`, lokalt och i CI, inklusive det tidigare Avbryt-mönstret och dess rättning. Den befintliga serveråtgärdsregressionen i `src/features/budget/forms.test.tsx` behålls.

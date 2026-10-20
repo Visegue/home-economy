@@ -15,7 +15,7 @@ export function IncomeField({
 }) {
   return (
     <div className="ui-field">
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         <Label htmlFor="monthly-net-income">
           Din månadsinkomst efter skatt (valfritt)
         </Label>
@@ -26,24 +26,23 @@ export function IncomeField({
           </p>
         </InfoButton>
       </div>
-      <div className="relative">
-        <Input
-          id="monthly-net-income"
-          name="monthlyNetIncome"
-          inputMode="decimal"
-          autoComplete="off"
-          placeholder="Till exempel 32 500"
-          maxLength={24}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          disabled={disabled}
-          aria-invalid={Boolean(error)}
-          aria-describedby={error ? "income-error" : undefined}
-          className="pr-20"
-        />
-        <span className="pointer-events-none absolute top-0 right-3 flex h-11 items-center text-xs text-muted-foreground">
-          kr/mån
-        </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="min-w-0 flex-1 basis-40">
+          <Input
+            id="monthly-net-income"
+            name="monthlyNetIncome"
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder="Till exempel 32 500"
+            maxLength={24}
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            disabled={disabled}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? "income-error" : undefined}
+          />
+        </div>
+        <span className="text-xs text-muted-foreground">kr/mån</span>
       </div>
       {error ? (
         <p id="income-error" role="alert" className="ui-error">

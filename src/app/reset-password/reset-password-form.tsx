@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LogIn, Save } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -60,8 +61,14 @@ export function ResetPasswordForm({ token }: { token: string }) {
     return (
       <div className="space-y-4 text-sm">
         <p>Lösenordet är uppdaterat. Du kan logga in.</p>
-        <Button asChild className="w-full">
-          <Link href="/login">Logga in</Link>
+        <Button
+          asChild
+          className="h-auto min-h-11 w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
+        >
+          <Link href="/login">
+            <LogIn aria-hidden="true" />
+            Logga in
+          </Link>
         </Button>
       </div>
     );
@@ -104,7 +111,12 @@ export function ResetPasswordForm({ token }: { token: string }) {
         </div>
         <p className="text-xs text-muted-foreground">Minst 12 tecken.</p>
       </FormSection>
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button
+        type="submit"
+        className="h-auto min-h-11 w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
+        disabled={pending}
+      >
+        <Save aria-hidden="true" />
         {pending ? "Sparar…" : "Spara nytt lösenord"}
       </Button>
     </Form>

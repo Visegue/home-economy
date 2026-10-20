@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CircleAlert, CircleCheck } from "lucide-react";
+import { CircleAlert, CircleCheck, LogIn, UserPlus } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -163,11 +163,17 @@ export function LoginForm({
   return (
     <div className="space-y-5">
       <Tabs defaultValue="sign-in">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="sign-in" className="text-muted-foreground">
+        <TabsList className="grid min-h-9 w-full grid-cols-2 group-data-horizontal/tabs:h-auto">
+          <TabsTrigger
+            value="sign-in"
+            className="min-w-0 whitespace-normal text-muted-foreground"
+          >
             Logga in
           </TabsTrigger>
-          <TabsTrigger value="sign-up" className="text-muted-foreground">
+          <TabsTrigger
+            value="sign-up"
+            className="min-w-0 whitespace-normal text-muted-foreground"
+          >
             Skapa konto
           </TabsTrigger>
         </TabsList>
@@ -191,9 +197,14 @@ export function LoginForm({
                 />
               </div>
               <div className="ui-field">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                   <Label htmlFor="sign-in-password">Lösenord</Label>
-                  <Button asChild variant="link" size="xs" className="px-0">
+                  <Button
+                    asChild
+                    variant="link"
+                    size="xs"
+                    className="h-auto min-h-7 max-w-full px-0 py-1 whitespace-normal"
+                  >
                     <Link href="/forgot-password">Glömt lösenord?</Link>
                   </Button>
                 </div>
@@ -211,9 +222,10 @@ export function LoginForm({
             </FormSection>
             <Button
               type="submit"
-              className="w-full"
+              className="h-auto min-h-11 w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
               disabled={!emailConfigured || pending}
             >
+              <LogIn aria-hidden="true" />
               {pendingAction === "sign-in" ? "Loggar in…" : "Logga in"}
             </Button>
           </Form>
@@ -284,9 +296,10 @@ export function LoginForm({
             </FormSection>
             <Button
               type="submit"
-              className="w-full"
+              className="h-auto min-h-11 w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
               disabled={!emailConfigured || pending}
             >
+              <UserPlus aria-hidden="true" />
               {pendingAction === "sign-up" ? "Skapar konto…" : "Skapa konto"}
             </Button>
           </Form>
@@ -342,7 +355,7 @@ export function LoginForm({
       <Button
         type="button"
         variant="outline"
-        className="w-full"
+        className="h-auto min-h-11 w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
         disabled={!googleConfigured || pending}
         onClick={signInWithGoogle}
       >

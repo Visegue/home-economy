@@ -35,7 +35,12 @@ export function AuthLayout({
         !header && "grid place-items-center",
       )}
     >
-      <div className={cn("mx-auto w-full", compact ? "max-w-md" : "max-w-lg")}>
+      <div
+        className={cn(
+          "mx-auto w-full min-w-0 [overflow-wrap:anywhere]",
+          compact ? "max-w-md" : "max-w-lg",
+        )}
+      >
         {header ? <div className="flex justify-end pb-6">{header}</div> : null}
         {children}
       </div>

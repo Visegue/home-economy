@@ -1,5 +1,5 @@
 import { AuthLayout } from "@home-economy/ui/layout";
-import { KeyRound } from "lucide-react";
+import { KeyRound, Mail } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -40,8 +40,14 @@ export default async function ResetPasswordPage({
           {invalid ? (
             <div className="space-y-4 text-sm">
               <p>Länken är ogiltig eller har gått ut.</p>
-              <Button asChild className="w-full">
-                <Link href="/forgot-password">Begär en ny länk</Link>
+              <Button
+                asChild
+                className="h-auto min-h-11 w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
+              >
+                <Link href="/forgot-password">
+                  <Mail aria-hidden="true" />
+                  Begär en ny länk
+                </Link>
               </Button>
             </div>
           ) : (
