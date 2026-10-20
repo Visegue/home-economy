@@ -28,6 +28,24 @@ Behåll Server Components som standard. Endast interaktiva exports har `"use cli
 - Ikonåtgärder använder `ActionIconButton` med namn, tooltip och pending-spärrning. `InfoButton` fungerar genom klick, touch och tangentbord. Tvetydiga bekräftelser har uttrycklig text.
 - Använd semantiska tokens för yta, text, fokus, fel och diagram. Dagens ljusa tokenvärden är bevarade i `packages/ui/styles.css`; den mörka profilen ligger intill dem. Ingen experimentpalett är införd.
 
+## Ikon och text i åtgärder (#111)
+
+Komplettera text när symbolen gör åtgärden lättare att känna igen. Använd namngivna imports från `lucide-react` och befintlig `Button`; ingen extra ikonwrapper eller ny klientgräns behövs. Placera en dekorativ ikon före hela den svenska texten med `aria-hidden="true"`, utan egen tooltip, klickhanterare eller fokuspunkt. Vid textförstoring får ikon och text ta egna rader i samma knapp. `Button` ger gap och ikonstorlek: normalt 1rem, `sm` 0,875rem och `xs` 0,75rem. Befintliga ikonknappar behåller `ActionIconButton`, dess namn och större träffyta.
+
+| Åtgärd                             | Ikon           | Betydelse                                                                  |
+| ---------------------------------- | -------------- | -------------------------------------------------------------------------- |
+| Ändra / Fortsätt redigera          | `Pencil`       | Redigera eller återgå till utkastet.                                       |
+| Ta bort / Kasta ändringar          | `Trash2`       | Ta bort det uttryckligen namngivna innehållet.                             |
+| Denna månad                        | `CalendarDays` | Återgå till aktuell månad.                                                 |
+| Visa månadsfilter                  | `Search`       | Visa resultatet genom befintlig GET-navigation, inte öppna en filterpanel. |
+| Hushållets medlemmar och inkomster | `Settings`     | Gå till befintliga `/settings`.                                            |
+
+Återanvänd befintliga betydelser för skapa (`Plus`), spara (`Save`), stäng (`X`) och hjälp (`Info`). Bekräftelser behåller uttryckliga svar enligt Q10; en bock eller ett kryss ersätter inte Fortsätt redigera/Kasta ändringar eller Ja/Nej. Samma åtgärd får samma betydelse och placering, men en vanlig textlänk eller ett val behöver ingen ikon utan tydlig nytta.
+
+Pending behåller begriplig text och befintlig disabled-/dubbelklicksspärrning. Månadsväljaren behåller sitt separata statusfält och `LoaderCircle` med `motion-reduce:animate-none`; byt inte dess textknapp till en ensam spinner. Ändra inte knapptyp, fokus, Escape, återgång eller länk-/GET-semantik för att lägga till en ikon. Långa texter ska kunna radbrytas utan ellips eller klippning, även vid 320px och textförstoring; kontrollera faktisk app i båda teman. Dialogheadern reserverar stängknappsutrymme bara när knappen visas.
+
+Inventering för #111: fem nya ikoner i de två osparat-svaren, Denna månad, Visa och hushållslänken. Föregående/nästa har redan `ChevronLeft`/`ChevronRight`; gemensamma stäng-, hjälp-, skapa- och sparnotisåtgärder är redan täckta och behåller sina kontrakt. Vanliga länkar till Historik, Överföringar, Till månadsöversikten och Hantera inkomster samt postnamn, historikens summary och radio-/select-val behåller avsiktligt text: destinationen eller värdet framgår redan, och en extra generell symbol tillför inte tydlig hjälp. Ekonomiska formulärs övriga åtgärder hanteras i sina egna issues.
+
 ## Explicit knapptyp (#104)
 
 `pnpm lint` aktiverar Oxlints `react/button-has-type` för native `<button>` och den lokala syntaxregeln `home-economy/button-has-type` i `scripts/button-type.mjs` för delad `Button`. Samma lint körs i `pnpm check` och CI. Diagnostiken anger fil, rad och kolumn. Kontrollens CLI-fixtures körs med `pnpm test`, lokalt och i CI, inklusive det tidigare Avbryt-mönstret och dess rättning. Den befintliga serveråtgärdsregressionen i `src/features/budget/forms.test.tsx` behålls.

@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  LoaderCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,6 +90,7 @@ export function MonthSelector({ period }: { period: string }) {
           className={disabledControl}
           onClick={() => navigate(currentPeriod())}
         >
+          <CalendarDays aria-hidden="true" />
           Denna månad
         </Button>
       </div>
