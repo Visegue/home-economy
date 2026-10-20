@@ -3,6 +3,7 @@
 import { validateOnboarding } from "@/features/forms/validation";
 
 import { useActionState, useState } from "react";
+import { HousePlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Form, FormSection, Input } from "@home-economy/ui/form";
@@ -59,7 +60,13 @@ export function OnboardingForm() {
 
         <IncomeField value={income} onChange={setIncome} disabled={pending} />
       </FormSection>
-      <Button type="submit" size="lg" className="w-full" disabled={pending}>
+      <Button
+        type="submit"
+        size="lg"
+        className="h-auto min-h-12 w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
+        disabled={pending}
+      >
+        <HousePlus aria-hidden="true" />
         {pending ? "Skapar hushållet…" : "Skapa mitt hushåll"}
       </Button>
     </Form>

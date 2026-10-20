@@ -15,7 +15,7 @@ export function IncomeField({
 }) {
   return (
     <div className="ui-field">
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         <Label htmlFor="monthly-net-income">
           Din månadsinkomst efter skatt (valfritt)
         </Label>
@@ -26,7 +26,7 @@ export function IncomeField({
           </p>
         </InfoButton>
       </div>
-      <div className="relative">
+      <div className="@container relative">
         <Input
           id="monthly-net-income"
           name="monthlyNetIncome"
@@ -39,9 +39,9 @@ export function IncomeField({
           disabled={disabled}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? "income-error" : undefined}
-          className="pr-20"
+          className="@min-[16rem]:pr-20"
         />
-        <span className="pointer-events-none absolute top-0 right-3 flex h-11 items-center text-xs text-muted-foreground">
+        <span className="pointer-events-none mt-2 block text-xs text-muted-foreground @min-[16rem]:absolute @min-[16rem]:top-0 @min-[16rem]:right-3 @min-[16rem]:mt-0 @min-[16rem]:flex @min-[16rem]:h-11 @min-[16rem]:items-center">
           kr/mån
         </span>
       </div>
