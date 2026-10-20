@@ -1,5 +1,6 @@
 "use client";
 
+import { Save } from "lucide-react";
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
 import { Form, FormSection, Input } from "@home-economy/ui/form";
@@ -22,7 +23,7 @@ export function DayDefaultsForm({ days }: { days: DayDefaults }) {
       <FormSection
         title="Förifyllda dagar"
         disabled={pending}
-        className="grid gap-4 sm:grid-cols-2"
+        className="grid grid-cols-1 gap-4 sm:grid-cols-2"
       >
         {(
           [
@@ -46,7 +47,13 @@ export function DayDefaultsForm({ days }: { days: DayDefaults }) {
             />
           </div>
         ))}
-        <Button type="submit">Spara standarddagar</Button>
+        <Button
+          type="submit"
+          className="h-auto min-h-11 max-w-full min-w-0 flex-wrap px-1 py-2 [overflow-wrap:anywhere] whitespace-normal"
+        >
+          <Save aria-hidden="true" />
+          Spara standarddagar
+        </Button>
       </FormSection>
       {state.success ? <output>{state.success}</output> : null}
     </Form>

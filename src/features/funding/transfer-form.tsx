@@ -1,5 +1,6 @@
 "use client";
 
+import { ClipboardPenLine, ClipboardCheck } from "lucide-react";
 import { SelectTrigger } from "@home-economy/ui/form";
 
 import { validateTransfer } from "@/features/forms/validation";
@@ -29,7 +30,12 @@ export function TransferDialog({ purpose }: { purpose: Purpose }) {
   return (
     <FormDialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline">
+        <Button
+          type="button"
+          variant="outline"
+          className="h-auto min-h-11 max-w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
+        >
+          <ClipboardPenLine aria-hidden="true" />
           Registrera för {purpose.name}
         </Button>
       </DialogTrigger>
@@ -70,7 +76,7 @@ function TransferForm({ purpose }: { purpose: Purpose }) {
         event.preventDefault();
         event.stopPropagation();
       }}
-      className="space-y-4"
+      className="min-w-0 space-y-4"
     >
       <input type="hidden" name="id" value={requestId} />
       <input type="hidden" name="itemId" value={purpose.itemId ?? ""} />
@@ -81,7 +87,7 @@ function TransferForm({ purpose }: { purpose: Purpose }) {
       </p>
       <fieldset
         disabled={pending || Boolean(state.success)}
-        className="space-y-4"
+        className="min-w-0 space-y-4"
       >
         <FormSection title="Överföring">
           <div className="ui-field">
@@ -168,7 +174,11 @@ function TransferForm({ purpose }: { purpose: Purpose }) {
             </Label>
           </div>
         ) : null}
-        <Button type="submit">
+        <Button
+          type="submit"
+          className="h-auto min-h-11 max-w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
+        >
+          <ClipboardCheck aria-hidden="true" />
           {pending ? "Sparar…" : "Bekräfta registrering"}
         </Button>
       </fieldset>

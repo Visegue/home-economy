@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { Pencil, CircleStop, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormDialog } from "@/components/form-dialog";
 import { FormDialogContent } from "@/components/form-dialog-content";
@@ -189,23 +190,26 @@ export function PostManagement({
               }
             }}
           >
-            <SheetHeader className="shrink-0 border-b pr-24">
-              <SheetTitle className="break-words">
-                {selected?.item.name}
-              </SheetTitle>
-              <SheetDescription>
-                Postens detaljer och registrerade överföringar.
-              </SheetDescription>
+            <SheetHeader className="grid max-h-[50dvh] shrink-0 grid-cols-1 items-start gap-3 overflow-y-auto border-b sm:grid-cols-[minmax(0,1fr)_auto]">
+              <div className="col-start-1 row-start-2 min-w-0 space-y-1.5 sm:row-start-1">
+                <SheetTitle className="break-words">
+                  {selected?.item.name}
+                </SheetTitle>
+                <SheetDescription>
+                  Postens detaljer och registrerade överföringar.
+                </SheetDescription>
+              </div>
+              <SheetClose asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="col-start-1 row-start-1 justify-self-end sm:col-start-2"
+                >
+                  <X aria-hidden="true" />
+                  Stäng
+                </Button>
+              </SheetClose>
             </SheetHeader>
-            <SheetClose asChild>
-              <Button
-                type="button"
-                variant="outline"
-                className="absolute top-3 right-3"
-              >
-                Stäng
-              </Button>
-            </SheetClose>
             <div className="min-h-0 overflow-y-auto p-4 [overflow-wrap:anywhere]">
               <div className="mb-4 flex flex-wrap gap-2">
                 <Button
@@ -216,6 +220,7 @@ export function PostManagement({
                     setPhase("edit");
                   }}
                 >
+                  <Pencil aria-hidden="true" />
                   Ändra
                 </Button>
                 <Button
@@ -227,6 +232,7 @@ export function PostManagement({
                     setPhase("end");
                   }}
                 >
+                  <CircleStop aria-hidden="true" />
                   Avsluta
                 </Button>
               </div>
