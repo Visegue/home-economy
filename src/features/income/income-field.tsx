@@ -26,23 +26,24 @@ export function IncomeField({
           </p>
         </InfoButton>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="min-w-0 flex-1 basis-40">
-          <Input
-            id="monthly-net-income"
-            name="monthlyNetIncome"
-            inputMode="decimal"
-            autoComplete="off"
-            placeholder="Till exempel 32 500"
-            maxLength={24}
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            disabled={disabled}
-            aria-invalid={Boolean(error)}
-            aria-describedby={error ? "income-error" : undefined}
-          />
-        </div>
-        <span className="text-xs text-muted-foreground">kr/mån</span>
+      <div className="@container relative">
+        <Input
+          id="monthly-net-income"
+          name="monthlyNetIncome"
+          inputMode="decimal"
+          autoComplete="off"
+          placeholder="Till exempel 32 500"
+          maxLength={24}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          disabled={disabled}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? "income-error" : undefined}
+          className="@min-[16rem]:pr-20"
+        />
+        <span className="pointer-events-none mt-2 block text-xs text-muted-foreground @min-[16rem]:absolute @min-[16rem]:top-0 @min-[16rem]:right-3 @min-[16rem]:mt-0 @min-[16rem]:flex @min-[16rem]:h-11 @min-[16rem]:items-center">
+          kr/mån
+        </span>
       </div>
       {error ? (
         <p id="income-error" role="alert" className="ui-error">

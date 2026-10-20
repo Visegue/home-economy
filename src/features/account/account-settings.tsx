@@ -124,6 +124,7 @@ export function AccountSettings({
               <Button
                 type="button"
                 variant="secondary"
+                className="h-auto min-h-11 max-w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
                 disabled={pending !== null}
               >
                 <KeyRound aria-hidden="true" />
@@ -146,6 +147,7 @@ export function AccountSettings({
           <Button
             type="button"
             variant="secondary"
+            className="h-auto min-h-11 max-w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
             disabled={!emailConfigured || pending !== null || sent}
             onClick={sendPasswordLink}
           >
@@ -183,6 +185,7 @@ export function AccountSettings({
           <Button
             type="button"
             variant="outline"
+            className="h-auto min-h-11 max-w-full flex-wrap py-2 [overflow-wrap:anywhere] whitespace-normal"
             disabled={!googleConfigured || pending !== null}
             onClick={linkGoogle}
           >
