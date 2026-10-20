@@ -4,7 +4,7 @@
 
 [#109](https://github.com/Visegue/home-economy/issues/109) levererades via [PR #145](https://github.com/Visegue/home-economy/pull/145): sex dekorativa ikoner, bevarade texter/beteenden, lokala reflow-rättningar och inventering i [UI-reglerna](../ui-components.md#ekonomiska-åtgärder-109). Granskat head `dea473ea6f5e6ee5080076d782e2ffef11a6ce3b` gav oberoende Standards/Spec PASS; squash/main är `a94e6db22535d1ff086063e3ac6a0f9050b206a1`.
 
-[Exakt-main-CI](https://github.com/Visegue/home-economy/actions/runs/39393673505) passerade kvalitet, 41 E2E direkt, bygge, migration, databaskontroll, smoke, promotion och release. Vid implementationsverifieringen pekade production `dpl_gAxSHDiBs6QGuy49NQyRbkACBncG` och [alias](https://home-economy-visegue.vercel.app) verifierades mot samma commit, inklusive login i båda teman. CI skapade [v0.16.12](https://github.com/Visegue/home-economy/releases/tag/v0.16.12) där. Ärendet är stängt/Done; lokala verifieringsbegränsningar redovisas nedan. Grenar och worktree är bevarade.
+[Exakt-main-CI](https://github.com/Visegue/home-economy/actions/runs/39393673505) passerade kvalitet, 41 E2E direkt, bygge, migration, databaskontroll, smoke, promotion och release. Vid implementationsverifieringen verifierades aktiv production `dpl_gAxSHDiBs6QGuy49NQyRbkACBncG` och [alias](https://home-economy-visegue.vercel.app) mot samma commit, inklusive login i båda teman. CI skapade [v0.16.12](https://github.com/Visegue/home-economy/releases/tag/v0.16.12) där. Ärendet är stängt/Done; lokala verifieringsbegränsningar redovisas nedan. Grenar och worktree är bevarade.
 
 ## Retrospektiv
 
