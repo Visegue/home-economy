@@ -321,6 +321,28 @@ export const confirmedTransfers = pgTable(
   ],
 ).enableRLS();
 
+// Stores the complete confirmation so retries cannot silently change its membership.
+export const depositBatches = pgTable(
+  "deposit_batches",
+  {
+    id: uuid().primaryKey(),
+    householdId: bigint("household_id", { mode: "number" })
+      .notNull()
+      .references(() => households.id, { onDelete: "cascade" }),
+    request: text().notNull(),
+    result: text().notNull(),
+    createdAt: createdAt(),
+  },
+  (table) => [
+    index("deposit_batches_household_idx").on(table.householdId),
+    pgPolicy("deposit_batches_access", {
+      for: "all",
+      using: sql`(select private.has_household_access(${table.householdId}))`,
+      withCheck: sql`(select private.has_household_access(${table.householdId}))`,
+    }),
+  ],
+).enableRLS();
+
 export const recurringItems = pgTable(
   "recurring_items",
   {

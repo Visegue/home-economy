@@ -1,0 +1,1 @@
+CREATE INDEX "deposit_batches_household_idx" ON "deposit_batches" USING btree ("household_id");
