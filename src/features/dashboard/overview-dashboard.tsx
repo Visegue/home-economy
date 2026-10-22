@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { DepositBatchDialog } from "@/features/funding/batch-form";
+import { getFundingData } from "@/features/funding/data";
 import { ArrowRightLeft, ReceiptText, Scale, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CollapsibleCard } from "@/components/collapsible-card";
@@ -30,6 +32,7 @@ export async function OverviewDashboard({ period }: { period: string }) {
     savings,
     totals: summary,
   } = await getMonthlyOverview(period);
+  const funding = await getFundingData(period);
   const savingsInOre = summary.savingsContributionsInOre;
   const hasIncome = summary.incomeInOre !== null;
   const deficit =
@@ -152,6 +155,27 @@ export async function OverviewDashboard({ period }: { period: string }) {
                   {formatBudgetSek(summary.transfersInOre)}
                 </output>
               </div>
+              <DepositBatchDialog
+                key={period}
+                period={period}
+                purposes={funding.purposes.map(
+                  ({
+                    source,
+                    id,
+                    itemId,
+                    versions,
+                    inMonthlyPlan,
+                    progress,
+                  }) => ({
+                    source,
+                    id,
+                    itemId,
+                    versions,
+                    inMonthlyPlan,
+                    progress,
+                  }),
+                )}
+              />
             </CollapsibleCard>
           </section>
 

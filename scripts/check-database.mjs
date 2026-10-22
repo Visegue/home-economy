@@ -26,10 +26,10 @@ try {
       'households', 'household_members', 'household_member_income', 'categories', 'accounts',
       'recurring_items', 'monthly_plans', 'monthly_plan_items', 'transactions',
       'balance_snapshots', 'savings_goals', 'monthly_liquidity_snapshots',
-      'household_people', 'recurring_item_owners', 'household_incomes', 'financial_items', 'confirmed_transfers'
+      'household_people', 'recurring_item_owners', 'household_incomes', 'financial_items', 'confirmed_transfers', 'deposit_batches'
     )
   `;
-  assert.equal(tables.length, 17);
+  assert.equal(tables.length, 18);
   for (const table of tables) {
     assert.ok(table.relrowsecurity && table.relforcerowsecurity, table.relname);
   }
@@ -114,7 +114,26 @@ try {
         )[0].amount,
         "50.75",
       );
+      const batchId = randomUUID();
+      await sql`insert into public.deposit_batches (id, household_id, request, result)
+        values (${batchId}, ${household.id}, '{}', '{}')`;
+      assert.equal(
+        (await sql`select id from public.deposit_batches where id = ${batchId}`)
+          .length,
+        1,
+      );
       await sql`select set_config('app.user_id', ${outsider}, true)`;
+      assert.equal(
+        (await sql`select id from public.deposit_batches where id = ${batchId}`)
+          .length,
+        0,
+      );
+      assert.equal(
+        (
+          await sql`update public.deposit_batches set result = '{}' where id = ${batchId} returning id`
+        ).length,
+        0,
+      );
       assert.equal(
         (await sql`select id from public.financial_items where id = ${item.id}`)
           .length,

@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 import { confirmTransfer } from "./data";
+import { confirmDepositBatch } from "./batch-data";
 import { PeriodWriteError } from "@/features/periods/write";
 export interface TransferState {
   error?: string;
@@ -29,6 +30,25 @@ export async function confirmTransferAction(
         error instanceof PeriodWriteError
           ? error.message
           : "Registreringen kunde inte sparas. Försök igen.",
+    };
+  }
+}
+
+export async function confirmDepositBatchAction(input: unknown) {
+  try {
+    const response = await confirmDepositBatch(input);
+    if (response.result) {
+      revalidatePath("/");
+      revalidatePath("/transfers");
+    }
+    return response;
+  } catch (error) {
+    unstable_rethrow(error);
+    return {
+      error:
+        error instanceof PeriodWriteError
+          ? error.message
+          : "Insättningarna kunde inte sparas. Försök igen. Inmatningen finns kvar.",
     };
   }
 }

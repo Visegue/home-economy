@@ -62,6 +62,9 @@ import { getMonthlyOverview } from "@/features/dashboard/monthly-overview";
 import { confirmTransfer, getFundingData } from "@/features/funding/data";
 import { financialItems, confirmedTransfers } from "./schema";
 import { randomUUID } from "node:crypto";
+import { confirmDepositBatch } from "@/features/funding/batch-data";
+import { batchPurposeOn } from "@/features/funding/batch-model";
+import { depositBatches } from "./schema";
 import { totalMonthlySavings } from "@/features/savings/validation";
 
 const client = new PGlite("memory://");
@@ -1745,4 +1748,225 @@ describe("locked expense types", () => {
       });
     },
   );
+});
+
+describe("monthly deposit batches", () => {
+  async function fixture() {
+    const household = await effectiveFixture();
+    await saveSaving(
+      { name: "Semester", amountInOre: 100_000 },
+      undefined,
+      "2026-08-01",
+      { scheduledDay: 31 },
+    );
+    await saveSaving(
+      { name: "Buffert", amountInOre: 0 },
+      undefined,
+      "2026-08-01",
+    );
+    return household;
+  }
+  async function batch(amount = "600") {
+    const funding = await getFundingData("2026-08");
+    return {
+      id: randomUUID(),
+      occurredOn: "2026-09-02",
+      attributionMonth: "2026-08",
+      rows: funding.purposes.map((purpose) => ({
+        id: randomUUID(),
+        itemId: purpose.itemId ?? undefined,
+        source: purpose.source,
+        versionId: purpose.id,
+        amount,
+      })),
+    };
+  }
+
+  it("keeps the original month's plan, all deposit progress, date-aware labels and ended purposes", async () => {
+    await fixture();
+    const [original] = await getSavings();
+    const changed = await saveSaving(
+      { name: "Resor", amountInOre: 150_000 },
+      original.id,
+      "2026-09-01",
+      { scheduledDay: 15 },
+    );
+    await removeSaving(changed, "2026-09-03");
+    await confirmTransfer({
+      id: randomUUID(),
+      source: "saving",
+      versionId: original.id,
+      itemId: original.itemId!,
+      kind: "deposit",
+      amount: "400",
+      occurredOn: "2026-09-10",
+      attributionMonth: "2026-08",
+      note: "",
+    });
+    const funding = await getFundingData("2026-08");
+    const purpose = funding.purposes.find((p) => p.itemId === original.itemId)!;
+    expect(purpose.progress).toMatchObject({
+      plannedInOre: 100_000,
+      depositedInOre: 40_000,
+      remainingInOre: 60_000,
+    });
+    expect(batchPurposeOn(purpose, "2026-08-31")?.name).toBe("Semester");
+    expect(batchPurposeOn(purpose, "2026-09-02")?.name).toBe("Resor");
+    expect(batchPurposeOn(purpose, "2026-09-10")?.name).toBe("Resor");
+    expect(batchPurposeOn(purpose, "2026-07-31")).toBeUndefined();
+    expect(funding.purposes.find((p) => p.name === "Buffert")).toMatchObject({
+      inMonthlyPlan: true,
+      progress: { plannedInOre: 0 },
+    });
+    const input = await batch();
+    const result = await confirmDepositBatch(input);
+    expect(result.result).toMatchObject({
+      count: 2,
+      totalInOre: 120_000,
+      occurredOn: "2026-09-02",
+      attributionMonth: "2026-08",
+    });
+    expect(
+      (await getFundingData("2026-08")).purposes.find(
+        (p) => p.itemId === original.itemId,
+      )!.progress.remainingInOre,
+    ).toBe(0);
+    expect(
+      (await getFundingData("2026-08")).purposes.find(
+        (p) => p.itemId === original.itemId,
+      )!.monthEndValueInOre,
+    ).toBe(0);
+  });
+
+  it("replays lost-success retries before changed plan availability and rejects changed membership or money", async () => {
+    await fixture();
+    const input = await batch();
+    const first = await confirmDepositBatch(input);
+    const saving = (await getSavings())[0];
+    await removeSaving(saving.id, "2026-08-01");
+    expect(await confirmDepositBatch(input)).toEqual(first);
+    await expect(
+      confirmDepositBatch({ ...input, rows: input.rows.slice(0, 1) }),
+    ).rejects.toThrow("redan sparats");
+    await expect(
+      confirmDepositBatch({
+        ...input,
+        rows: input.rows.map((r) => ({ ...r, amount: "601" })),
+      }),
+    ).rejects.toThrow("redan sparats");
+    const funding = await getFundingData("2026-08");
+    expect(funding.purposes.flatMap((p) => p.transfers)).toHaveLength(2);
+  });
+
+  it("rolls back every row on validation failure and on negative-value warnings, then permits explicit consent", async () => {
+    await fixture();
+    const input = await batch("10");
+    // Put the negative ledger last so the warning exercises rollback of an earlier insert.
+    const saving = (await getSavings())
+      .sort((a, b) => a.itemId!.localeCompare(b.itemId!))
+      .at(-1)!;
+    await confirmTransfer({
+      id: randomUUID(),
+      source: "saving",
+      versionId: saving.id,
+      itemId: saving.itemId!,
+      kind: "withdrawal",
+      amount: "100",
+      occurredOn: "2026-08-01",
+      attributionMonth: "2026-08",
+      note: "",
+      confirmNegative: true,
+    });
+    const failure = {
+      ...input,
+      confirmNegative: true,
+      rows: [
+        ...input.rows,
+        {
+          ...input.rows[0],
+          id: randomUUID(),
+          itemId: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          versionId: 999999,
+        },
+      ],
+    };
+    await expect(confirmDepositBatch(failure)).rejects.toThrow(
+      "inte tillgängligt",
+    );
+    expect(
+      (await getFundingData("2026-08")).purposes.flatMap((p) => p.transfers),
+    ).toHaveLength(1);
+    expect(await confirmDepositBatch(input)).toHaveProperty("warning");
+    expect(
+      (await getFundingData("2026-08")).purposes.flatMap((p) => p.transfers),
+    ).toHaveLength(1);
+    expect(
+      await confirmDepositBatch({ ...input, confirmNegative: true }),
+    ).toHaveProperty("result");
+    expect(
+      (await getFundingData("2026-08")).purposes.flatMap((p) => p.transfers),
+    ).toHaveLength(3);
+  });
+
+  it("forces RLS on receipts and prevents cross-household replay, writes and access", async () => {
+    const household = await fixture();
+    const input = await batch();
+    await confirmDepositBatch(input);
+    const flags = await database.execute<{ relforcerowsecurity: boolean }>(
+      sql`select relforcerowsecurity from pg_class where relname = 'deposit_batches'`,
+    );
+    expect(flags.rows[0].relforcerowsecurity).toBe(true);
+    await effectiveFixture();
+    await withAuthenticatedDatabase(async (transaction) => {
+      expect(
+        await transaction
+          .select()
+          .from(depositBatches)
+          .where(eq(depositBatches.id, input.id)),
+      ).toEqual([]);
+      expect(
+        await transaction
+          .update(depositBatches)
+          .set({ result: "{}" })
+          .where(eq(depositBatches.id, input.id))
+          .returning(),
+      ).toEqual([]);
+    });
+    await expect(confirmDepositBatch(input)).rejects.toThrow(
+      "inte tillgängligt",
+    );
+    await expect(
+      withAuthenticatedDatabase(async (transaction) => {
+        await transaction.insert(depositBatches).values({
+          id: randomUUID(),
+          householdId: household.id,
+          request: "{}",
+          result: "{}",
+        });
+      }),
+    ).rejects.toThrow(/insert into/);
+  });
+
+  it("rejects future dates, duplicate purposes and invalid amounts before recording anything", async () => {
+    await fixture();
+    const input = await batch();
+    await expect(
+      confirmDepositBatch({ ...input, occurredOn: "2199-01-01" }),
+    ).rejects.toThrow("framtiden");
+    await expect(
+      confirmDepositBatch({
+        ...input,
+        rows: [input.rows[0], { ...input.rows[0], id: randomUUID() }],
+      }),
+    ).rejects.toThrow("bara väljas en gång");
+    await expect(
+      confirmDepositBatch({
+        ...input,
+        rows: [{ ...input.rows[0], amount: "0" }],
+      }),
+    ).rejects.toThrow("större än noll");
+    expect(
+      (await getFundingData("2026-08")).purposes.flatMap((p) => p.transfers),
+    ).toHaveLength(0);
+  });
 });
