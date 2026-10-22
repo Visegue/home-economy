@@ -334,6 +334,7 @@ export const depositBatches = pgTable(
     createdAt: createdAt(),
   },
   (table) => [
+    index("deposit_batches_household_idx").on(table.householdId),
     pgPolicy("deposit_batches_access", {
       for: "all",
       using: sql`(select private.has_household_access(${table.householdId}))`,

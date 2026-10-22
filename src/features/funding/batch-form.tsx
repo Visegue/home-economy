@@ -116,9 +116,12 @@ function DepositBatchForm({
   const selected = visible.filter(
     (purpose) => draft[purposeKey(purpose)]?.selected,
   );
-  const totalInOre = selected.reduce((total, purpose) => {
+  const totalInOre = selected.reduce<number | null>((total, purpose) => {
+    if (total === null) return null;
     const amount = amountSchema.safeParse(draft[purposeKey(purpose)].amount);
-    return total + (amount.success ? amount.data : 0);
+    if (!amount.success || amount.data <= 0) return null;
+    const sum = total + amount.data;
+    return Number.isSafeInteger(sum) ? sum : null;
   }, 0);
   const [state, action, pending] = useActionState<BatchState, FormData>(
     async () => {
@@ -300,9 +303,7 @@ function DepositBatchForm({
           </p>
           <p>
             {selected.length} valda insättningar · Totalt{" "}
-            {Number.isSafeInteger(totalInOre)
-              ? formatBudgetSek(totalInOre)
-              : "för stort belopp"}
+            {totalInOre !== null ? formatBudgetSek(totalInOre) : "—"}
           </p>
         </section>
         {"warning" in state && state.warning ? (

@@ -42,7 +42,34 @@ test("månadens insättningar bevarar utkast, skyddar sparande och återhämtar 
   await expect(
     dialog.getByRole("checkbox", { name: "Extra", exact: true }),
   ).not.toBeChecked();
-  await dialog.getByLabel("Faktiskt belopp för Semester (kr)").fill("321");
+  const summary = dialog.getByRole("region", { name: "Sammanfattning" });
+  let registrationRequests = 0;
+  const countRegistration = (request: import("@playwright/test").Request) => {
+    if (request.method() === "POST" && request.headers()["next-action"])
+      registrationRequests++;
+  };
+  page.on("request", countRegistration);
+  const semesterAmount = dialog.getByLabel("Faktiskt belopp för Semester (kr)");
+  for (const invalid of ["", "abc", "0"]) {
+    await semesterAmount.fill(invalid);
+    await expect(summary).toContainText("Totalt —");
+    await dialog
+      .getByRole("button", { name: "Bekräfta 2 utförda insättningar" })
+      .click();
+    await expect(semesterAmount).toHaveAttribute("aria-invalid", "true");
+    expect(registrationRequests).toBe(0);
+  }
+  await semesterAmount.fill("321");
+  // A draft amount is preserved but excluded from validation and total when deselected.
+  await dialog.getByLabel("Faktiskt belopp för Nystartat (kr)").fill("abc");
+  await dialog
+    .getByRole("checkbox", { name: "Nystartat", exact: true })
+    .uncheck();
+  await expect(summary).toContainText("321,00 kr");
+  await dialog
+    .getByRole("checkbox", { name: "Nystartat", exact: true })
+    .check();
+  page.off("request", countRegistration);
   await dialog.getByLabel("Faktiskt belopp för Nystartat (kr)").fill("77");
   await dialog.getByLabel("Utfört datum").fill(`${previous}-01`);
   await expect(dialog.getByRole("status")).toContainText("tagits ur urvalet");
@@ -59,6 +86,13 @@ test("månadens insättningar bevarar utkast, skyddar sparande och återhämtar 
   await expect(
     dialog.getByLabel("Faktiskt belopp för Semester (kr)"),
   ).toHaveValue("321");
+  await dialog
+    .getByRole("checkbox", { name: "Nystartat", exact: true })
+    .check();
+  await dialog.getByLabel("Faktiskt belopp för Nystartat (kr)").fill("abc");
+  await dialog
+    .getByRole("checkbox", { name: "Nystartat", exact: true })
+    .uncheck();
   await dialog.getByRole("checkbox", { name: "Extra", exact: true }).focus();
   await page.keyboard.press("Space");
   await dialog.getByLabel("Faktiskt belopp för Extra (kr)").fill("55");
