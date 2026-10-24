@@ -32,12 +32,12 @@
     "agent:job": "bun scripts/agent-job.mjs"
   },
   "dependencies": {
-    "@better-auth/drizzle-adapter": "1.7.10",
+    "@better-auth/drizzle-adapter": "1.7.12",
     "@electric-sql/pglite": "0.5.10",
     "@home-economy/ui": "workspace:*",
     "@next/env": "16.4.2",
     "@vercel/functions": "^3.10.1",
-    "better-auth": "1.7.10",
+    "better-auth": "1.7.12",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "4.4.0",
@@ -67,7 +67,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "6.1.2",
-    "auth": "1.7.10",
+    "auth": "1.7.12",
     "drizzle-kit": "0.31.11",
     "jsdom": "30.1.3",
     "oxlint": "1.88.0",
