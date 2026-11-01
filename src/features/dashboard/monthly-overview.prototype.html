@@ -1,0 +1,2135 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Månadsöversikt · Utforskande prototyp</title>
+    <style>
+      /* Throwaway interaction prototype. Tokens copied from packages/ui/styles.css;
+   native controls keep this file runnable without the app, auth or a build. */
+      :root {
+        --background: oklch(0.976 0.014 78);
+        --foreground: oklch(0.245 0.024 330);
+        --card: oklch(0.995 0.006 78);
+        --primary: oklch(0.41 0.105 332);
+        --muted: oklch(0.946 0.017 77);
+        --muted-foreground: oklch(0.51 0.025 325);
+        --border: oklch(0.88 0.025 68);
+        --sidebar: oklch(0.31 0.065 331);
+        --accent: oklch(0.905 0.045 145);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          sans-serif;
+        color: var(--foreground);
+        background: var(--background);
+        font-size: 15px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+        color: inherit;
+      }
+      button {
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: var(--card);
+        border-radius: 9px;
+        min-height: 44px;
+        padding: 9px 14px;
+        font-weight: 550;
+      }
+      button:hover {
+        background: var(--muted);
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      button.primary {
+        background: var(--primary);
+        color: white;
+        border-color: var(--primary);
+      }
+      button.danger {
+        background: #9e2727;
+        color: white;
+      }
+      button.link {
+        border: 0;
+        background: none;
+        color: var(--primary);
+        padding: 4px;
+        min-height: 36px;
+        text-decoration: underline;
+      }
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible,
+      summary:focus-visible,
+      a:focus-visible {
+        outline: 3px solid #6282b6;
+        outline-offset: 3px;
+      }
+      input,
+      select {
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        min-height: 44px;
+        background: var(--card);
+        padding: 9px;
+        width: 100%;
+      }
+      input[type="checkbox"] {
+        width: 22px;
+        min-height: 22px;
+        accent-color: var(--primary);
+      }
+      h1 {
+        font-size: 30px;
+        letter-spacing: -0.8px;
+        margin: 0;
+      }
+      h2 {
+        font-size: 20px;
+        margin: 0 0 8px;
+      }
+      h3 {
+        font-size: 17px;
+        margin: 0;
+      }
+      p {
+        line-height: 1.55;
+        margin: 8px 0;
+      }
+      .muted,
+      small {
+        color: var(--muted-foreground);
+      }
+      small {
+        font-size: 13px;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .spread {
+        justify-content: space-between;
+      }
+      .grow {
+        flex: 1;
+      }
+      .badge {
+        background: var(--muted);
+        border: 1px solid var(--border);
+        padding: 5px 10px;
+        border-radius: 30px;
+        font-size: 13px;
+      }
+      .lab {
+        background: #e9eff8;
+        border-bottom: 1px solid #c6d1e4;
+        padding: 10px 24px;
+        color: #253752;
+      }
+      .lab details {
+        max-width: 1390px;
+        margin: auto;
+      }
+      .lab summary {
+        cursor: pointer;
+        font-size: 13px;
+      }
+      .lab-panel {
+        padding: 12px 0;
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 1fr 1fr;
+      }
+      .lab button {
+        font-size: 13px;
+      }
+      .lab label {
+        font-size: 13px;
+      }
+      .lab p {
+        font-size: 13px;
+      }
+      .lab [role="tablist"] {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+      }
+      .lab [role="tab"][aria-selected="true"] {
+        background: #253752;
+        color: white;
+      }
+      .lab-state {
+        font-size: 13px;
+        border-top: 1px solid #c6d1e4;
+        padding-top: 10px;
+        margin-top: 12px;
+      }
+      .shell {
+        background: var(--sidebar);
+        color: #f8f2e9;
+      }
+      .topnav {
+        max-width: 1440px;
+        margin: auto;
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        gap: 28px;
+      }
+      .brand {
+        font-weight: 700;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .brand-mark {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+        background: #e8c47c;
+        color: #382537;
+        border-radius: 12px;
+      }
+      .nav {
+        display: flex;
+        gap: 6px;
+        margin-left: auto;
+      }
+      .nav button {
+        background: none;
+        border-color: transparent;
+        color: inherit;
+      }
+      .nav button[aria-current="page"] {
+        background: #68435f;
+      }
+      .nav button[data-wait="true"] {
+        outline: 2px solid #e8c47c;
+      }
+      .nav-icon {
+        display: inline-flex;
+        align-items: center;
+      }
+      .nav-wrap {
+        position: relative;
+      }
+      .menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        z-index: 35;
+        background: var(--card);
+        color: var(--foreground);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 12px 35px #34213526;
+        padding: 6px;
+        min-width: 295px;
+        max-width: calc(100vw - 32px);
+      }
+      .menu button {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        text-align: left;
+        width: 100%;
+        border: 0;
+        background: none;
+      }
+      .menu button:hover,
+      .menu button[aria-current="page"] {
+        background: var(--muted);
+      }
+      .menu small {
+        display: block;
+        font-weight: 400;
+      }
+      .menu.right {
+        left: auto;
+        right: 0;
+      }
+      .menu[hidden],
+      [hidden] {
+        display: none !important;
+      }
+      main {
+        max-width: 1440px;
+        margin: auto;
+        padding: 32px 24px 64px;
+      }
+      .page-heading {
+        margin-bottom: 26px;
+      }
+      .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 20px;
+      }
+      .selector {
+        position: relative;
+        min-width: 290px;
+      }
+      .selector-line {
+        display: flex;
+        gap: 6px;
+      }
+      .month-open {
+        min-width: 202px;
+      }
+      .month-popover {
+        padding: 16px;
+      }
+      .month-popover label {
+        display: block;
+        margin-bottom: 8px;
+      }
+      .feedback {
+        min-height: 60px;
+        padding-top: 10px;
+        font-size: 14px;
+        line-height: 1.4;
+        max-width: 460px;
+      }
+      .feedback:empty {
+        padding: 0;
+      }
+      .waiting {
+        color: var(--primary);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+      }
+      .spinner {
+        display: inline-block;
+        width: 17px;
+        height: 17px;
+        flex-shrink: 0;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.75s linear infinite;
+      }
+      .spinner.small {
+        width: 12px;
+        height: 12px;
+        margin-left: 5px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .spinner {
+          animation: none;
+          border-style: dotted;
+        }
+      }
+      .error {
+        color: #9e2727;
+      }
+      .notice {
+        background: var(--accent);
+        padding: 14px 18px;
+        border-radius: 10px;
+        margin: 8px 0 20px;
+      }
+      .page-feedback {
+        min-height: 42px;
+        padding: 8px 0;
+      }
+      .toolbar:not([hidden]) + .page-feedback {
+        min-height: 0;
+        height: 0;
+        padding: 0;
+        position: relative;
+        top: -36px;
+      }
+      .data-surface {
+        position: relative;
+      }
+      .data-surface.dim {
+        opacity: 0.36;
+        pointer-events: none;
+      }
+      .month-heading {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: baseline;
+        margin-bottom: 18px;
+      }
+      .month-heading small {
+        text-align: right;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 13px;
+        padding: 22px;
+        min-width: 0;
+      }
+      .card.wide {
+        grid-column: 1/-1;
+      }
+      .card-head {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .card-icon {
+        color: var(--muted-foreground);
+      }
+      .amount {
+        font-size: 28px;
+        font-weight: 650;
+        letter-spacing: -0.5px;
+        font-variant-numeric: tabular-nums;
+      }
+      .funding {
+        background: var(--sidebar);
+        color: #f8f2e9;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        align-items: center;
+        gap: 20px;
+      }
+      .funding small {
+        color: #e0cfd9;
+      }
+      .funding h3 {
+        margin-bottom: 8px;
+      }
+      .funding p {
+        font-size: 14px;
+      }
+      .funding .amount {
+        font-size: 32px;
+      }
+      .funding-part {
+        border-left: 1px solid #8c7588;
+        padding-left: 22px;
+      }
+      .table-wrap {
+        overflow-x: auto;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 14px;
+        font-variant-numeric: tabular-nums;
+      }
+      th {
+        text-align: left;
+        font-weight: 500;
+        color: var(--muted-foreground);
+        font-size: 12px;
+        border-bottom: 1px solid var(--border);
+        padding: 8px 5px;
+      }
+      td {
+        border-bottom: 1px solid var(--border);
+        padding: 11px 5px;
+      }
+      tr:last-child td {
+        border-bottom: 0;
+      }
+      th:not(:first-child),
+      td:not(:first-child) {
+        text-align: right;
+      }
+      td button {
+        border: 0;
+        background: none;
+        padding: 0;
+        min-height: 30px;
+        font-weight: 500;
+        text-align: left;
+        color: var(--primary);
+      }
+      .empty {
+        padding: 38px 16px;
+        text-align: center;
+        background: var(--muted);
+        border-radius: 10px;
+      }
+      .empty h3 {
+        margin-bottom: 8px;
+      }
+      .empty p {
+        max-width: 480px;
+        margin: 0 auto;
+      }
+      .secondary-page {
+        min-height: 400px;
+      }
+      dialog {
+        border: 1px solid var(--border);
+        border-radius: 15px;
+        background: var(--card);
+        color: var(--foreground);
+        width: min(560px, calc(100vw - 24px));
+        padding: 26px;
+        max-height: calc(100dvh - 30px);
+        overflow: auto;
+      }
+      dialog::backdrop {
+        background: #23182477;
+      }
+      .dialog-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      .dialog-top h2 {
+        margin: 0;
+      }
+      .fields {
+        display: grid;
+        gap: 17px;
+        margin-top: 20px;
+      }
+      .fields label {
+        display: block;
+        font-weight: 550;
+        font-size: 14px;
+        margin-bottom: 6px;
+      }
+      .two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 25px;
+      }
+      .form-summary {
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        padding: 9px 12px;
+        background: var(--muted);
+      }
+      .choice {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        text-align: left;
+        margin: 5px 0;
+      }
+      .choice small {
+        display: block;
+        font-weight: 400;
+      }
+      .funding-line {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .funding-line input[type="number"] {
+        width: 120px;
+        margin-left: auto;
+      }
+      .state-line {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .mobile-context {
+        display: none;
+      }
+      .empty-route {
+        padding: 60px 20px;
+        text-align: center;
+      }
+      @media (max-width: 1000px) {
+        .topnav {
+          padding: 12px 20px;
+        }
+        .brand {
+          font-size: 14px;
+        }
+        .nav {
+          gap: 0;
+        }
+        .nav button {
+          padding: 9px;
+          font-size: 13px;
+        }
+      }
+      @media (max-width: 1023px) {
+        main {
+          padding: 23px 16px 115px;
+        }
+        .topnav {
+          padding: 13px 16px;
+        }
+        .nav {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          z-index: 40;
+          justify-content: space-around;
+          background: var(--card);
+          border-top: 1px solid var(--border);
+          color: var(--foreground);
+          padding: 5px 2px max(7px, env(safe-area-inset-bottom));
+        }
+        .nav > button,
+        .nav > .nav-wrap {
+          width: 20%;
+        }
+        .nav button {
+          width: 100%;
+          min-height: 60px;
+          font-size: 10px;
+          padding: 6px 2px;
+          line-height: 1.25;
+          border-radius: 8px;
+        }
+        .nav button[aria-current="page"] {
+          background: var(--muted);
+          color: var(--primary);
+        }
+        .nav-icon {
+          display: inline-flex;
+          margin-bottom: 0;
+        }
+        .nav .menu {
+          position: fixed;
+          bottom: 83px;
+          top: auto;
+          left: 12px;
+          right: 12px;
+          max-width: none;
+          min-width: 0;
+        }
+        .nav .menu button {
+          font-size: 15px;
+          min-height: 48px;
+          text-align: left;
+          padding: 10px;
+        }
+        .mobile-context {
+          display: block;
+          margin-left: auto;
+          font-size: 12px;
+          color: #eadde5;
+        }
+        .toolbar {
+          display: block;
+        }
+        .selector {
+          min-width: 0;
+        }
+        .selector-line {
+          justify-content: space-between;
+        }
+        .month-open {
+          flex: 1;
+          min-width: 0;
+        }
+        .actions {
+          margin: 0 0 12px;
+          align-items: stretch;
+        }
+        .actions > button {
+          flex: 1;
+          text-align: left;
+          font-size: 13px;
+        }
+        .actions .nav-wrap {
+          flex: 0 0 110px;
+        }
+        .actions .nav-wrap > button {
+          height: 100%;
+          width: 100%;
+        }
+        .feedback {
+          min-height: 60px;
+          max-width: none;
+        }
+        .page-heading {
+          margin-bottom: 20px;
+        }
+        h1 {
+          font-size: 26px;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+          gap: 14px;
+        }
+        .card {
+          padding: 17px;
+        }
+        .funding {
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+        .funding > div:first-child {
+          grid-column: 1/-1;
+        }
+        .funding .amount {
+          font-size: 29px;
+        }
+        .funding-part {
+          padding-left: 0;
+          border-left: 0;
+        }
+        .lab {
+          padding: 9px 16px;
+        }
+        .lab-panel {
+          grid-template-columns: 1fr;
+        }
+        .lab .row {
+          gap: 8px;
+        }
+        .month-heading {
+          display: block;
+        }
+        .month-heading small {
+          display: block;
+          text-align: left;
+        }
+        .page-feedback {
+          min-height: 42px;
+        }
+        dialog {
+          padding: 20px;
+        }
+        .dialog-actions {
+          flex-wrap: wrap;
+        }
+        .dialog-actions button {
+          flex: 1;
+        }
+        .two {
+          grid-template-columns: 1fr;
+        }
+        .menu.right {
+          right: 0;
+        }
+        .nav [data-wait="true"] {
+          outline-offset: -3px;
+        }
+      }
+
+      .icon-sprite {
+        position: absolute;
+        overflow: hidden;
+        pointer-events: none;
+      }
+      .ui-icon {
+        display: block;
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+      }
+      .chevron {
+        width: 16px;
+        height: 16px;
+      }
+      .icon-button,
+      .heading-with-icon,
+      .nav-label,
+      .month-open {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .icon-button {
+        justify-content: center;
+      }
+      .heading-with-icon {
+        vertical-align: middle;
+      }
+      .nav > button,
+      .nav > .nav-wrap > button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .nav .ui-icon {
+        width: 17px;
+        height: 17px;
+      }
+      .nav .chevron {
+        width: 15px;
+        height: 15px;
+      }
+      .nav-label {
+        min-width: 0;
+        gap: 5px;
+      }
+      [aria-expanded="true"] .chevron {
+        transform: rotate(180deg);
+      }
+      .month-open {
+        justify-content: center;
+        gap: 10px;
+      }
+      .selector-line > button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .option-copy {
+        min-width: 0;
+      }
+      .menu [role="menuitem"] > .ui-icon,
+      .choice > .ui-icon {
+        color: var(--primary);
+      }
+      .menu [role="menuitem"] > .spinner {
+        margin-left: auto;
+      }
+      .dialog-top > button[data-close] {
+        display: grid;
+        place-items: center;
+        padding: 10px;
+      }
+      .dialog-actions .primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      @media (max-width: 1023px) {
+        .nav > button,
+        .nav > .nav-wrap > button {
+          flex-direction: column;
+          gap: 4px;
+          min-height: 68px;
+        }
+        .nav .nav-icon .ui-icon {
+          width: 20px;
+          height: 20px;
+        }
+        .nav .nav-label {
+          justify-content: center;
+          gap: 3px;
+        }
+        .nav .nav-label > span {
+          min-width: 0;
+        }
+        .nav .chevron {
+          width: 12px;
+          height: 12px;
+        }
+        #monthly-nav-wait:empty {
+          display: none;
+        }
+        #monthly-nav-wait:not(:empty) {
+          position: absolute;
+          top: 6px;
+          right: 8px;
+        }
+        .nav .menu {
+          bottom: 91px;
+        }
+        .actions .icon-button {
+          justify-content: center;
+          gap: 7px;
+        }
+        .actions #add {
+          gap: 6px;
+          padding-inline: 10px;
+          font-size: 14px;
+          white-space: nowrap;
+        }
+        #register {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Inline icons from installed lucide-react.
+ISC License
+
+Copyright (c) 2026 Lucide Icons and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+---
+
+The following Lucide icons are derived from the Feather project:
+
+airplay, alert-circle, alert-octagon, alert-triangle, aperture, arrow-down-circle, arrow-down-left, arrow-down-right, arrow-down, arrow-left-circle, arrow-left, arrow-right-circle, arrow-right, arrow-up-circle, arrow-up-left, arrow-up-right, arrow-up, at-sign, calendar, cast, check, chevron-down, chevron-left, chevron-right, chevron-up, chevrons-down, chevrons-left, chevrons-right, chevrons-up, circle, clipboard, clock, code, columns, command, compass, corner-down-left, corner-down-right, corner-left-down, corner-left-up, corner-right-down, corner-right-up, corner-up-left, corner-up-right, crosshair, database, divide-circle, divide-square, dollar-sign, download, external-link, feather, frown, hash, headphones, help-circle, info, italic, key, layout, life-buoy, link-2, link, loader, lock, log-in, log-out, maximize, meh, minimize, minimize-2, minus-circle, minus-square, minus, monitor, moon, more-horizontal, more-vertical, move, music, navigation-2, navigation, octagon, pause-circle, percent, plus-circle, plus-square, plus, power, radio, rss, search, server, share, shopping-bag, sidebar, smartphone, smile, square, table-2, tablet, target, terminal, trash-2, trash, triangle, tv, type, upload, x-circle, x-octagon, x-square, x, zoom-in, zoom-out
+
+The MIT License (MIT) (for the icons listed above)
+
+Copyright (c) 2013-present Cole Bemis
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-->
+    <svg
+      class="icon-sprite"
+      width="0"
+      height="0"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <defs>
+        <symbol id="prototype-icon-receipt" viewBox="0 0 24 24">
+          <path d="M13 16H8"></path>
+          <path d="M14 8H8"></path>
+          <path d="M16 12H8"></path>
+          <path
+            d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"
+          ></path>
+        </symbol>
+        <symbol id="prototype-icon-allocated" viewBox="0 0 24 24">
+          <path d="M16 14v2.2l1.6 1"></path>
+          <path d="M16 2v3"></path>
+          <path
+            d="M21 7.338V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h2.338"
+          ></path>
+          <path d="M3 9h5.859"></path>
+          <path d="M8 2v3"></path>
+          <circle cx="16" cy="16" r="6"></circle>
+        </symbol>
+        <symbol id="prototype-icon-settlement" viewBox="0 0 24 24">
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
+          <path d="M21 3v5h-5"></path>
+          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
+          <path d="M8 16H3v5"></path>
+        </symbol>
+        <symbol id="prototype-icon-saving" viewBox="0 0 24 24">
+          <path
+            d="M11 17h3v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a3.16 3.16 0 0 0 2-2h1a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1h-1a5 5 0 0 0-2-4V3a4 4 0 0 0-3.2 1.6l-.3.4H11a6 6 0 0 0-6 6v1a5 5 0 0 0 2 4v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1z"
+          ></path>
+          <path d="M16 10h.01"></path>
+          <path d="M2 8v1a2 2 0 0 0 2 2h1"></path>
+        </symbol>
+        <symbol id="prototype-icon-month" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+          <path d="M16 2v3"></path>
+          <path d="M3 9h18"></path>
+          <path d="M8 2v3"></path>
+          <path d="M17 13h-6"></path>
+          <path d="M13 17H7"></path>
+          <path d="M7 13h.01"></path>
+          <path d="M17 17h.01"></path>
+        </symbol>
+        <symbol id="prototype-icon-salary" viewBox="0 0 24 24">
+          <path
+            d="M3 11h3.75a2 2 0 0 1 1.6.8l.45.6a4 4 0 0 0 6.4 0l.45-.6a2 2 0 0 1 1.6-.8H21"
+          ></path>
+          <path d="M3 7h18"></path>
+          <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+        </symbol>
+        <symbol id="prototype-icon-investments" viewBox="0 0 24 24">
+          <path d="M16 7h6v6"></path>
+          <path d="m22 7-8.5 8.5-5-5L2 17"></path>
+        </symbol>
+        <symbol id="prototype-icon-balance" viewBox="0 0 24 24">
+          <path d="M10 18v-7"></path>
+          <path
+            d="M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949z"
+          ></path>
+          <path d="M14 18v-7"></path>
+          <path d="M18 18v-7"></path>
+          <path d="M3 22h18"></path>
+          <path d="M6 18v-7"></path>
+        </symbol>
+        <symbol id="prototype-icon-settings" viewBox="0 0 24 24">
+          <path
+            d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"
+          ></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </symbol>
+        <symbol id="prototype-icon-chevron" viewBox="0 0 24 24">
+          <path d="m6 9 6 6 6-6"></path>
+        </symbol>
+        <symbol id="prototype-icon-previous" viewBox="0 0 24 24">
+          <path d="m15 18-6-6 6-6"></path>
+        </symbol>
+        <symbol id="prototype-icon-next" viewBox="0 0 24 24">
+          <path d="m9 18 6-6-6-6"></path>
+        </symbol>
+        <symbol id="prototype-icon-brand" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"></circle>
+          <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path>
+          <path d="M12 18V6"></path>
+        </symbol>
+        <symbol id="prototype-icon-transfers" viewBox="0 0 24 24">
+          <path d="m16 3 4 4-4 4"></path>
+          <path d="M20 7H4"></path>
+          <path d="m8 21-4-4 4-4"></path>
+          <path d="M4 17h16"></path>
+        </symbol>
+        <symbol id="prototype-icon-switch" viewBox="0 0 24 24">
+          <path d="M8 3 4 7l4 4"></path>
+          <path d="M4 7h16"></path>
+          <path d="m16 21 4-4-4-4"></path>
+          <path d="M20 17H4"></path>
+        </symbol>
+        <symbol id="prototype-icon-history" viewBox="0 0 24 24">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+          <path d="M3 3v5h5"></path>
+          <path d="M12 7v5l4 2"></path>
+        </symbol>
+        <symbol id="prototype-icon-plus" viewBox="0 0 24 24">
+          <path d="M5 12h14"></path>
+          <path d="M12 5v14"></path>
+        </symbol>
+        <symbol id="prototype-icon-close" viewBox="0 0 24 24">
+          <path d="M18 6 6 18"></path>
+          <path d="m6 6 12 12"></path>
+        </symbol>
+        <symbol id="prototype-icon-save" viewBox="0 0 24 24">
+          <path d="M20 6 9 17l-5-5"></path>
+        </symbol>
+        <symbol id="prototype-icon-income" viewBox="0 0 24 24">
+          <path d="M12 3v18"></path>
+          <path d="m19 8 3 8a5 5 0 0 1-6 0zV7"></path>
+          <path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1"></path>
+          <path d="m5 8 3 8a5 5 0 0 1-6 0zV7"></path>
+          <path d="M7 21h10"></path>
+        </symbol>
+        <symbol id="prototype-icon-discard" viewBox="0 0 24 24">
+          <path d="M10 11v6"></path>
+          <path d="M14 11v6"></path>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+          <path d="M3 6h18"></path>
+          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </symbol>
+        <symbol id="prototype-icon-edit" viewBox="0 0 24 24">
+          <path
+            d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+          ></path>
+          <path d="m15 5 4 4"></path>
+        </symbol>
+      </defs>
+    </svg>
+    <div class="lab">
+      <details id="lab">
+        <summary>
+          <strong>Utforskande prototyp</strong> · Syntetiska data · Simulerad
+          väntan · Öppna provlägen
+        </summary>
+        <p>
+          Pröva om åtgärderna hittas, vad undermenyns extra steg kostar och om
+          laddningen märks. Inget sparas utanför denna flik. Utseendet följer
+          appens färger; formulären är förenklade.
+        </p>
+        <div class="lab-panel">
+          <div>
+            <div class="row">
+              <label
+                >Simulerad svarstid
+                <select id="latency">
+                  <option value="0">Utan fördröjning</option>
+                  <option value="1200" selected>1,2 sekunder</option>
+                  <option value="3500">3,5 sekunder</option>
+                </select></label
+              ><label class="row"
+                ><input id="reverse" type="checkbox" />Äldre svar kommer
+                sist</label
+              >
+            </div>
+            <p>
+              <label class="row"
+                ><input id="fail-next" type="checkbox" />Nästa navigation
+                misslyckas</label
+              ><label class="row"
+                ><input id="fail-save" type="checkbox" />Nästa sparande
+                misslyckas</label
+              >
+            </p>
+            <button id="toggle-empty">Visa tom översikt</button>
+            <button id="reset">Återställ allt</button>
+          </div>
+          <div>
+            <div role="tablist" aria-label="Guidade prov">
+              <button role="tab" data-scenario="find" aria-selected="true">
+                Hittbarhet</button
+              ><button role="tab" data-scenario="loading" aria-selected="false">
+                Laddning</button
+              ><button role="tab" data-scenario="dirty" aria-selected="false">
+                Byt typ
+              </button>
+            </div>
+            <p id="guide"></p>
+            <button id="guide-step">Starta provet</button>
+            <p id="guide-progress"></p>
+          </div>
+        </div>
+        <div id="state" class="lab-state" aria-live="polite"></div>
+      </details>
+    </div>
+    <div class="shell">
+      <div class="topnav">
+        <div class="brand">
+          <span class="brand-mark"
+            ><svg
+              class="ui-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <use href="#prototype-icon-brand"></use></svg></span
+          >Hemekonomi
+        </div>
+        <span class="mobile-context">Hushållet Exempel</span>
+        <nav class="nav" aria-label="Huvudmeny">
+          <div class="nav-wrap">
+            <button id="monthly-nav" aria-haspopup="menu" aria-expanded="false">
+              <span class="nav-icon"
+                ><svg
+                  class="ui-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <use href="#prototype-icon-month"></use></svg></span
+              ><span class="nav-label"
+                ><span>Månads<wbr />översikt</span
+                ><svg
+                  class="ui-icon chevron"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <use href="#prototype-icon-chevron"></use></svg></span
+              ><span id="monthly-nav-wait"></span>
+            </button>
+            <div
+              id="monthly-menu"
+              class="menu"
+              role="menu"
+              aria-label="Månadens vyer"
+              hidden
+            ></div>
+          </div>
+          <button data-page="salary">
+            <span class="nav-icon"
+              ><svg
+                class="ui-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <use href="#prototype-icon-salary"></use></svg></span
+            ><span class="nav-label">Lönekoll</span></button
+          ><button data-page="investments">
+            <span class="nav-icon"
+              ><svg
+                class="ui-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <use href="#prototype-icon-investments"></use></svg></span
+            ><span class="nav-label">Investeringar</span></button
+          ><button data-page="balance">
+            <span class="nav-icon"
+              ><svg
+                class="ui-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <use href="#prototype-icon-balance"></use></svg></span
+            ><span class="nav-label">Balans</span></button
+          ><button data-page="settings">
+            <span class="nav-icon"
+              ><svg
+                class="ui-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <use href="#prototype-icon-settings"></use></svg></span
+            ><span class="nav-label">Inställningar</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+    <main>
+      <header class="row page-heading">
+        <h1 id="page-title">Månadsöversikt</h1>
+        <span class="badge">Hushållet Exempel</span>
+      </header>
+      <div id="toolbar" class="toolbar">
+        <div class="selector">
+          <div class="selector-line">
+            <button id="previous" aria-label="Föregående månad">
+              <svg
+                class="ui-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <use href="#prototype-icon-previous"></use>
+              </svg></button
+            ><button
+              id="month-open"
+              class="month-open"
+              aria-haspopup="dialog"
+              aria-expanded="false"
+            ></button
+            ><button id="next" aria-label="Nästa månad">
+              <svg
+                class="ui-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <use href="#prototype-icon-next"></use>
+              </svg>
+            </button>
+          </div>
+          <div
+            id="month-picker"
+            class="menu month-popover"
+            role="dialog"
+            aria-label="Månadsväljare"
+            hidden
+          >
+            <label for="month-input">Månad</label
+            ><input
+              id="month-input"
+              type="month"
+              min="1900-01"
+              max="2199-12"
+            /><button class="link" id="current-month">Denna månad</button>
+          </div>
+          <div
+            id="month-status"
+            class="feedback"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          ></div>
+        </div>
+        <div class="row actions" id="actions">
+          <button id="register" class="icon-button">
+            <svg
+              class="ui-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <use href="#prototype-icon-transfers"></use></svg
+            ><span>Registrera månadens insättningar</span>
+          </button>
+          <div class="nav-wrap">
+            <button
+              id="add"
+              class="primary icon-button"
+              aria-haspopup="menu"
+              aria-expanded="false"
+            >
+              <svg
+                class="ui-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <use href="#prototype-icon-plus"></use></svg
+              ><span>Lägg till</span>
+            </button>
+            <div
+              id="add-menu"
+              class="menu right"
+              role="menu"
+              aria-label="Lägg till"
+              hidden
+            ></div>
+          </div>
+        </div>
+      </div>
+      <div
+        id="page-status"
+        class="page-feedback"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      ></div>
+      <div id="notice" class="notice" role="status" hidden></div>
+      <section
+        id="surface"
+        class="data-surface"
+        aria-label="Visad månad"
+      ></section>
+    </main>
+    <dialog id="form-dialog" aria-labelledby="dialog-title">
+      <div id="dialog-body"></div>
+    </dialog>
+    <script>
+      // Portable state model: no DOM, storage, network or clock dependencies.
+      const Model = (() => {
+        const initial = (month = "2026-10", page = "overview") => ({
+          month,
+          page,
+          targetMonth: month,
+          targetPage: page,
+          request: 0,
+          pending: false,
+          error: null,
+          empty: false,
+          posts: [],
+          deposits: [],
+          notice: "",
+        });
+        function reduce(s, a) {
+          switch (a.type) {
+            case "navigate":
+              return {
+                ...s,
+                targetMonth: a.month,
+                targetPage: a.page,
+                request: s.request + 1,
+                pending: true,
+                error: null,
+                notice: "",
+              };
+            case "resolved":
+              return a.request !== s.request
+                ? s
+                : a.failed
+                  ? {
+                      ...s,
+                      pending: false,
+                      error: { month: s.targetMonth, page: s.targetPage },
+                    }
+                  : {
+                      ...s,
+                      month: s.targetMonth,
+                      page: s.targetPage,
+                      pending: false,
+                      error: null,
+                    };
+            case "empty":
+              return { ...s, empty: !s.empty, notice: "" };
+            case "saved":
+              return { ...s, posts: [...s.posts, a.post], notice: a.notice };
+            case "deposited":
+              return {
+                ...s,
+                deposits: [...s.deposits, a.deposit],
+                notice: "Månadens insättningar registrerade i prototypen.",
+              };
+            default:
+              return s;
+          }
+        }
+        function shift(month, delta) {
+          const [y, m] = month.split("-").map(Number);
+          const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+          return d.toISOString().slice(0, 7);
+        }
+        return { initial, reduce, shift };
+      })();
+      const $ = (id) => document.getElementById(id);
+      const names = {
+        overview: "Månadsöversikt",
+        transfers: "Överföringar och värden",
+        history: "Historik och kommande ändringar",
+        salary: "Lönekoll",
+        investments: "Investeringar",
+        balance: "Balans",
+        settings: "Inställningar",
+      };
+      const types = [
+        ["direct", "Direkt utgift", "Betalas direkt, utan månadsavsättning."],
+        [
+          "allocated",
+          "Avsatt utgift",
+          "Lägg undan inför en kommande betalning.",
+        ],
+        ["settlement", "Avräkning", "Jämna ut betalningar mellan personer."],
+        ["saving", "Sparande", "Spara till ett ändamål."],
+      ];
+      const money = (ore) =>
+        new Intl.NumberFormat("sv-SE", {
+          style: "currency",
+          currency: "SEK",
+          maximumFractionDigits: 0,
+        }).format(ore / 100);
+      const label = (month) =>
+        new Intl.DateTimeFormat("sv-SE", {
+          month: "long",
+          year: "numeric",
+          timeZone: "UTC",
+        }).format(new Date(month + "-01T12:00:00Z"));
+      const todayMonth = new Intl.DateTimeFormat("sv-SE", {
+        year: "numeric",
+        month: "2-digit",
+        timeZone: "Europe/Stockholm",
+      }).format(new Date());
+      const esc = (value) =>
+        String(value).replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      // Icons deliberately match the app; one category icon follows each create flow.
+      const icon = (name, extra = "") =>
+        `<svg class="ui-icon ${extra}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><use href="#prototype-icon-${name}"></use></svg>`;
+      const typeIcons = {
+        direct: "receipt",
+        allocated: "allocated",
+        settlement: "settlement",
+        saving: "saving",
+      };
+      const pageIcons = {
+        overview: "month",
+        transfers: "transfers",
+        history: "history",
+      };
+      const spinner = '<span class="spinner" aria-hidden="true"></span>';
+      let state = Model.initial();
+      let form = null,
+        returnFocus = "add",
+        formSnapshot = "",
+        scenario = "find",
+        step = 0,
+        generation = 0;
+      const fixtures = [
+        { kind: "direct", name: "Boende", ore: 980000, total: 0 },
+        { kind: "direct", name: "Bredband", ore: 34900, total: 0 },
+        { kind: "allocated", name: "Hemförsäkring", ore: 35000, total: 210000 },
+        { kind: "allocated", name: "Cykelservice", ore: 20000, total: 120000 },
+        {
+          kind: "settlement",
+          name: "Gemensamma inköp",
+          ore: 80000,
+          total: 160000,
+        },
+        { kind: "saving", name: "Buffert", ore: 150000, total: 1250000 },
+        { kind: "saving", name: "Semester", ore: 100000, total: 680000 },
+      ];
+      function posts() {
+        return [
+          ...(state.empty ? [] : fixtures),
+          ...state.posts.filter((p) => p.date.slice(0, 7) <= state.month),
+        ];
+      }
+      function dispatch(a) {
+        state = Model.reduce(state, a);
+        render();
+      }
+      function updateUrl(replace = false) {
+        const u = new URL(location.href);
+        u.searchParams.set("month", state.month);
+        u.searchParams.set("page", state.page);
+        history[replace ? "replaceState" : "pushState"]({}, "", u);
+      }
+      function startNavigation(month, page, force = false) {
+        if (
+          form ||
+          !/^\d{4}-(0[1-9]|1[0-2])$/.test(month) ||
+          month < "1900-01" ||
+          month > "2199-12"
+        )
+          return;
+        if (!force && month === state.targetMonth && page === state.targetPage)
+          return;
+        closeMenus();
+        dispatch({ type: "navigate", month, page });
+        const request = state.request,
+          run = generation,
+          failed = $("fail-next").checked;
+        $("fail-next").checked = false;
+        const delay = $("reverse").checked
+          ? request % 2
+            ? 2400
+            : 400
+          : Number($("latency").value);
+        const complete = () => {
+          if (run !== generation) return;
+          const current = request === state.request;
+          dispatch({ type: "resolved", request, failed });
+          if (current && !failed) {
+            updateUrl();
+            if (page !== previousPage) {
+              $("page-title").tabIndex = -1;
+              $("page-title").focus({ preventScroll: true });
+            }
+          }
+        };
+        const previousPage = state.page;
+        // This is simulated response time, never a minimum UI waiting period.
+        if (delay === 0) complete();
+        else setTimeout(complete, delay);
+      }
+      function closeMenus() {
+        for (const id of ["monthly-menu", "add-menu", "month-picker"])
+          $(id).hidden = true;
+        for (const id of ["monthly-nav", "add", "month-open"])
+          $(id).setAttribute("aria-expanded", "false");
+      }
+      function openMenu(id, trigger) {
+        const opening = $(id).hidden;
+        closeMenus();
+        if (opening) {
+          $(id).hidden = false;
+          $(trigger).setAttribute("aria-expanded", "true");
+          $(id).querySelector("button,input")?.focus();
+        }
+      }
+      function table(kind, heading) {
+        const rows = posts().filter((p) => p.kind === kind);
+        return `<article class="card"><div class="card-head">${icon(typeIcons[kind], "card-icon")}<h3>${heading}</h3></div>${rows.length ? `<div class="table-wrap"><table><thead><tr><th>Namn</th><th>${kind === "direct" ? "Per månad" : "Per månad"}</th>${kind === "direct" ? "" : "<th>Totalt<br>undansparat</th>"}</tr></thead><tbody>${rows.map((p) => `<tr><td><button data-detail="${esc(p.name)}">${esc(p.name)}</button></td><td>${money(p.ore)}</td>${kind === "direct" ? "" : `<td>${money(p.total || 0)}</td>`}</tr>`).join("")}</tbody></table></div>` : '<p class="muted">Inga poster ännu. Använd Lägg till högst upp.</p>'}</article>`;
+      }
+      function render() {
+        const waiting = state.pending;
+        $("page-title").textContent = names[state.page];
+        document.title = names[state.page] + " · Prototyp";
+        $("toolbar").hidden = !["overview", "transfers"].includes(state.page);
+        $("actions").hidden = state.page !== "overview";
+        $("month-open").innerHTML =
+          `<span>${label(state.targetMonth)}</span>${icon("chevron", "chevron")}`;
+        $("month-open").setAttribute(
+          "aria-label",
+          "Välj månad: " + label(state.targetMonth),
+        );
+        $("month-input").value = state.targetMonth;
+        $("previous").disabled = state.targetMonth === "1900-01";
+        $("next").disabled = state.targetMonth === "2199-12";
+        $("add").disabled = waiting;
+        $("register").disabled = waiting;
+        const monthPending = waiting && state.targetPage === state.page;
+        $("month-status").innerHTML = monthPending
+          ? `<span class="waiting">${spinner}Byter till ${label(state.targetMonth)}…</span>`
+          : state.error && state.error.page === state.page
+            ? `<span class="error">${label(state.error.month)} kunde inte laddas. ${label(state.month)} visas fortfarande.</span> <button class="link" data-retry>Försök igen</button>`
+            : "";
+        $("page-status").innerHTML =
+          waiting && !monthPending
+            ? `<span class="waiting">${spinner}Öppnar ${names[state.targetPage]}…</span>`
+            : state.error && state.error.page !== state.page
+              ? `<span class="error">${names[state.error.page]} kunde inte laddas. ${names[state.page]} visas fortfarande.</span> <button class="link" data-retry>Försök igen</button>`
+              : "";
+        $("surface").classList.toggle("dim", waiting);
+        $("surface").inert = waiting;
+        $("surface").setAttribute("aria-busy", String(waiting));
+        $("notice").hidden = !state.notice;
+        $("notice").textContent = state.notice;
+        const group = ["overview", "transfers", "history"];
+        $("monthly-nav").setAttribute(
+          "aria-current",
+          group.includes(state.page) ? "page" : "false",
+        );
+        $("monthly-nav").dataset.wait = String(
+          waiting && group.includes(state.targetPage),
+        );
+        $("monthly-nav-wait").innerHTML =
+          waiting && group.includes(state.targetPage)
+            ? '<span class="spinner small" aria-hidden="true"></span>'
+            : "";
+        $("monthly-nav").setAttribute(
+          "aria-label",
+          "Månadsöversikt" +
+            (waiting && group.includes(state.targetPage)
+              ? ", öppnar " + names[state.targetPage]
+              : ""),
+        );
+        $("monthly-menu").innerHTML = group
+          .map(
+            (p) =>
+              `<button role="menuitem" data-page="${p}" ${state.page === p ? 'aria-current="page"' : ""}>${icon(pageIcons[p])}<span>${names[p]}</span>${waiting && state.targetPage === p ? spinner : ""}</button>`,
+          )
+          .join("");
+        document.querySelectorAll(".nav > button").forEach((b) => {
+          b.setAttribute(
+            "aria-current",
+            b.dataset.page === state.page ? "page" : "false",
+          );
+          b.dataset.wait = String(
+            waiting && b.dataset.page === state.targetPage,
+          );
+          b.setAttribute(
+            "aria-label",
+            names[b.dataset.page] +
+              (waiting && b.dataset.page === state.targetPage
+                ? ", laddar"
+                : ""),
+          );
+        });
+        const rows = posts(),
+          monthly = rows
+            .filter((p) => p.kind !== "direct")
+            .reduce((sum, p) => sum + p.ore, 0),
+          deposited = state.deposits
+            .filter((d) => d.month === state.month)
+            .reduce((sum, d) => sum + d.ore, 0);
+        if (state.page === "overview")
+          $("surface").innerHTML =
+            `<div class="month-heading"><h2>${label(state.month)}</h2><small>Registrerade värden · syntetiskt hushåll</small></div><div class="grid"><article class="card wide funding"><div><h3 class="heading-with-icon">${icon("transfers")}<span>Att föra över</span></h3><div class="amount">${money(Math.max(0, monthly - deposited))}</div><p>Återstår för ${label(state.month)}</p></div><div class="funding-part"><small>Planerat denna månad</small><div class="amount">${money(monthly)}</div></div><div class="funding-part"><small>Registrerade insättningar</small><div class="amount">${money(deposited)}</div></div></article>${state.empty && !rows.length ? '<div class="card wide empty"><h3>Din månad börjar här</h3><p>Öppna Lägg till högst upp för att skapa din första utgift, avräkning eller ditt första sparande.</p></div>' : ""}${table("direct", "Direkta utgifter")}${table("allocated", "Avsatta utgifter")}${table("settlement", "Avräkningar")}${table("saving", "Spara")}<article class="card wide"><h3 class="heading-with-icon">${icon("income")}<span>Räcker inkomsten?</span></h3><p>Exempelinkomst ${money(4200000)} · kvar efter planerade utgifter och sparande ${money(4200000 - rows.reduce((s, p) => s + p.ore, 0))}</p></article></div>`;
+        else if (state.page === "transfers")
+          $("surface").innerHTML =
+            `<div class="month-heading"><h2>${label(state.month)}</h2><small>Vald månad följer med mellan vyerna</small></div><article class="card secondary-page"><h3>Registrerade insättningar</h3><p class="muted">Förenklad destinationsvy för navigeringsprovet.</p>${
+              state.deposits
+                .filter((d) => d.month === state.month)
+                .map((d) => `<p>${d.date} · ${money(d.ore)}</p>`)
+                .join("") ||
+              "<p>Inga registrerade insättningar denna månad.</p>"
+            }<hr><h3>Ingående värden</h3><p>Buffert: ${money(1250000)}</p></article>`;
+        else if (state.page === "history")
+          $("surface").innerHTML =
+            `<article class="card secondary-page"><h2>Alla perioder</h2><p>Historiken filtreras inte av den valda månaden.</p><table><thead><tr><th>Gäller från</th><th>Händelse</th></tr></thead><tbody><tr><td>2026-09-01</td><td>Buffert skapad</td></tr><tr><td>2027-01-01</td><td>Kommande ändring av bredband</td></tr></tbody></table><p class="muted">Återgång till månadsområdet behåller ${label(state.month)}.</p></article>`;
+        else
+          $("surface").innerHTML =
+            `<article class="card secondary-page"><h2>${names[state.page]}</h2><p>Förenklad destinationsvy. Öppna Månadsöversikt i huvudmenyn och välj sedan Månadsöversikt för att gå tillbaka.</p>${state.page === "settings" ? "<p>Hushåll, medlemmar, inkomster och kontofunktioner hör hemma här.</p>" : '<div class="empty-route muted">Tidigare sidram behålls under nästa navigation.</div>'}</article>`;
+        $("state").innerHTML =
+          `<div class="state-line"><span>Visas: <strong>${names[state.page]}, ${label(state.month)}</strong></span><span>Avsikt: <strong>${names[state.targetPage]}, ${label(state.targetMonth)}</strong></span><span>${waiting ? "Väntar på senaste svaret" : state.error ? "Fel kvarstår" : "Klar"} · ${form ? "Dialog: " + (form.kind || "typval") : "Ingen dialog"}</span><span>${state.posts.length} skapade poster i minnet</span></div>`;
+        $("toggle-empty").textContent = state.empty
+          ? "Visa fylld översikt"
+          : "Visa tom översikt";
+      }
+      function typeChoices() {
+        return types
+          .map(
+            ([key, title, description]) =>
+              `<button class="choice" data-type="${key}">${icon(typeIcons[key])}<span class="option-copy"><strong>${title}</strong><small>${description}</small></span></button>`,
+          )
+          .join("");
+      }
+      function showDialog(kind) {
+        if (state.pending) return;
+        closeMenus();
+        returnFocus = kind === "funding" ? "register" : "add";
+        form = { kind, dirty: false, pending: false };
+        renderForm();
+        $("form-dialog").showModal();
+        focusForm();
+        render();
+      }
+      function focusForm() {
+        const target =
+          $("dialog-body").querySelector("input:not([type=hidden])") ??
+          $("dialog-body").querySelector("[data-type],button");
+        target?.focus();
+      }
+      function renderForm() {
+        if (form.kind === "choose") {
+          $("dialog-body").innerHTML =
+            `<div class="dialog-top"><h2 id="dialog-title">Byt typ</h2><button data-close aria-label="Stäng">${icon("close")}</button></div><p>Välj vilken post du vill skapa.</p>${typeChoices()}`;
+          return;
+        }
+        const kind = form.kind,
+          title = types.find((t) => t[0] === kind)?.[1];
+        if (kind === "funding") {
+          $("dialog-body").innerHTML =
+            `<div class="dialog-top"><h2 id="dialog-title">Registrera månadens insättningar</h2><button data-close aria-label="Stäng">${icon("close")}</button></div><p>${label(state.month)} · Registrera pengar som redan har förts över.</p><form id="entry-form"><div class="fields"><div><label for="entry-date">Datum för insättning</label><input id="entry-date" name="date" type="date" value="${state.month}-25" required></div><div>${
+              posts()
+                .filter((p) => p.kind !== "direct")
+                .map(
+                  (p, i) =>
+                    `<label class="funding-line"><input type="checkbox" name="include-${i}" checked><span>${esc(p.name)}</span><input type="number" min="0" step="0.01" value="${p.ore / 100}" name="deposit-${i}" aria-label="Insättning ${esc(p.name)}"></label>`,
+                )
+                .join("") ||
+              "<p>Inga planerade insättningar ännu. Skapa en post via Lägg till först.</p>"
+            }</div></div><p id="form-error" class="error" role="alert"></p><div class="dialog-actions"><button type="button" data-close class="icon-button">${icon("close")}<span>Avbryt</span></button><button class="primary" ${posts().filter((p) => p.kind !== "direct").length ? "" : "disabled"}>${icon("transfers")}<span>Registrera insättningar</span></button></div></form>`;
+        } else {
+          $("dialog-body").innerHTML =
+            `<div class="dialog-top"><h2 id="dialog-title">Lägg till ${title.toLowerCase()}</h2><button data-close aria-label="Stäng">${icon("close")}</button></div><div class="form-summary row spread"><strong class="heading-with-icon">${icon(typeIcons[kind])}<span>${title}</span></strong><button class="link icon-button" data-change-type>${icon("switch")}<span>Byt typ</span></button></div><form id="entry-form"><div class="fields"><div><label for="entry-name">${kind === "saving" ? "Namn på sparandet" : "Namn på utgiften"}</label><input id="entry-name" name="name" placeholder="${kind === "saving" ? "Till exempel buffert" : "Till exempel hemförsäkring"}" maxlength="160" required></div><div><label for="entry-amount">${kind === "saving" ? "Sparande per månad" : kind === "allocated" ? "Belopp per betalning" : "Belopp per månad"} (kr)</label><input id="entry-amount" name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" required></div>${kind === "allocated" ? '<div class="two"><div><label for="entry-cadence">Hur ofta?</label><select id="entry-cadence" name="cadence"><option value="12">Varje år</option><option value="3">Var tredje månad</option><option value="1">Varje månad</option></select></div><div><label for="entry-due">Nästa betalning</label><input id="entry-due" name="due" type="date" value="' + state.month + '-28" required></div></div><p class="muted">Månadsavsättningen beräknas från belopp och intervall.</p>' : ""}${kind === "settlement" ? '<div><label for="entry-person">Avräkning för</label><select id="entry-person" name="person"><option>Person A</option><option>Person B</option></select></div>' : ""}<div class="two"><div><label for="entry-date">Gäller från</label><input id="entry-date" name="date" type="date" value="${state.month}-01" required></div>${kind !== "direct" ? '<div><label for="entry-day">Planerad insättningsdag</label><input id="entry-day" name="day" type="number" min="1" max="31" value="25" required></div>' : ""}</div></div><p class="muted">Skapar en definition. Inga pengar registreras som insatta.</p><p id="form-error" class="error" role="alert"></p><div class="dialog-actions"><button type="button" data-close class="icon-button">${icon("close")}<span>Avbryt</span></button><button class="primary icon-button">${icon("save")}<span>Spara ${title.toLowerCase()}</span></button></div></form>`;
+        }
+        formSnapshot = snapshot();
+      }
+      function snapshot() {
+        const f = $("entry-form");
+        return f ? JSON.stringify([...new FormData(f)]) : "";
+      }
+      function closeDialog() {
+        if (form?.pending) return;
+        form = null;
+        $("form-dialog").close();
+        $(returnFocus).focus({ preventScroll: true });
+        render();
+      }
+      function requestExit(changeType = false) {
+        if (form?.pending) return;
+        if (form?.dirty) {
+          const fragment = document.createDocumentFragment();
+          while ($("dialog-body").firstChild)
+            fragment.append($("dialog-body").firstChild);
+          form.suspended = fragment;
+          form.guard = changeType ? "type" : "close";
+          $("dialog-body").innerHTML =
+            `<h2 id="dialog-title">Du har osparade ändringar</h2><p>${changeType ? "Om du byter typ börjar du med ett tomt formulär." : "Om du stänger försvinner det du har fyllt i."}</p><div class="dialog-actions"><button data-continue class="icon-button">${icon("edit")}<span>Fortsätt redigera</span></button><button class="danger icon-button" data-discard>${icon("discard")}<span>${changeType ? "Kasta ändringar och byt typ" : "Kasta ändringar och stäng"}</span></button></div>`;
+          $("dialog-body").querySelector("[data-continue]").focus();
+        } else if (changeType) {
+          showTypeChoice();
+        } else closeDialog();
+      }
+      function showTypeChoice() {
+        const prior = form.kind;
+        form = {
+          kind: "choose",
+          previous: prior,
+          dirty: false,
+          pending: false,
+        };
+        renderForm();
+        $("dialog-body").querySelector(`[data-type="${prior}"]`)?.focus();
+        render();
+      }
+      async function saveEntry(event) {
+        event.preventDefault();
+        if (form.pending) return;
+        const data = new FormData(event.target),
+          kind = form.kind;
+        form.pending = true;
+        form.data = data;
+        event.target
+          .querySelectorAll("input,select,button")
+          .forEach((x) => (x.disabled = true));
+        $("dialog-body")
+          .querySelectorAll("button")
+          .forEach((x) => (x.disabled = true));
+        $("form-error").innerHTML =
+          `<span class="waiting">${spinner}Sparar och uppdaterar vyn…</span>`;
+        render();
+        const failed = $("fail-save").checked;
+        $("fail-save").checked = false;
+        await new Promise((resolve) =>
+          setTimeout(resolve, Number($("latency").value)),
+        );
+        if (failed) {
+          form.pending = false;
+          $("dialog-body")
+            .querySelectorAll("input,select,button")
+            .forEach((x) => (x.disabled = false));
+          $("form-error").textContent =
+            "Kunde inte spara. Inmatningen finns kvar. Försök igen.";
+          return;
+        }
+        if (kind === "funding") {
+          let ore = 0;
+          for (const [key, value] of data) {
+            if (key.startsWith("include-"))
+              ore += Math.round(
+                Number(data.get("deposit-" + key.slice(8))) * 100,
+              );
+          }
+          dispatch({
+            type: "deposited",
+            deposit: { month: state.month, date: data.get("date"), ore },
+          });
+        } else {
+          const date = String(data.get("date")),
+            name = String(data.get("name")),
+            amount = Math.round(Number(data.get("amount")) * 100),
+            ore =
+              kind === "allocated"
+                ? Math.round(amount / Number(data.get("cadence")))
+                : amount;
+          dispatch({
+            type: "saved",
+            post: { kind, name, ore, total: 0, date },
+            notice: `${types.find((t) => t[0] === kind)[1]} tillagt. Gäller från ${date}.${date.slice(0, 7) > state.month ? " Visas inte i " + label(state.month) + ". Vald månad behålls." : ""}`,
+          });
+        }
+        form.pending = false;
+        closeDialog();
+      }
+      $("monthly-nav").onclick = () => openMenu("monthly-menu", "monthly-nav");
+      $("add").onclick = () => openMenu("add-menu", "add");
+      $("month-open").onclick = () => openMenu("month-picker", "month-open");
+      $("add-menu").innerHTML = types
+        .map(
+          ([key, title, description]) =>
+            `<button role="menuitem" data-type="${key}">${icon(typeIcons[key])}<span class="option-copy">${title}<small>${description}</small></span></button>`,
+        )
+        .join("");
+      $("previous").onclick = () =>
+        startNavigation(Model.shift(state.targetMonth, -1), state.targetPage);
+      $("next").onclick = () =>
+        startNavigation(Model.shift(state.targetMonth, 1), state.targetPage);
+      $("month-input").onchange = (e) => {
+        if (e.target.validity.valid && e.target.value) {
+          startNavigation(e.target.value, state.targetPage);
+          $("month-open").focus({ preventScroll: true });
+        }
+      };
+      $("current-month").onclick = () => {
+        startNavigation(todayMonth, state.targetPage);
+        closeMenus();
+        $("month-open").focus();
+      };
+      $("register").onclick = () => showDialog("funding");
+      $("toggle-empty").onclick = () => dispatch({ type: "empty" });
+      $("form-dialog").addEventListener("cancel", (e) => {
+        e.preventDefault();
+        if (!form?.guard) requestExit();
+        else $("dialog-body").querySelector("[data-continue]")?.click();
+      });
+      $("dialog-body").addEventListener("input", () => {
+        if (form && !form.guard) form.dirty = snapshot() !== formSnapshot;
+      });
+      $("dialog-body").addEventListener("change", () => {
+        if (form && !form.guard) form.dirty = snapshot() !== formSnapshot;
+      });
+      $("dialog-body").addEventListener("submit", saveEntry);
+      $("dialog-body").addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (!b) return;
+        if (b.hasAttribute("data-close")) requestExit();
+        if (b.hasAttribute("data-change-type")) {
+          if (form.dirty) requestExit(true);
+          else showTypeChoice();
+        }
+        if (b.hasAttribute("data-continue")) {
+          const fragment = form.suspended;
+          delete form.suspended;
+          delete form.guard;
+          $("dialog-body").replaceChildren(fragment);
+          $("dialog-body").querySelector("[data-change-type],input")?.focus();
+        }
+        if (b.hasAttribute("data-discard")) {
+          if (form.guard === "type") showTypeChoice();
+          else closeDialog();
+        }
+      });
+      // Delegated events keep the prototype disposable, with no app wiring.
+      document.addEventListener("click", (e) => {
+        const b = e.target.closest("button");
+        if (!b) return;
+        if (b.dataset.page) startNavigation(state.targetMonth, b.dataset.page);
+        if (b.dataset.type) {
+          const kind = b.dataset.type;
+          if (form) {
+            form = { kind, dirty: false, pending: false };
+            renderForm();
+            focusForm();
+            render();
+          } else showDialog(kind);
+        }
+        if (b.hasAttribute("data-retry") && state.error)
+          startNavigation(state.error.month, state.error.page, true);
+        if (b.dataset.detail) {
+          returnFocus = "add";
+          form = { kind: "detail", dirty: false, pending: false };
+          $("dialog-body").innerHTML =
+            `<div class="dialog-top"><h2 id="dialog-title">${esc(b.dataset.detail)}</h2><button data-close aria-label="Stäng">${icon("close")}</button></div><p>Förenklad detaljvy för ${label(state.month)}. Ändra och Avsluta prövas i befintliga produktflöden.</p><button data-close>Stäng</button>`;
+          $("form-dialog").showModal();
+        }
+        if (!e.target.closest(".nav-wrap,.selector")) closeMenus();
+      });
+      document.addEventListener("keydown", (e) => {
+        const menu = e.target.closest("[role=menu]");
+        if (menu && ["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
+          e.preventDefault();
+          const buttons = [...menu.querySelectorAll("button")],
+            i = buttons.indexOf(document.activeElement);
+          buttons[
+            e.key === "Home"
+              ? 0
+              : e.key === "End"
+                ? buttons.length - 1
+                : (i + (e.key === "ArrowDown" ? 1 : -1) + buttons.length) %
+                  buttons.length
+          ]?.focus();
+        }
+        if (e.key === "Escape" && !$("form-dialog").open) {
+          const id = !$("add-menu").hidden
+            ? "add"
+            : !$("monthly-menu").hidden
+              ? "monthly-nav"
+              : "month-open";
+          closeMenus();
+          $(id).focus();
+        }
+      });
+      function reset() {
+        generation++;
+        if ($("form-dialog").open) {
+          form = null;
+          $("form-dialog").close();
+        }
+        state = Model.initial();
+        $("latency").value = "1200";
+        $("reverse").checked = false;
+        $("fail-next").checked = false;
+        $("fail-save").checked = false;
+        closeMenus();
+        render();
+        updateUrl(true);
+      }
+      $("reset").onclick = reset;
+      const guides = {
+        find: {
+          text: "Från Inställningar: hitta Månadsöversikt, skapa ett sparande och hitta insättningsregistreringen. Räkna trycken i månadsmenyn. Prova sedan tom sida.",
+          steps: [
+            [
+              "Börja i Inställningar",
+              () => {
+                reset();
+                state = { ...state, page: "settings", targetPage: "settings" };
+                render();
+                updateUrl(true);
+              },
+            ],
+            [
+              "Öppna månadsmenyn",
+              () => openMenu("monthly-menu", "monthly-nav"),
+            ],
+            [
+              "Välj Månadsöversikt",
+              () => startNavigation(state.month, "overview"),
+            ],
+            [
+              "Visa tom sida",
+              () => {
+                if (!state.pending) dispatch({ type: "empty" });
+              },
+            ],
+          ],
+        },
+        loading: {
+          text: "Prova tre snabba månadspilar, omvänd svarsordning och sedan ett fel. Kontrollera gammal rubrik, nedtoning och spärrade skrivåtgärder. Väljaren ska fortfarande fungera.",
+          steps: [
+            [
+              "Börja med långsam laddning",
+              () => {
+                reset();
+                $("latency").value = "3500";
+              },
+            ],
+            [
+              "Tre snabba val framåt",
+              () => {
+                for (let i = 0; i < 3; i++)
+                  startNavigation(
+                    Model.shift(state.targetMonth, 1),
+                    "overview",
+                  );
+              },
+            ],
+            [
+              "Äldre svar sist: två snabba val",
+              () => {
+                $("reverse").checked = true;
+                for (let i = 0; i < 2; i++)
+                  startNavigation(
+                    Model.shift(state.targetMonth, 1),
+                    "overview",
+                  );
+              },
+            ],
+            [
+              "Nästa månad misslyckas",
+              () => {
+                $("reverse").checked = false;
+                $("fail-next").checked = true;
+                startNavigation(Model.shift(state.targetMonth, 1), "overview");
+              },
+            ],
+          ],
+        },
+        dirty: {
+          text: "Öppna Direkt utgift, skriv ett namn och välj Byt typ. Fortsätt redigera ska behålla inmatningen. Kasta ändringar ska ge rent typval. Prova även Escape.",
+          steps: [
+            [
+              "Börja med Direkt utgift",
+              () => {
+                reset();
+                showDialog("direct");
+              },
+            ],
+            [
+              "Fyll i syntetiska uppgifter",
+              () => {
+                $("entry-name").value = "Provinmatning";
+                $("entry-amount").value = "125";
+                form.dirty = true;
+              },
+            ],
+            ["Prova Byt typ", () => requestExit(true)],
+          ],
+        },
+      };
+      function renderGuide() {
+        const g = guides[scenario];
+        $("guide").textContent = g.text;
+        $("guide-step").textContent = g.steps[step]?.[0] || "Börja om provet";
+        $("guide-progress").textContent =
+          `Steg ${Math.min(step + 1, g.steps.length)} av ${g.steps.length}. Du kan också klicka fritt i prototypen.`;
+        document
+          .querySelectorAll("[data-scenario]")
+          .forEach((b) =>
+            b.setAttribute(
+              "aria-selected",
+              String(b.dataset.scenario === scenario),
+            ),
+          );
+      }
+      document.querySelectorAll("[data-scenario]").forEach(
+        (b) =>
+          (b.onclick = () => {
+            scenario = b.dataset.scenario;
+            step = 0;
+            renderGuide();
+          }),
+      );
+      $("guide-step").onclick = () => {
+        const g = guides[scenario];
+        if (step >= g.steps.length) step = 0;
+        g.steps[step][1]();
+        step++;
+        renderGuide();
+      };
+      window.addEventListener("popstate", () => {
+        const u = new URL(location.href),
+          month = u.searchParams.get("month"),
+          page = u.searchParams.get("page");
+        if (form) return;
+        generation++;
+        state = {
+          ...state,
+          month: month || "2026-10",
+          targetMonth: month || "2026-10",
+          page: names[page] ? page : "overview",
+          targetPage: names[page] ? page : "overview",
+          pending: false,
+          error: null,
+        };
+        render();
+      });
+      const initialUrl = new URL(location.href),
+        initialMonth = initialUrl.searchParams.get("month"),
+        initialPage = initialUrl.searchParams.get("page");
+      if (
+        /^\d{4}-(0[1-9]|1[0-2])$/.test(initialMonth || "") &&
+        initialMonth >= "1900-01" &&
+        initialMonth <= "2199-12"
+      )
+        state = Model.initial(
+          initialMonth,
+          names[initialPage] ? initialPage : "overview",
+        );
+      render();
+      renderGuide();
+    </script>
+  </body>
+</html>
