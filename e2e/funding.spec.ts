@@ -1,3 +1,10 @@
+import { monthlyPage } from "./helpers/monthly";
+import {
+  openForm,
+  changeCreateType,
+  expectMonth,
+  selectMonth,
+} from "./helpers/monthly";
 import { openPostAction, closePostDetails } from "./helpers/post-management";
 import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
@@ -13,14 +20,14 @@ test("inaktiv avsatt utgift behåller överföringar men visar inget förväntat
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Avsättningstest");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
-  await page.getByRole("button", { name: "Lägg till utgift" }).click();
-  await page.getByRole("radio", { name: "Avsatt utgift" }).check();
+  await openForm(page, "Lägg till utgift");
+  await changeCreateType(page, "Avsatt utgift");
   await page.getByLabel("Namn på utgiften").fill("Försäkring");
   await page.getByLabel("Belopp per betalning (kr)").fill("1200");
   await page.getByLabel("Nästa betalning").fill(`${period}-01`);
   await page.getByRole("button", { name: "Spara utgift" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.getByRole("link", { name: "Överföringar och värden" }).click();
+  await monthlyPage(page, "Överföringar och värden");
   await expect(page.getByText(/Förväntat uttag/)).toBeVisible();
   await page.getByRole("button", { name: "Registrera för Försäkring" }).click();
   await page.getByLabel("Faktiskt belopp (kr)").fill("500");
@@ -53,7 +60,7 @@ test("bekräftade överföringar är skilda från planen och hänförs till valf
   await expect(page).toHaveURL(/\/onboarding$/);
   await page.getByLabel("Namn på hushållet").fill("Överföringstest");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
-  await page.getByRole("button", { name: "Lägg till sparande" }).click();
+  await openForm(page, "Lägg till sparande");
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Namn").fill("Buffert");
   await dialog.getByLabel(/Belopp/).fill("1000");
@@ -63,7 +70,7 @@ test("bekräftade överföringar är skilda från planen och hänförs till valf
   await dialog.getByLabel("Planerad dag i månaden").fill("15");
   await dialog.getByRole("button", { name: "Spara sparande" }).click();
   await expect(dialog).toHaveCount(0);
-  await page.getByRole("link", { name: "Överföringar och värden" }).click();
+  await monthlyPage(page, "Överföringar och värden");
   const card = page.locator('[data-slot="card"]').filter({
     has: page.getByRole("heading", {
       name: "Buffert",
@@ -215,8 +222,8 @@ test("bekräftade överföringar är skilda från planen och hänförs till valf
   await dialog.getByRole("button", { name: "Spara sparande" }).click();
   await closePostDetails(page, "Buffert");
   await expect(dialog).toHaveCount(0);
-  await page.getByLabel("Välj månad").fill(next);
-  await expect(page.getByLabel("Välj månad")).toHaveValue(next);
+  await selectMonth(page, next);
+  await expectMonth(page, next);
   await expect(
     page.getByRole("button", { name: "Hantera sparande" }),
   ).toHaveCount(0);

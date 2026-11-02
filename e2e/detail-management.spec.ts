@@ -1,3 +1,4 @@
+import { openForm, expectMonth, selectMonth } from "./helpers/monthly";
 import { setSession, expect, test, type Page } from "./helpers/session";
 
 test("återgår från ändring till uppdaterade detaljer för samma sparande", async ({
@@ -12,7 +13,7 @@ test("återgår från ändring till uppdaterade detaljer för samma sparande", a
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/?month=2027-01");
-  await page.getByRole("button", { name: "Lägg till sparande" }).click();
+  await openForm(page, "Lägg till sparande");
   await page.getByLabel("Namn på sparandet").fill("Buffert");
   await page.getByLabel("Belopp per månad (kr)").fill("100");
   await page.getByRole("button", { name: "Spara sparande" }).click();
@@ -123,7 +124,7 @@ test("skyddar ändring och avslut för alla posttyper med en modal och rätt fok
       save: "Spara utgift",
       title: "Ändra utgift",
       end: "Avsluta utgift",
-      card: "Utgifter",
+      card: "Direkta utgifter",
       value: "1200",
     },
     {
@@ -134,7 +135,7 @@ test("skyddar ändring och avslut för alla posttyper med en modal och rätt fok
       save: "Spara utgift",
       title: "Ändra utgift",
       end: "Avsluta utgift",
-      card: "Utgifter",
+      card: "Avsatta utgifter",
       value: "1200",
     },
     {
@@ -161,15 +162,7 @@ test("skyddar ändring och avslut för alla posttyper med en modal och rätt fok
     },
   ];
   for (const item of cases) {
-    await page
-      .getByRole("button", {
-        name:
-          item.type === "Sparande" ? "Lägg till sparande" : "Lägg till utgift",
-        exact: true,
-      })
-      .click();
-    if (item.type !== "Sparande")
-      await page.getByRole("radio", { name: item.type, exact: true }).check();
+    await openForm(page, item.type);
     await page.getByLabel(item.field).fill(item.name);
     await page.getByLabel(item.amount).fill(item.value);
     if (item.type === "Avsatt utgift")
@@ -319,10 +312,8 @@ test(
         end: "Avsluta utgift",
       },
     ]) {
-      await page.getByLabel("Välj månad").fill(`${item.year}-01`);
-      await expect(page.getByLabel("Välj månad")).toHaveValue(
-        `${item.year}-01`,
-      );
+      await selectMonth(page, `${item.year}-01`);
+      await expectMonth(page, `${item.year}-01`);
       const table = page.getByRole("table", { name: item.table, exact: true });
       const original = table.getByRole("row").filter({
         has: page.getByRole("cell", { name: "100,00 kr", exact: true }),
@@ -394,10 +385,8 @@ test(
         })
         .click();
       await expect(page.getByRole("dialog")).toHaveCount(0);
-      await page.getByLabel("Välj månad").fill(`${item.year}-02`);
-      await expect(page.getByLabel("Välj månad")).toHaveValue(
-        `${item.year}-02`,
-      );
+      await selectMonth(page, `${item.year}-02`);
+      await expectMonth(page, `${item.year}-02`);
       await table
         .getByRole("button", { name: item.name + " framtid", exact: true })
         .click();
@@ -412,10 +401,8 @@ test(
       );
       await form.getByRole("button", { name: "Stäng", exact: true }).click();
       await future.getByRole("button", { name: "Stäng", exact: true }).click();
-      await page.getByLabel("Välj månad").fill(`${item.year}-01`);
-      await expect(page.getByLabel("Välj månad")).toHaveValue(
-        `${item.year}-01`,
-      );
+      await selectMonth(page, `${item.year}-01`);
+      await expectMonth(page, `${item.year}-01`);
     }
   },
 );

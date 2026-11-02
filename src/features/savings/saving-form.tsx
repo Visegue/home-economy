@@ -1,5 +1,6 @@
 "use client";
 
+import { CreateTypeSummary } from "@/features/forms/create-type-summary";
 import { validateSaving } from "@/features/forms/validation";
 
 import { FormActions } from "@home-economy/ui/layout";
@@ -37,9 +38,11 @@ export function SavingForm({
   saving,
   onSaved,
   period,
+  onChangeType,
 }: {
   saving?: Saving;
   onSaved: (savedId?: number) => void;
+  onChangeType?: () => void;
   period: string;
 }) {
   const fieldId = useId();
@@ -55,22 +58,21 @@ export function SavingForm({
   const [state, action, pending] = useActionState(
     async (previous: SavingState, formData: FormData) => {
       const result = await saveSavingAction(saving?.id, previous, formData);
-      if (result.success) {
-        notify(
-          savedMessage(
-            saving ? "Sparandet uppdaterat" : "Sparandet tillagt",
-            String(formData.get("period")),
-          ),
-        );
-      }
       return result;
     },
     {},
   );
 
-  useCloseAfterSave(Boolean(state.success), pending, () =>
-    onSaved(state.savedId),
-  );
+  useCloseAfterSave(Boolean(state.success), pending, () => {
+    notify(
+      savedMessage(
+        saving ? "Sparandet uppdaterat" : "Sparandet tillagt",
+        effectivePeriod,
+        onChangeType ? period : undefined,
+      ),
+    );
+    onSaved(state.savedId);
+  });
   const parsedAmount = monthlyIncomeInputSchema.safeParse(amount);
   useFormGuard(
     {
@@ -92,6 +94,13 @@ export function SavingForm({
       fieldErrors={{ name: state.nameError, amount: state.amountError }}
       className="space-y-5"
     >
+      {onChangeType ? (
+        <CreateTypeSummary
+          type="saving"
+          pending={pending}
+          onChangeType={onChangeType}
+        />
+      ) : null}
       <FormSection title="Grunduppgifter">
         <div className="ui-field">
           <Label htmlFor={`${fieldId}-name`}>Namn på sparandet</Label>

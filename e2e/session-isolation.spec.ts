@@ -1,3 +1,4 @@
+import { openForm } from "./helpers/monthly";
 import { expect, setSession, test } from "./helpers/session";
 
 test("vanliga databassessioner håller parallella hushållsskrivningar åtskilda", async ({
@@ -25,9 +26,7 @@ test("vanliga databassessioner håller parallella hushållsskrivningar åtskilda
           .getByRole("button", { name: "Skapa mitt hushåll" })
           .click();
         await expect(current).toHaveURL(/\/$/);
-        await current
-          .getByRole("button", { name: "Lägg till sparande" })
-          .click();
+        await openForm(current, "Sparande");
         const dialog = current.getByRole("dialog");
         await dialog.getByLabel("Namn").fill(`Sparande ${index}`);
         await dialog.getByLabel(/Belopp/).fill("123");

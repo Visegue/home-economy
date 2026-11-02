@@ -12,6 +12,7 @@ import { Pencil, CircleStop, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormDialog } from "@/components/form-dialog";
 import { FormDialogContent } from "@/components/form-dialog-content";
+import { NavigationStatus, useNavigation } from "@/components/navigation";
 import { useSaveNotice } from "@/components/save-notice";
 import {
   Sheet,
@@ -29,7 +30,7 @@ import type { HouseholdPerson } from "@/features/households/members/model";
 
 export type ManagedPost = {
   key: string;
-  card: "Utgifter" | "Avräkningar" | "Spara";
+  card: "Direkta utgifter" | "Avsatta utgifter" | "Avräkningar" | "Spara";
   details: ReactNode;
 } & (
   | { source: "expense"; item: BudgetExpense }
@@ -59,6 +60,7 @@ export function PostManagement({
   period: string;
   children: ReactNode;
 }) {
+  const { pending } = useNavigation();
   const [confirmedPeriod, setConfirmedPeriod] = useState(period);
   const [selection, setSelection] = useState<ManagedPost | null>(null);
   const [phase, setPhase] = useState<"details" | "edit" | "end" | null>(null);
@@ -211,10 +213,12 @@ export function PostManagement({
               </SheetClose>
             </SheetHeader>
             <div className="min-h-0 overflow-y-auto p-4 [overflow-wrap:anywhere]">
+              {pending ? <NavigationStatus /> : null}
               <div className="mb-4 flex flex-wrap gap-2">
                 <Button
                   type="button"
                   ref={edit}
+                  disabled={pending}
                   onClick={() => {
                     if (selected) setSelection(selected);
                     setPhase("edit");
@@ -226,6 +230,7 @@ export function PostManagement({
                 <Button
                   type="button"
                   ref={end}
+                  disabled={pending}
                   variant="outline"
                   onClick={() => {
                     setSelection(selected);

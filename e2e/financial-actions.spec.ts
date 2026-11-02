@@ -1,3 +1,5 @@
+import { monthlyPage } from "./helpers/monthly";
+import { openForm } from "./helpers/monthly";
 import { setSession, expect, test } from "./helpers/session";
 
 for (const theme of ["light", "dark"] as const) {
@@ -12,9 +14,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/onboarding");
     await page.getByLabel("Namn på hushållet").fill("Syntetiska åtgärder");
     await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
-    await page
-      .getByRole("button", { name: "Lägg till sparande", exact: true })
-      .click();
+    await openForm(page, "Lägg till sparande");
     const name = "Syntetiskt sparande med ett långt namn för framtida semester";
     await page.getByLabel("Namn på sparandet", { exact: true }).fill(name);
     await page.getByLabel("Belopp per månad (kr)").fill("100");
@@ -96,9 +96,7 @@ for (const theme of ["light", "dark"] as const) {
     await trigger.press("Enter");
     await page.keyboard.press("Escape");
     await expect(trigger).toBeFocused();
-    await page
-      .getByRole("link", { name: "Överföringar och värden", exact: true })
-      .click();
+    await monthlyPage(page, "Överföringar och värden");
     const register = page.getByRole("button", {
       name: `Registrera för ${name}`,
       exact: true,

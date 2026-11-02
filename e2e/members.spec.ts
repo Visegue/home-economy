@@ -1,3 +1,4 @@
+import { openForm } from "./helpers/monthly";
 import { setSession, expect, test } from "./helpers/session";
 
 test("redigerar och tar bort medlemmar med bevarade utgifter", async ({
@@ -80,7 +81,7 @@ test("redigerar och tar bort medlemmar med bevarade utgifter", async ({
   expect(version!.y).toBeGreaterThan(account!.y);
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Lägg till utgift" }).click();
+  await openForm(page, "Lägg till utgift");
   await page.getByLabel("Namn på utgiften").fill("Mobil");
   await page.getByLabel("Belopp per betalning (kr)").fill("250,25");
   await page.getByRole("checkbox", { name: "Kim", exact: true }).check();

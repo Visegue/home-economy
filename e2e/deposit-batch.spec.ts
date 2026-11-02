@@ -1,3 +1,5 @@
+import { monthlyPage } from "./helpers/monthly";
+import { openForm } from "./helpers/monthly";
 import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
 import { currentDate } from "../src/features/periods/model";
@@ -22,7 +24,7 @@ test("månadens insättningar bevarar utkast, skyddar sparande och återhämtar 
     ["Extra", "0", `${previous}-01`],
     ["Nystartat", "500", today],
   ]) {
-    await page.getByRole("button", { name: "Lägg till sparande" }).click();
+    await openForm(page, "Lägg till sparande");
     await dialog.getByLabel("Namn på sparandet", { exact: true }).fill(name);
     await dialog.getByLabel(/Belopp/).fill(amount);
     await dialog
@@ -177,7 +179,7 @@ test("månadens insättningar bevarar utkast, skyddar sparande och återhämtar 
   ).not.toBeChecked();
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
-  await page.getByRole("link", { name: "Överföringar och värden" }).click();
+  await monthlyPage(page, "Överföringar och värden");
   await expect(page.getByText("Överföringshistorik (1)")).toHaveCount(2);
   await expect(page.getByText("Överföringshistorik (0)")).toHaveCount(1);
 });

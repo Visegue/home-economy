@@ -1,3 +1,4 @@
+import { openForm, expectMonth, selectMonth } from "./helpers/monthly";
 import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
 
@@ -12,7 +13,7 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
   await page.goto("/onboarding");
   await page.getByLabel("Namn på hushållet").fill("Radtest");
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
-  await page.getByRole("button", { name: "Lägg till sparande" }).click();
+  await openForm(page, "Lägg till sparande");
   await page.getByLabel("Namn på sparandet").fill("Radens sparande");
   await page.getByLabel("Belopp per månad (kr)").fill("1000");
   await page.getByRole("button", { name: "Spara sparande" }).click();
@@ -38,8 +39,7 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
     ["Avsatt utgift", "Radens avsatta"],
     ["Avräkning", "Radens avräkning"],
   ]) {
-    await page.getByRole("button", { name: "Lägg till utgift" }).click();
-    await page.getByRole("radio", { name: type, exact: true }).check();
+    await openForm(page, type);
     await page.getByLabel("Namn på utgiften").fill(name);
     if (type === "Avräkning") {
       await page.getByLabel("Kostnad i dag (kr)").fill("12000");
@@ -229,32 +229,29 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
       await expect(
         row.getByRole("button", { name: item.name, exact: true }),
       ).toBeFocused();
+      await expect(panel).toHaveCount(0);
     }
     const row = mobile
       .getByRole("table", { name: "Månadssparande" })
       .getByRole("row")
       .filter({ hasText: "Radens sparande" });
-    await row.scrollIntoViewIfNeeded();
-    const box = (await row.boundingBox())!;
+    await row.evaluate((element) =>
+      element.scrollIntoView({ block: "center", behavior: "instant" }),
+    );
+    await expect(row).toBeInViewport({ ratio: 1 });
+    const box = (await row.getByRole("cell").nth(1).boundingBox())!;
     const scrollBefore = await mobile.evaluate(() => window.scrollY);
     const cdp = await mobileContext.newCDPSession(mobile);
     const x = box.x + 10,
       y = box.y + box.height / 2;
-    await cdp.send("Input.dispatchTouchEvent", {
-      type: "touchStart",
-      touchPoints: [{ x, y }],
-    });
-    await cdp.send("Input.dispatchTouchEvent", {
-      type: "touchMove",
-      touchPoints: [{ x, y: y + 50 }],
-    });
-    await cdp.send("Input.dispatchTouchEvent", {
-      type: "touchMove",
-      touchPoints: [{ x, y: y + 100 }],
-    });
-    await cdp.send("Input.dispatchTouchEvent", {
-      type: "touchEnd",
-      touchPoints: [],
+    // Let Chromium schedule the complete touch gesture across frames.
+    await cdp.send("Input.synthesizeScrollGesture", {
+      x,
+      y,
+      yDistance: 100,
+      speed: 500,
+      gestureSourceType: "touch",
+      preventFling: true,
     });
     await expect(mobile.getByRole("dialog")).toHaveCount(0);
     await expect
@@ -297,9 +294,9 @@ test("visar rätt identitet och datumversion för likadana namn vid historiknavi
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.goto("/?month=2027-01");
-  await expect(page.getByLabel("Välj månad")).toHaveValue("2027-01");
+  await expectMonth(page, "2027-01");
   for (const amount of ["100", "200"]) {
-    await page.getByRole("button", { name: "Lägg till sparande" }).click();
+    await openForm(page, "Lägg till sparande");
     await page.getByLabel("Namn på sparandet").fill("Delat namn");
     await page.getByLabel("Belopp per månad (kr)").fill(amount);
     await page.getByRole("button", { name: "Spara sparande" }).click();
@@ -360,8 +357,8 @@ test("visar rätt identitet och datumversion för likadana namn vid historiknavi
   expect(firstLink).toContain("month=2027-01#purpose-");
   expect(secondLink).toContain("month=2027-01#purpose-");
   await details.getByRole("button", { name: "Stäng", exact: true }).click();
-  await page.getByLabel("Välj månad").fill("2027-02");
-  await expect(page.getByLabel("Välj månad")).toHaveValue("2027-02");
+  await selectMonth(page, "2027-02");
+  await expectMonth(page, "2027-02");
   const updated = table.getByRole("row").filter({
     has: page.getByRole("cell", { name: "300,00 kr", exact: true }),
   });
@@ -377,12 +374,12 @@ test("visar rätt identitet och datumversion för likadana namn vid historiknavi
     details.getByRole("region", { name: "Månadens planuppföljning" }),
   ).toContainText("februari 2027");
   await page.goBack();
-  await expect(page.getByLabel("Välj månad")).toHaveValue("2027-01");
+  await expectMonth(page, "2027-01");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await first.getByRole("cell").nth(1).click();
   await expect(details).toContainText("100,00 kr");
   await page.goForward();
-  await expect(page.getByLabel("Välj månad")).toHaveValue("2027-02");
+  await expectMonth(page, "2027-02");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await updated.getByRole("cell").nth(1).click();
   await details

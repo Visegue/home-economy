@@ -45,3 +45,5 @@ Se [testguiden](docs/testing.md) för förtestets resultat, separata kontroller 
 ## Licens
 
 [MIT](LICENSE): programvaran ges i befintligt skick, utan garanti. Ansvarsfriskrivningen garanterar inte ansvarsfrihet i alla jurisdiktioner.
+
+Månadsöversikten samlar månadsval, insättningar och **Lägg till** i en gemensam toppsektion. Menyn länkar vidare till överföringar och historik. Se [användarguiden](docs/usage.md) för månadsbyte, felåterkoppling och skyddat typbyte.

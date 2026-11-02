@@ -5,8 +5,11 @@ const navigationMocks = vi.hoisted(() => ({ pathname: "/" }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => navigationMocks.pathname,
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: vi.fn<() => void>() }),
 }));
 
+import { NavigationProvider } from "./navigation";
 import { AppShell } from "./app-shell";
 
 beforeEach(() => {
@@ -18,9 +21,11 @@ afterEach(cleanup);
 describe("AppShell", () => {
   it("visar alla vyer i navigeringen", () => {
     render(
-      <AppShell householdName="Testhushållet" userName="Ada">
-        <p>Sidinnehåll</p>
-      </AppShell>,
+      <NavigationProvider>
+        <AppShell householdName="Testhushållet">
+          <p>Sidinnehåll</p>
+        </AppShell>
+      </NavigationProvider>,
     );
 
     const desktopNavigation = screen.getByRole("navigation", {
@@ -28,8 +33,8 @@ describe("AppShell", () => {
     });
 
     expect(
-      within(desktopNavigation).getByRole("link", { name: "Månaden" }),
-    ).toHaveAttribute("href", "/");
+      within(desktopNavigation).getByRole("button", { name: "Månadsöversikt" }),
+    ).toHaveAttribute("aria-haspopup", "menu");
     expect(
       within(desktopNavigation).getByRole("link", { name: "Lönekoll" }),
     ).toHaveAttribute("href", "/salary");
@@ -44,7 +49,7 @@ describe("AppShell", () => {
     expect(
       within(desktopNavigation).getByRole("link", { name: "Inställningar" }),
     ).toHaveAttribute("href", "/settings");
-    expect(screen.getByText("Ada")).toBeInTheDocument();
+    expect(screen.queryByText("Ada")).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Logga ut" }),
     ).not.toBeInTheDocument();
@@ -54,9 +59,11 @@ describe("AppShell", () => {
     navigationMocks.pathname = "/investments";
 
     render(
-      <AppShell householdName="Testhushållet" userName="Ada">
-        <p>Sidinnehåll</p>
-      </AppShell>,
+      <NavigationProvider>
+        <AppShell householdName="Testhushållet">
+          <p>Sidinnehåll</p>
+        </AppShell>
+      </NavigationProvider>,
     );
 
     expect(
@@ -78,9 +85,11 @@ it.each([
 ])("shows one explicit page heading for %s", (pathname, title) => {
   navigationMocks.pathname = pathname;
   render(
-    <AppShell householdName="Testhushållet" userName="Ada">
-      <p>Innehåll</p>
-    </AppShell>,
+    <NavigationProvider>
+      <AppShell householdName="Testhushållet">
+        <p>Innehåll</p>
+      </AppShell>
+    </NavigationProvider>,
   );
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   expect(

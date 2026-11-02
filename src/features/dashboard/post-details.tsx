@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { NavigationLink as Link } from "@/components/navigation";
 import type { ReactNode } from "react";
 import { MemberAvatarGroup } from "@/components/member-avatar-group";
 import { ChangeNotice } from "@/features/periods/change-notice";

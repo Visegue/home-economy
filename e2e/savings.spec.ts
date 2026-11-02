@@ -1,3 +1,4 @@
+import { changeCreateType, expectMonth, openForm } from "./helpers/monthly";
 import { openPostAction, closePostDetails } from "./helpers/post-management";
 import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
@@ -28,10 +29,10 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   const cardTitles = await page
     .locator('[data-slot="card-title"]')
     .allTextContents();
-  expect(cardTitles.indexOf("Utgifter")).toBeLessThan(
+  expect(cardTitles.indexOf("Direkta utgifter")).toBeLessThan(
     cardTitles.indexOf("Spara"),
   );
-  await expect(page.getByLabel("Välj månad")).toHaveValue(start);
+  await expectMonth(page, start);
   await expect(
     page.getByRole("link", { name: /föregående|nästa månad/i }),
   ).toHaveCount(0);
@@ -39,18 +40,16 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await expect(total).toHaveText("0,00 kr");
   await expect(section).toContainText("Inget sparande ännu");
   await expect(
-    section
-      .locator('[data-slot="card-action"]')
-      .getByRole("button", { name: "Lägg till sparande" }),
+    page.getByRole("button", { name: "Lägg till", exact: true }),
   ).toBeVisible();
 
-  await page.getByRole("button", { name: "Lägg till utgift" }).click();
+  await openForm(page, "Lägg till utgift");
   await page.getByLabel("Namn på utgiften").fill("Mobil");
   await page.getByLabel("Belopp per betalning (kr)").fill("250");
   await page.getByRole("button", { name: "Spara utgift" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
-  await section.getByRole("button", { name: "Lägg till sparande" }).click();
+  await openForm(page, "Lägg till sparande");
   const dialog = page.getByRole("dialog");
   const name = dialog.getByRole("textbox", { name: "Namn på sparandet" });
   const amount = dialog.getByRole("textbox", { name: "Belopp per månad (kr)" });
@@ -66,7 +65,7 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await expect(dialog).not.toBeVisible();
   await expect(total).toHaveText("1 250,75 kr");
 
-  await section.getByRole("button", { name: "Lägg till sparande" }).click();
+  await openForm(page, "Lägg till sparande");
   await name.fill("Semester");
   await amount.fill("500,29");
   await dialog.getByRole("button", { name: "Spara sparande" }).click();
@@ -166,9 +165,9 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   await expect(section).toContainText("Inget sparande ännu");
   await expect(total).toHaveText("0,00 kr");
   // Transfers include reserves and active savings, without counting direct expenses.
-  await page.getByRole("button", { name: "Lägg till utgift" }).click();
+  await openForm(page, "Lägg till utgift");
+  await changeCreateType(page, "Avsatt utgift");
   await page.getByLabel("Namn på utgiften").fill("Årsförsäkring");
-  await page.getByRole("radio", { name: /Avsatt utgift/ }).check();
   await page.getByLabel("Belopp per betalning (kr)").fill("1203");
   await page.getByLabel("Nästa betalning", { exact: true }).fill(`${start}-28`);
   await page.getByRole("button", { name: "Spara utgift" }).click();
@@ -179,7 +178,7 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
     ["Semester", start],
     ["Framtida sparande", shiftPeriod(start, 1)],
   ]) {
-    await section.getByRole("button", { name: "Lägg till sparande" }).click();
+    await openForm(page, "Lägg till sparande");
     await name.fill(savingName);
     await amount.fill("50,50");
     await dialog
@@ -210,7 +209,7 @@ test("månadsöversikten rymmer långa namn och stora belopp på mobil", async (
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
   const longName =
     "Semester-och-buffertsparande-med-ett-mycket-långt-sammanhängande-namn";
-  await page.getByRole("button", { name: "Lägg till sparande" }).click();
+  await openForm(page, "Lägg till sparande");
   await page.getByLabel("Namn på sparandet").fill(longName);
   await page.getByLabel("Belopp per månad (kr)").fill("12345678,90");
   await page.getByRole("button", { name: "Spara sparande" }).click();

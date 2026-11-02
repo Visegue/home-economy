@@ -16,7 +16,11 @@ import { Dialog } from "./dialog";
 import { FormDialogContent } from "./form-dialog-content";
 
 type Guard = { dirty: boolean; pending: boolean };
-const FormGuardContext = createContext<((guard: Guard) => void) | null>(null);
+type GuardController = {
+  update: (guard: Guard) => void;
+  request: (action: () => void, label: string) => void;
+};
+const FormGuardContext = createContext<GuardController | null>(null);
 
 export function FormDialog({
   open,
@@ -36,22 +40,30 @@ export function FormDialog({
   const continueButton = useRef<HTMLButtonElement>(null);
   const discarded = useRef(false);
 
-  function requestOpenChange(nextOpen: boolean) {
-    if (!nextOpen && guard.current.pending) return;
-    if (!nextOpen && guard.current.dirty) {
+  const discardAction = useRef<(() => void) | null>(null);
+  const [discardLabel, setDiscardLabel] = useState("Kasta ändringar");
+  function requestAction(action: () => void, label: string) {
+    if (guard.current.pending) return;
+    if (guard.current.dirty) {
       previousFocus.current =
         document.activeElement instanceof HTMLElement
           ? document.activeElement
           : null;
       discarded.current = false;
+      discardAction.current = action;
+      setDiscardLabel(label);
       setConfirmDiscard(true);
     } else {
-      onOpenChange(nextOpen);
+      action();
     }
+  }
+  function requestOpenChange(nextOpen: boolean) {
+    if (nextOpen) onOpenChange(true);
+    else requestAction(() => onOpenChange(false), "Kasta ändringar");
   }
 
   return (
-    <FormGuardContext value={updateGuard}>
+    <FormGuardContext value={{ update: updateGuard, request: requestAction }}>
       <Dialog open={open} onOpenChange={requestOpenChange}>
         {children}
         <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
@@ -93,11 +105,11 @@ export function FormDialog({
                 onClick={() => {
                   discarded.current = true;
                   setConfirmDiscard(false);
-                  onOpenChange(false);
+                  discardAction.current?.();
                 }}
               >
                 <Trash2 aria-hidden="true" />
-                <span className="min-w-0">Kasta ändringar</span>
+                <span className="min-w-0">{discardLabel}</span>
               </Button>
             </div>
           </FormDialogContent>
@@ -109,8 +121,9 @@ export function FormDialog({
 
 // Compare form values, not input events: restoring the original values is clean.
 export function useFormGuard(values: unknown, pending: boolean) {
-  const updateGuard = useContext(FormGuardContext);
-  if (!updateGuard) throw new Error("Form changes require a FormDialog.");
+  const controller = useContext(FormGuardContext);
+  if (!controller) throw new Error("Form changes require a FormDialog.");
+  const updateGuard = controller.update;
   const snapshot = JSON.stringify(values);
   const [initial] = useState(snapshot);
   const dirty = snapshot !== initial;
@@ -132,4 +145,10 @@ export function useCloseAfterSave(
   useEffect(() => {
     if (success && !pending) onSaved();
   }, [success, pending, onSaved]);
+}
+
+export function useGuardedAction() {
+  const controller = useContext(FormGuardContext);
+  if (!controller) throw new Error("Guarded actions require a FormDialog.");
+  return controller.request;
 }

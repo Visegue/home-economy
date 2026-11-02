@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { Button } from "@/components/ui/button";
+import { dateLabel, monthEnd } from "@/features/periods/model";
 import { currentPeriod, monthLabel } from "@/features/budget/model";
 
 const SaveNoticeContext = createContext<((message: string) => void) | null>(
@@ -62,7 +63,13 @@ export function useSaveNotice() {
   return notify;
 }
 
-export function savedMessage(message: string, period?: string) {
+export function savedMessage(
+  message: string,
+  period?: string,
+  selectedMonth?: string,
+) {
+  if (period && selectedMonth && period > monthEnd(selectedMonth))
+    return `${message}. Gäller från ${dateLabel(period)} och visas inte i ${monthLabel(selectedMonth)}.`;
   return period && period.slice(0, 7) > currentPeriod()
     ? `${message} från ${monthLabel(period.slice(0, 7))}`
     : message;

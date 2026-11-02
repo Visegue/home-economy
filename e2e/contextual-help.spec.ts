@@ -1,3 +1,4 @@
+import { changeCreateType, formTitle, openForm } from "./helpers/monthly";
 import { setSession, expect, test } from "./helpers/session";
 
 test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning", async ({
@@ -21,11 +22,8 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
   await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
   await expect(page).toHaveURL("http://127.0.0.1:3000/");
 
-  await page.getByRole("button", { name: "Lägg till utgift" }).click();
-  const expense = page.getByRole("dialog", {
-    name: "Lägg till utgift",
-    exact: true,
-  });
+  await openForm(page, "Lägg till utgift");
+  const expense = page.getByRole("dialog");
   await expense.getByLabel("Namn på utgiften").fill("Årsförsäkring");
   const help = expense.getByRole("button", {
     name: "Information om utgiftstyper",
@@ -44,11 +42,9 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
     "Årsförsäkring",
   );
   await expect(
-    expense.getByRole("radio", { name: "Direkt utgift", exact: true }),
-  ).toBeChecked();
-  await expense
-    .getByRole("radio", { name: "Avsatt utgift", exact: true })
-    .check();
+    expense.getByText("Direkt utgift", { exact: true }),
+  ).toBeVisible();
+  await changeCreateType(page, "Avsatt utgift");
   await expense.getByLabel("Belopp per betalning (kr)").fill("1200");
   await expect(
     expense.getByLabel("Beräknad månadsavsättning", { exact: true }),
@@ -108,7 +104,7 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
     await setSession(mobile, token);
     const mobilePage = await mobile.newPage();
     await mobilePage.goto("http://127.0.0.1:3000/");
-    await mobilePage.getByRole("button", { name: "Lägg till sparande" }).tap();
+    await openForm(mobilePage, "Lägg till sparande");
     await mobilePage.getByLabel("Namn på sparandet").fill("Buffert");
     await mobilePage
       .getByRole("button", { name: "Information om månadssparande" })
@@ -133,6 +129,9 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
     await mobilePage.getByRole("button", { name: "Kasta ändringar" }).tap();
     await mobilePage.setViewportSize({ width: 320, height: 640 });
     // Native month controls have different minimum widths across operating systems.
+    await mobilePage
+      .getByRole("button", { name: "Öppna månadsväljaren" })
+      .click();
     await mobilePage.getByLabel("Välj månad").evaluate((input) => {
       input.style.minWidth = "200px";
     });
@@ -142,9 +141,11 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
       ),
     ).toBe(true);
 
+    await mobilePage.getByLabel("Välj månad").press("Escape");
     for (const title of [
       "Att föra över",
-      "Utgifter",
+      "Direkta utgifter",
+      "Avsatta utgifter",
       "Avräkningar",
       "Spara",
       "Räcker inkomsten?",
@@ -177,12 +178,15 @@ test("öppnar formulärhjälp med tangentbord och touch utan att tappa inmatning
     });
 
     for (const label of ["Lägg till sparande", "Lägg till utgift"]) {
-      const trigger = mobilePage.getByRole("button", { name: label });
+      const trigger = mobilePage.getByRole("button", {
+        name: "Lägg till",
+        exact: true,
+      });
       const bounds = await trigger.boundingBox();
       expect(bounds?.width).toBeGreaterThanOrEqual(44);
       expect(bounds?.height).toBeGreaterThanOrEqual(44);
-      await trigger.tap();
-      const dialog = mobilePage.getByRole("dialog", { name: label });
+      await openForm(mobilePage, label);
+      const dialog = mobilePage.getByRole("dialog", { name: formTitle(label) });
       await expect(dialog).toBeInViewport();
       expect(
         await mobilePage.evaluate(

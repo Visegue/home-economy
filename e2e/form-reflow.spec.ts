@@ -1,3 +1,4 @@
+import { openForm } from "./helpers/monthly";
 import { setSession, expect, test } from "./helpers/session";
 
 for (const theme of ["light", "dark"] as const) {
@@ -19,11 +20,9 @@ for (const theme of ["light", "dark"] as const) {
       await page.goto("http://127.0.0.1:3000/onboarding");
       await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
       await expect(page).toHaveURL(/\/$/);
-      await page
-        .getByRole("button", { name: "Lägg till utgift", exact: true })
-        .click();
+      await openForm(page, "Lägg till utgift");
       const dialog = page.getByRole("dialog", {
-        name: "Lägg till utgift",
+        name: "Lägg till direkt utgift",
         exact: true,
       });
       await dialog

@@ -1,3 +1,4 @@
+import { openForm } from "./helpers/monthly";
 import { closePostDetails } from "./helpers/post-management";
 import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
@@ -19,12 +20,10 @@ for (const [type, label] of [
     await page.goto("/onboarding");
     await page.getByLabel("Namn på hushållet").fill("Typtestfamiljen");
     await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
-    await page
-      .getByRole("button", { name: "Lägg till utgift", exact: true })
-      .click();
+    await openForm(page, label);
     const dialog = page.getByRole("dialog");
-    await expect(dialog.getByRole("radio")).toHaveCount(3);
-    await dialog.getByRole("radio", { name: label, exact: true }).check();
+    await expect(dialog.getByRole("radio")).toHaveCount(0);
+
     await dialog.getByLabel("Namn på utgiften").fill(name);
     await dialog
       .getByLabel(
@@ -48,7 +47,12 @@ for (const [type, label] of [
     await expect(dialog).toHaveCount(0);
     const card = page.locator('[data-slot="card"]').filter({
       has: page.getByRole("heading", {
-        name: type === "settlement" ? "Avräkningar" : "Utgifter",
+        name:
+          type === "settlement"
+            ? "Avräkningar"
+            : type === "direct"
+              ? "Direkta utgifter"
+              : "Avsatta utgifter",
         exact: true,
       }),
     });

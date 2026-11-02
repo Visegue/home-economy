@@ -1,3 +1,4 @@
+import { monthlyPage, openForm } from "./helpers/monthly";
 import { setSession, expect, test } from "./helpers/session";
 
 for (const system of ["light", "dark"] as const) {
@@ -74,10 +75,16 @@ for (const system of ["light", "dark"] as const) {
 
     const mobile = page.getByRole("navigation", { name: "Mobilmeny" });
     await expect(mobile).toBeVisible();
-    await expect(mobile.getByRole("link")).toHaveCount(5);
-    await mobile.getByRole("link", { name: "Månaden", exact: true }).click();
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Månaden");
-    await page.getByLabel("Välj månad").focus();
+    await expect(mobile.getByRole("link")).toHaveCount(4);
+    await expect(
+      mobile.getByRole("button", { name: "Månadsöversikt", exact: true }),
+    ).toHaveCount(1);
+    await monthlyPage(page, "Månadsöversikt");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+      "Månadsöversikt",
+    );
+    await page.getByRole("button", { name: "Öppna månadsväljaren" }).click();
+    await page.getByLabel("Välj månad", { exact: true }).focus();
     await page.evaluate(() => {
       const viewport = window.visualViewport!;
       Object.defineProperty(viewport, "height", {
@@ -93,19 +100,21 @@ for (const system of ["light", "dark"] as const) {
       viewport.dispatchEvent(new Event("resize"));
     });
     await expect(mobile).toBeVisible();
+    await page.getByLabel("Välj månad", { exact: true }).press("Escape");
+    await expect(
+      page.getByRole("button", { name: "Öppna månadsväljaren" }),
+    ).toBeFocused();
 
-    await page
-      .getByRole("button", { name: "Lägg till utgift", exact: true })
-      .click();
+    await openForm(page, "Lägg till utgift");
     const dialog = page.getByRole("dialog").first();
     await expect(dialog).toBeVisible();
     await expect(dialog.getByLabel("Från och med", { exact: true })).toHaveCSS(
       "color-scheme",
       system,
     );
-    await dialog
-      .getByRole("radio", { name: "Direkt utgift", exact: true })
-      .check();
+    await expect(
+      dialog.getByText("Direkt utgift", { exact: true }),
+    ).toBeVisible();
     await dialog.getByLabel("Namn på utgiften").fill("Syntetisk temautgift");
     await dialog
       .getByLabel("Belopp per betalning (kr)", { exact: true })

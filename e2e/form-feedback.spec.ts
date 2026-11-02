@@ -1,3 +1,4 @@
+import { openForm, formTitle } from "./helpers/monthly";
 import { setSession, expect, test } from "./helpers/session";
 
 test("skyddar formulärändringar och bekräftar endast lyckad sparning", async ({
@@ -51,11 +52,14 @@ test("skyddar formulärändringar och bekräftar endast lyckad sparning", async 
   ]) {
     await page.goto(form.path);
     const trigger = page.getByRole("button", {
-      name: form.trigger,
+      name: form.path === "/" ? "Lägg till" : form.trigger,
       exact: true,
     });
-    await trigger.click();
-    let dialog = page.getByRole("dialog", { name: form.trigger, exact: true });
+    await openForm(page, form.trigger);
+    let dialog = page.getByRole("dialog", {
+      name: formTitle(form.trigger),
+      exact: true,
+    });
     // An untouched form and a restored original value close without a warning.
     await dialog.getByLabel(form.field).fill("Tillfälligt");
     await dialog.getByLabel(form.field).fill("");
@@ -64,8 +68,11 @@ test("skyddar formulärändringar och bekräftar endast lyckad sparning", async 
     await expect(page.getByRole("alertdialog")).toHaveCount(0);
     await expect(trigger).toBeFocused();
 
-    await trigger.click();
-    dialog = page.getByRole("dialog", { name: form.trigger, exact: true });
+    await openForm(page, form.trigger);
+    dialog = page.getByRole("dialog", {
+      name: formTitle(form.trigger),
+      exact: true,
+    });
     await dialog.getByLabel(form.field).fill(form.name);
     await page.keyboard.press("Escape");
     const confirmation = page.getByRole("alertdialog", {
@@ -90,7 +97,7 @@ test("skyddar formulärändringar och bekräftar endast lyckad sparning", async 
     await confirmation.getByRole("button", { name: "Kasta ändringar" }).click();
     await expect(dialog).toHaveCount(0);
     await expect(trigger).toBeFocused();
-    await trigger.click();
+    await openForm(page, form.trigger);
     await expect(dialog.getByLabel(form.field)).toBeEmpty();
     await dialog.getByLabel(form.field).fill(form.name);
     if (form.amount) {
