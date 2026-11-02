@@ -244,14 +244,39 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
     const cdp = await mobileContext.newCDPSession(mobile);
     const x = box.x + 10,
       y = box.y + box.height / 2;
-    // Let Chromium schedule the complete touch gesture across frames.
-    await cdp.send("Input.synthesizeScrollGesture", {
-      x,
-      y,
-      yDistance: 100,
-      speed: 500,
-      gestureSourceType: "touch",
-      preventFling: true,
+    await expect(mobile.locator("body")).not.toHaveAttribute(
+      "data-scroll-locked",
+    );
+    expect(
+      await row.evaluate(
+        (element, point) =>
+          element.contains(document.elementFromPoint(point.x, point.y)),
+        { x, y },
+      ),
+    ).toBe(true);
+    const nextFrame = () =>
+      mobile.evaluate(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => resolve()),
+          ),
+      );
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x, y }],
+    });
+    await nextFrame();
+    // Real touch moves span frames; a back-to-back burst may be coalesced.
+    for (const distance of [20, 40, 60, 80, 100]) {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{ x, y: y + distance }],
+      });
+      await nextFrame();
+    }
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchEnd",
+      touchPoints: [],
     });
     await expect(mobile.getByRole("dialog")).toHaveCount(0);
     await expect
