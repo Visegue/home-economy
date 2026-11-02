@@ -1,5 +1,6 @@
 "use client";
 
+import { CreateTypeSummary } from "@/features/forms/create-type-summary";
 import { SelectTrigger } from "@home-economy/ui/form";
 
 import { FormActions } from "@home-economy/ui/layout";
@@ -167,10 +168,12 @@ export function ExpenseForm({
   onSaved,
   expense,
   defaultType,
+  onChangeType,
 }: {
   period: string;
   people: HouseholdPerson[];
   onSaved: (savedId?: number) => void;
+  onChangeType?: () => void;
   expense?: BudgetExpense;
   defaultType: BudgetExpense["destination"];
 }) {
@@ -210,28 +213,27 @@ export function ExpenseForm({
   const [state, action, pending] = useActionState(
     async (previous: FormState, data: FormData) => {
       const result = await addExpenseAction(previous, data);
-      if (result.success) {
-        notify(
-          savedMessage(
-            type === "settlement"
-              ? expense
-                ? "Avräkningen uppdaterad"
-                : "Avräkningen tillagd"
-              : expense
-                ? "Utgiften uppdaterad"
-                : "Utgiften tillagd",
-            String(data.get("period")),
-          ),
-        );
-      }
       return result;
     },
     {},
   );
 
-  useCloseAfterSave(Boolean(state.success), pending, () =>
-    onSaved(state.savedId),
-  );
+  useCloseAfterSave(Boolean(state.success), pending, () => {
+    notify(
+      savedMessage(
+        type === "settlement"
+          ? expense
+            ? "Avräkningen uppdaterad"
+            : "Avräkningen tillagd"
+          : expense
+            ? "Utgiften uppdaterad"
+            : "Utgiften tillagd",
+        effectivePeriod,
+        onChangeType ? period : undefined,
+      ),
+    );
+    onSaved(state.savedId);
+  });
   const parsedAmount = amountSchema.safeParse(amount);
   useFormGuard(
     {
@@ -294,6 +296,15 @@ export function ExpenseForm({
                 övergångsmånaden, beroende på giltighetsdatum och planerad dag.
               </p>
             </>
+          ) : onChangeType ? (
+            <div className="col-span-3">
+              <input type="hidden" name="type" value={type} />
+              <CreateTypeSummary
+                type={type}
+                pending={pending}
+                onChangeType={onChangeType}
+              />
+            </div>
           ) : (
             expenseTypes.map((option) => (
               <Label

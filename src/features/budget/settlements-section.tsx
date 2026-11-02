@@ -2,12 +2,10 @@ import { RefreshCw } from "lucide-react";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import type { getMonthlyOverview } from "@/features/dashboard/monthly-overview";
 import { OverviewTable } from "@/features/dashboard/overview-table";
-import { ExpenseDialog } from "./forms";
 import type { HouseholdPerson } from "@/features/households/members/model";
 export function SettlementsSection({
   expenses,
   totalInOre,
-  people,
   period,
   valueDate,
   recordedTotal,
@@ -35,15 +33,6 @@ export function SettlementsSection({
             aria-hidden="true"
           />
         }
-        actions={
-          <>
-            <ExpenseDialog
-              period={period}
-              people={people}
-              defaultType="settlement"
-            />
-          </>
-        }
       >
         {expenses.length ? (
           <OverviewTable
@@ -63,7 +52,7 @@ export function SettlementsSection({
           />
         ) : (
           <p className="py-4 text-sm text-muted-foreground">
-            Inga avräkningar ännu.
+            Inga avräkningar ännu. Använd Lägg till högst upp.
           </p>
         )}
       </CollapsibleCard>

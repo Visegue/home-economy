@@ -1,3 +1,7 @@
+> Uppdatering 2026-11-01 för #159, #65 och #77: den godkända UI-riktningen för #159/#65 och en avgränsad del av navigationen är implementerade enligt [användarguiden](usage.md) och [arkitekturen](architecture.md). Dessa beskrivningar gäller framför äldre avsnitt nedan om fem kort, spärrad månadsväljare, kortvisa skapandeknappar och bevarade dolda typutkast. Månadsöversikten har sex kort, senaste månadsval vinner, skapande finns i toppsektionens Lägg till och bekräftat typbyte ger ett rent formulär. ADR 0004/0005 och ekonomiska regler påverkas inte. #76:s produktionsmätning återstår separat.
+>
+> Beslut 2026-11-02: användaren valde att leverera UI:t nu och hålla #77 öppet. Vid nätavbrott/HTTP 503 efter påbörjad begäran kan Next göra hård helsidesnavigation, så bevarad gammal vy och lokalt omförsök garanteras inte i dessa fall. Begränsningen är reproducerad och kvarstår; den är inte redovisad som rättad av de gröna ordinarie testerna.
+
 # Månadsöversikt: design för issue #63
 
 Historiskt krav- och intervjuunderlag. För appens nuvarande beteende, se [användarguiden](usage.md); för implementation och regler, se [arkitekturen](architecture.md).

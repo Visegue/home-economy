@@ -1,3 +1,4 @@
+import { openForm, changeCreateType, expectMonth } from "./helpers/monthly";
 import { openPostAction, closePostDetails } from "./helpers/post-management";
 import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
@@ -22,7 +23,10 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     page.getByText("Ingen aktiv inkomst", { exact: true }).first(),
   ).toBeVisible();
   await expect(
-    page.getByText("Inga utgifter för den här månaden", { exact: true }),
+    page.getByText(
+      "Inga direkta utgifter för den här månaden. Använd Lägg till högst upp.",
+      { exact: true },
+    ),
   ).toBeVisible();
 
   await page.goto("/settings");
@@ -156,13 +160,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await page.goto("/");
   await expect(page).toHaveURL(/\/$/);
   await expect(
-    page
-      .locator('[data-slot="card"]')
-      .filter({
-        has: page.getByRole("heading", { name: "Utgifter", exact: true }),
-      })
-      .locator('[data-slot="card-action"]')
-      .getByRole("button", { name: "Lägg till utgift" }),
+    page.getByRole("button", { name: "Lägg till", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", {
@@ -172,13 +170,13 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await expect(
     page.getByRole("link", { name: "Registrera inkomst" }),
   ).toHaveCount(0);
-  await expect(page.getByLabel("Välj månad")).toHaveValue(period);
+  await expectMonth(page, period);
   await expect(
     page.getByRole("link", { name: /föregående|nästa månad/i }),
   ).toHaveCount(0);
   await expect(page.getByText(/Månad för månad/)).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Lägg till utgift" }).click();
+  await openForm(page, "Lägg till utgift");
   await expect(page.getByLabel("Från och med", { exact: true })).toHaveValue(
     `${period}-01`,
   );
@@ -189,7 +187,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
   await page.getByRole("button", { name: "Spara utgift" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "Lägg till utgift", exact: true }),
+    page.getByRole("button", { name: "Lägg till", exact: true }),
   ).toBeFocused();
   const rent = page.getByRole("row").filter({ hasText: "Hyra" });
   await rent.getByRole("button", { name: "Hyra", exact: true }).click();
@@ -234,8 +232,8 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     ["Hemförsäkring", "Årsvis", `${shiftPeriod(period, 11)}-01`, "2400"],
     ["Besiktning", "Vartannat år", `${shiftPeriod(period, 23)}-01`, "4800"],
   ]) {
-    await page.getByRole("button", { name: "Lägg till utgift" }).click();
-    await page.getByRole("radio", { name: "Avsatt utgift" }).check();
+    await openForm(page, "Lägg till utgift");
+    await changeCreateType(page, "Avsatt utgift");
     await page.getByLabel("Namn på utgiften").fill(name);
     await page.getByLabel("Belopp per betalning (kr)").fill(amount);
     await page.getByRole("combobox", { name: "Hur ofta?" }).click();
@@ -275,7 +273,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     .getByRole("button", { name: "Stäng", exact: true })
     .click();
 
-  await page.getByRole("button", { name: "Lägg till utgift" }).click();
+  await openForm(page, "Lägg till utgift");
   await page.getByLabel("Namn på utgiften").fill("Ogiltigt belopp");
   await page.getByLabel("Belopp per betalning (kr)").fill("-50");
   await page.getByRole("button", { name: "Spara utgift" }).click();
@@ -295,9 +293,7 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     fullPage: true,
   });
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(
-    page.getByRole("button", { name: "Lägg till utgift" }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Lägg till" })).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -308,8 +304,9 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     path: testInfo.outputPath("budget-mobile.png"),
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Lägg till utgift" }).click();
-  await page.getByRole("radio", { name: "Avsatt utgift" }).check();
+  await openForm(page, "Lägg till utgift");
+  await changeCreateType(page, "Avsatt utgift");
+  await page.getByLabel("Namn på utgiften").fill("Osparad avsatt utgift");
   await expect(
     page.getByRole("button", { name: "Spara utgift" }),
   ).toBeInViewport();
@@ -412,7 +409,10 @@ test("registrerar medlemmar, inkomst och utgifter för aktuell månad", async ({
     await outsider.getByRole("button", { name: "Skapa mitt hushåll" }).click();
     await expect(outsider).toHaveURL(`${origin}/`);
     await expect(
-      outsider.getByText("Inga utgifter för den här månaden", { exact: true }),
+      outsider.getByText(
+        "Inga direkta utgifter för den här månaden. Använd Lägg till högst upp.",
+        { exact: true },
+      ),
     ).toBeVisible();
     await outsider.goto(`${origin}/settings`);
     await expect(

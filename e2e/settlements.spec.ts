@@ -1,3 +1,4 @@
+import { openForm } from "./helpers/monthly";
 import { openPostAction, closePostDetails } from "./helpers/post-management";
 import { setSession, expect, test } from "./helpers/session";
 import { currentPeriod, shiftPeriod } from "../src/features/budget/model";
@@ -29,10 +30,10 @@ test("planerar avräkningar med påslag, inflation och separata månadsöverför
     .getByText("Avräkningar", { exact: true })
     .locator("..");
   await expect(card).toContainText("Inga avräkningar ännu.");
-  await card.getByRole("button", { name: "Lägg till avräkning" }).click();
+  await openForm(page, "Lägg till avräkning");
   await expect(
-    page.getByRole("radio", { name: "Avräkning", exact: true }),
-  ).toBeChecked();
+    page.getByRole("dialog").getByText("Avräkning", { exact: true }),
+  ).toBeVisible();
   await expect(page.getByLabel("Påslag (%)", { exact: true })).toHaveValue(
     "10",
   );
@@ -125,7 +126,8 @@ test("planerar avräkningar med påslag, inflation och separata månadsöverför
   for (const title of [
     "Räcker inkomsten?",
     "Att föra över",
-    "Utgifter",
+    "Direkta utgifter",
+    "Avsatta utgifter",
     "Avräkningar",
     "Spara",
   ]) {

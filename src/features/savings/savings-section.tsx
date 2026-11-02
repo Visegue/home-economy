@@ -2,7 +2,6 @@ import { PiggyBank } from "lucide-react";
 import { CollapsibleCard } from "@/components/collapsible-card";
 import type { getMonthlyOverview } from "@/features/dashboard/monthly-overview";
 import { OverviewTable } from "@/features/dashboard/overview-table";
-import { SavingDialog } from "./saving-form";
 export function SavingsSection({
   savings,
   totalInOre,
@@ -31,15 +30,10 @@ export function SavingsSection({
             aria-hidden="true"
           />
         }
-        actions={
-          <>
-            <SavingDialog key={period} period={period} />
-          </>
-        }
       >
         {savings.length === 0 ? (
           <p className="py-4 text-sm text-muted-foreground">
-            Inget sparande ännu.
+            Inget sparande ännu. Använd Lägg till högst upp.
           </p>
         ) : (
           <OverviewTable

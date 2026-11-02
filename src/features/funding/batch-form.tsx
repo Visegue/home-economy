@@ -54,10 +54,13 @@ export function DepositBatchDialog({
         <DialogTrigger asChild>
           <Button
             type="button"
-            className="mt-4 h-auto min-h-11 w-full whitespace-normal"
+            variant="outline"
+            className="h-auto min-h-11 max-w-full min-w-0 gap-2 whitespace-normal"
           >
             <ClipboardPenLine aria-hidden="true" />
-            Registrera månadens insättningar
+            <span className="min-w-0 [overflow-wrap:anywhere]">
+              Registrera månadens insättningar
+            </span>
           </Button>
         </DialogTrigger>
         <FormDialogContent title="Registrera månadens insättningar">

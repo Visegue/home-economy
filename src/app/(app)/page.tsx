@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { OverviewDashboard } from "@/features/dashboard/overview-dashboard";
 import { currentPeriod, periodSchema } from "@/features/budget/model";
 
-export const metadata = { title: "Månaden" };
+export const metadata = { title: "Månadsöversikt" };
 
 export default async function MonthPage({
   searchParams,

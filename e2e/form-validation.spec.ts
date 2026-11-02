@@ -1,3 +1,4 @@
+import { openForm, formTitle } from "./helpers/monthly";
 import { setSession, expect, test } from "./helpers/session";
 
 for (const theme of ["light", "dark"] as const) {
@@ -60,11 +61,9 @@ for (const theme of ["light", "dark"] as const) {
       },
     ]) {
       await page.goto(form.path);
-      await page
-        .getByRole("button", { name: form.trigger, exact: true })
-        .click();
+      await openForm(page, form.trigger);
       const dialog = page.getByRole("dialog", {
-        name: form.trigger,
+        name: formTitle(form.trigger),
         exact: true,
       });
       await dialog.getByLabel(form.name).fill(`${theme} ${form.save}`);
