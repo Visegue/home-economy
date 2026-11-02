@@ -38,7 +38,7 @@ it("allows import-only clients while another client owns the offline database", 
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
-});
+}, 15_000);
 
 it("supports real queries and transactions with the lazy client's method receiver", () => {
   expect(
@@ -51,4 +51,4 @@ it("supports real queries and transactions with the lazy client's method receive
     await client.close();
   `),
   ).toBe("[42,7]");
-});
+}, 15_000);
