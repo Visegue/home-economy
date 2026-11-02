@@ -45,4 +45,6 @@ Lokalt finns rapporterna i `playwright-report/` och `test-results/report.json`. 
 
 När diagnostikens konfiguration, tester eller CI-filer ändras kör **Verify Playwright diagnostics** dessutom ett isolerat fall i Actions som avsiktligt fallerar först och lyckas på retry. Det gröna kontraktsjobbet sparar `playwright-diagnostics-contract-<körningsförsök>` med rapport och båda traces i sju dagar. Detta verifierar själva uppladdningen även när appens tester passerar direkt. Det kräver ingen browserinstallation eller databas och körs endast för berörda PR-ändringar.
 
+För riskfördelning och före/efter-mätningen från testförenklingen i #150, se [testnivåer och mätunderlag](testing-150.md).
+
 [Till dokumentationsindexet](README.md) · [Till projektets README](../README.md)

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
@@ -142,4 +142,36 @@ it("lets the user retry a password change after a network failure", async () => 
   expect(button).toBeEnabled();
   await user.click(button);
   expect(await screen.findByText(/Lösenordet är uppdaterat/)).toBeVisible();
+});
+
+it("submits one reset with its token, disables pending controls and offers login after completion", async () => {
+  let release!: (value: { error: null }) => void;
+  requests.reset.mockReturnValue(
+    new Promise((resolve) => {
+      release = resolve;
+    }),
+  );
+  const user = userEvent.setup();
+  render(<ResetPasswordForm token="synthetic-token" />);
+  const password = screen.getByLabelText("Nytt lösenord");
+  const confirmation = screen.getByLabelText("Upprepa lösenordet");
+  await user.type(password, "synthetic-reset-password");
+  await user.type(confirmation, "synthetic-reset-password");
+  await user.click(screen.getByRole("button", { name: "Spara nytt lösenord" }));
+  expect(screen.getByRole("button", { name: "Sparar…" })).toBeDisabled();
+  expect(password).toBeDisabled();
+  expect(confirmation).toBeDisabled();
+  await user.keyboard("{Enter}");
+  expect(requests.reset).toHaveBeenCalledExactlyOnceWith({
+    newPassword: "synthetic-reset-password",
+    token: "synthetic-token",
+  });
+  await act(async () => {
+    release({ error: null });
+  });
+  expect(await screen.findByText(/Lösenordet är uppdaterat/)).toBeVisible();
+  expect(screen.getByRole("link", { name: "Logga in" })).toHaveAttribute(
+    "href",
+    "/login",
+  );
 });

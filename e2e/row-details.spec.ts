@@ -6,7 +6,6 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
   session,
   page,
   context,
-  browser,
 }, testInfo) => {
   test.slow(); // This journey provisions the household through public forms.
   await setSession(context, session.token);
@@ -22,17 +21,6 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
     .getByRole("table", { name: "Månadssparande" })
     .getByRole("row")
     .filter({ hasText: "Radens sparande" });
-  await row.getByRole("cell").nth(1).click();
-  const details = page.getByRole("dialog", {
-    name: "Radens sparande",
-    exact: true,
-  });
-  await expect(details).toBeVisible();
-  await expect(details).toContainText("1 000,00 kr");
-  await details.getByRole("button", { name: "Stäng", exact: true }).click();
-  await expect(
-    row.getByRole("button", { name: "Radens sparande", exact: true }),
-  ).toBeFocused();
   const period = currentPeriod();
   for (const [type, name] of [
     ["Direkt utgift", "Radens direkta"],
@@ -65,26 +53,18 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
     {
       table: "Direkta utgifter",
       name: "Radens direkta",
-      manage: "utgifter",
-      edit: "Ändra utgift",
     },
     {
       table: "Avsatta utgifter",
       name: "Radens avsatta",
-      manage: "utgifter",
-      edit: "Ändra utgift",
     },
     {
       table: "Planerade avräkningar",
       name: "Radens avräkning",
-      manage: "avräkningar",
-      edit: "Ändra avräkning",
     },
     {
       table: "Månadssparande",
       name: "Radens sparande",
-      manage: "sparande",
-      edit: "Ändra sparande",
     },
   ];
   for (const item of cases) {
@@ -99,6 +79,7 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
     await expect(panel).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(name).toBeFocused();
+    if (item.table !== "Månadssparande") continue;
     await row
       .getByRole("cell")
       .first()
@@ -112,11 +93,9 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
       await page.keyboard.press("Escape");
       await expect(name).toBeFocused();
     }
-    if (item.table !== "Direkta utgifter") {
-      await row.getByRole("cell").nth(2).click();
-      await expect(panel).toBeVisible();
-      await panel.getByRole("button", { name: "Stäng", exact: true }).click();
-    }
+    await row.getByRole("cell").nth(2).click();
+    await expect(panel).toBeVisible();
+    await panel.getByRole("button", { name: "Stäng", exact: true }).click();
     await table
       .getByRole("columnheader", { name: "Per månad", exact: true })
       .click();
@@ -168,42 +147,25 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
       name: /^(Hantera|Klar med) (utgifter|avräkningar|sparande)$/,
     }),
   ).toHaveCount(0);
-  for (const item of cases) {
-    const row = page
-      .getByRole("table", { name: item.table, exact: true })
-      .getByRole("row")
-      .filter({ hasText: item.name });
-    await row.getByRole("cell").nth(1).click();
-    await expect(
-      page.getByRole("dialog", { name: item.name, exact: true }),
-    ).toBeVisible();
-    await page
-      .getByRole("dialog", { name: item.name, exact: true })
-      .getByRole("button", { name: "Ändra", exact: true })
-      .click();
-    const form = page.getByRole("dialog", { name: item.edit, exact: true });
-    await expect(form).toBeVisible();
-    await expect(page.getByRole("dialog")).toHaveCount(1);
-    await form.getByRole("heading").click(); // Portal content must not bubble into the row.
-    await expect(page.getByRole("dialog")).toHaveCount(1);
-    await form.getByRole("button", { name: "Stäng", exact: true }).click();
-    await page
-      .getByRole("dialog", { name: item.name, exact: true })
-      .getByRole("button", { name: "Avsluta", exact: true })
-      .click();
-    await expect(page.getByRole("dialog")).toHaveCount(1);
-    await page
-      .getByRole("dialog")
-      .getByRole("button", { name: "Avbryt", exact: true })
-      .click();
-    await expect(
-      page
-        .getByRole("dialog", { name: item.name, exact: true })
-        .getByRole("button", { name: "Avsluta", exact: true }),
-    ).toBeFocused();
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog")).toHaveCount(0);
-  }
+  // Edit/end transitions for every type live in detail-management.spec.ts.
+});
+
+test("mobil: touchscroll öppnar inte postdetaljer och efterföljande tryck fungerar", async ({
+  session,
+  page,
+  context,
+  browser,
+}, testInfo) => {
+  test.slow();
+  await setSession(context, session.token);
+  await page.goto("/onboarding");
+  await page.getByLabel("Namn på hushållet").fill("Touchtest");
+  await page.getByRole("button", { name: "Skapa mitt hushåll" }).click();
+  await openForm(page, "Lägg till sparande");
+  await page.getByLabel("Namn på sparandet").fill("Radens sparande");
+  await page.getByLabel("Belopp per månad (kr)").fill("1000");
+  await page.getByRole("button", { name: "Spara sparande" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   const mobileContext = await browser.newContext({
     baseURL: new URL(page.url()).origin,
     viewport: { width: 390, height: 844 },
@@ -214,23 +176,6 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
     await setSession(mobileContext, session.token);
     const mobile = await mobileContext.newPage();
     await mobile.goto("/");
-    for (const item of cases) {
-      const row = mobile
-        .getByRole("table", { name: item.table, exact: true })
-        .getByRole("row")
-        .filter({ hasText: item.name });
-      await row.getByRole("cell").nth(1).tap();
-      const panel = mobile.getByRole("dialog", {
-        name: item.name,
-        exact: true,
-      });
-      await expect(panel).toBeVisible();
-      await panel.getByRole("button", { name: "Stäng", exact: true }).tap();
-      await expect(
-        row.getByRole("button", { name: item.name, exact: true }),
-      ).toBeFocused();
-      await expect(panel).toHaveCount(0);
-    }
     const row = mobile
       .getByRole("table", { name: "Månadssparande" })
       .getByRole("row")
@@ -283,6 +228,9 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
       .poll(() => mobile.evaluate(() => window.scrollY))
       .toBeLessThan(scrollBefore);
     await row.getByRole("cell").nth(1).tap();
+    await expect(
+      mobile.getByRole("dialog", { name: "Radens sparande", exact: true }),
+    ).toBeVisible();
     await mobile.screenshot({
       path: testInfo.outputPath("row-details-mobile-panel.png"),
       animations: "disabled",
@@ -291,6 +239,9 @@ test("öppnar postdetaljer från belopp och återför fokus till namnet", async 
       .getByRole("dialog")
       .getByRole("button", { name: "Stäng", exact: true })
       .tap();
+    await expect(
+      row.getByRole("button", { name: "Radens sparande", exact: true }),
+    ).toBeFocused();
     await mobile.setViewportSize({ width: 320, height: 844 });
     expect(
       await mobile.evaluate(
