@@ -1,0 +1,60 @@
+#!/bin/sh
+set -eu
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+export COREPACK_ENABLE_NETWORK=0 COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+export PNPM_CONFIG_OFFLINE=true PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=error
+export PNPM_CONFIG_PM_ON_FAIL=error PNPM_CONFIG_RUNTIME_ON_FAIL=error
+export npm_config_manage_package_manager_versions=false MISE_AUTO_INSTALL=false MISE_OFFLINE=true
+# Bound bootstrap probes too: an unusable first PATH entry must not block fallback.
+probe_pid=
+watchdog_pid=
+cleanup_probe() {
+  if [ -n "$watchdog_pid" ]; then
+    kill "$watchdog_pid" 2>/dev/null || true
+    wait "$watchdog_pid" 2>/dev/null || true
+    watchdog_pid=
+  fi
+  if [ -n "$probe_pid" ]; then
+    kill -KILL "$probe_pid" 2>/dev/null || true
+    wait "$probe_pid" 2>/dev/null || true
+    probe_pid=
+  fi
+}
+trap 'cleanup_probe; exit 130' INT
+trap 'cleanup_probe; exit 143' TERM
+bootstrap() {
+  "$candidate" "$script_dir/verify-local.mjs" --bootstrap-probe >/dev/null 2>&1 &
+  probe_pid=$!
+  (
+    sleep 2 &
+    timer_pid=$!
+    trap 'kill "$timer_pid" 2>/dev/null || true; wait "$timer_pid" 2>/dev/null || true; exit 0' TERM
+    wait "$timer_pid"
+    kill -KILL "$probe_pid" 2>/dev/null || true
+  ) &
+  watchdog_pid=$!
+  status=0
+  wait "$probe_pid" 2>/dev/null || status=$?
+  probe_pid=
+  cleanup_probe
+  if [ "$status" -eq 0 ]; then
+    trap - INT TERM
+    exec "$candidate" "$script_dir/verify-local.mjs" "$@"
+  fi
+}
+for name in node bun; do
+  remaining_path=${PATH:-}:
+  while [ -n "$remaining_path" ]; do
+    directory=${remaining_path%%:*}
+    remaining_path=${remaining_path#*:}
+    candidate=${directory:-.}/$name
+    case "$candidate" in */shims/*) continue ;; esac
+    if [ -f "$candidate" ] && [ -x "$candidate" ]; then bootstrap "$@"; fi
+  done
+done
+mise_data=${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}
+for candidate in "$mise_data"/installs/node/*/bin/node "$mise_data"/installs/bun/*/bin/bun; do
+  if [ -x "$candidate" ]; then bootstrap "$@"; fi
+done
+printf '%s\n' 'Node/Bun saknas. Installera projektets verktyg enligt docs/local-development.md före verifiering.' >&2
+exit 1

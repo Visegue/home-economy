@@ -2,6 +2,14 @@
 
 Här finns förtest, kvalitetskontroller och testernas avgränsning. Se [lokal utveckling](local-development.md) för installation.
 
+## Lokal verifiering
+
+Kör `./scripts/verify-local` efter installationen. Ingången använder sitt eget worktree även när den anropas via sökväg från en annan katalog. Den väljer kompatibla redan installerade Node/Bun/pnpm enligt `.tool-versions` och `package.json`, kör `check:local` och startar sedan `pnpm check` och `pnpm test:e2e` sekventiellt genom `agent:job`. Fel eller avbrott i ett steg stoppar nästa; befintliga jobbresultat och Next-lås används.
+
+Verktyg söks i PATH, lokala mise-installationer (`MISE_DATA_DIR`/`XDG_DATA_HOME`) och Corepacks pnpm-cache (`COREPACK_HOME`/`XDG_CACHE_HOME`). Uppslag begränsas till två sekunder per kandidat. Valda verktyg binds till körningen genom en privat temporär katalog som tas bort efter normalt avslut eller hanterat avbrott. Personliga sökvägar behöver inte anges; inga globala inställningar ändras och inga verktyg/browser laddas ned. Om en kompatibel installation eller nödvändig skrivbehörighet saknas stannar ingången med fel före testerna. Installera enligt [lokal utveckling](local-development.md) först.
+
+CI fortsätter använda sina befintliga pinnade installationer och separata jobb. Enskilda projektkommandon nedan finns kvar för riktad felsökning i en redan konfigurerad miljö.
+
 ## Förtest
 
 Kör `bun scripts/check-local-environment.mjs` i repots rot före längre verifieringsjobb; när pnpm redan fungerar finns även `pnpm check:local`. Om Bun saknas kan en redan installerad Node köra samma `.mjs`-fil. Direktkommandot låter diagnostiken starta även när pnpm/Corepack annars försöker hämta rätt version före ett npm-skript.
