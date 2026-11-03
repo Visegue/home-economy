@@ -43,9 +43,14 @@ bootstrap() {
   fi
 }
 for name in node bun; do
-  candidate=$(command -v "$name" 2>/dev/null || true)
-  case "$candidate" in */shims/*|"") continue ;; esac
-  bootstrap "$@"
+  remaining_path=${PATH:-}:
+  while [ -n "$remaining_path" ]; do
+    directory=${remaining_path%%:*}
+    remaining_path=${remaining_path#*:}
+    candidate=${directory:-.}/$name
+    case "$candidate" in */shims/*) continue ;; esac
+    if [ -f "$candidate" ] && [ -x "$candidate" ]; then bootstrap "$@"; fi
+  done
 done
 mise_data=${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}
 for candidate in "$mise_data"/installs/node/*/bin/node "$mise_data"/installs/bun/*/bin/bun; do

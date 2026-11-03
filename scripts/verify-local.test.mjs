@@ -160,6 +160,31 @@ test("selects installed tools despite wrong PATH and runs real job boundaries se
   expect(result.stdout.match(/Result: completed; exit 0/g)).toHaveLength(2);
 });
 
+test("bootstraps with compatible runtimes later in PATH when first candidates are broken and mise is absent", () => {
+  const f = fixture();
+  const later = join(f.root, "later tools");
+  mkdirSync(later);
+  for (const [name, version] of [
+    ["node", "24.21.0"],
+    ["bun", "1.3.14"],
+  ]) {
+    copyFileSync(
+      join(f.mise, "installs", name, version, "bin", name),
+      join(later, name),
+    );
+    executable(join(f.root, "bin", name), "#!/bin/sh\nexit 9\n");
+  }
+  rmSync(f.mise, { recursive: true });
+  f.env.PATH = `${join(f.root, "bin")}:${later}:/usr/bin:/bin`;
+  const result = run(f);
+  expect(result.status).toBe(0);
+  expect(events(f).map((row) => row.stage)).toEqual([
+    "preflight",
+    "check",
+    "test:e2e",
+  ]);
+});
+
 test.each(["broken", "stalled"])(
   "bootstraps past a %s first runtime in PATH",
   (kind) => {
