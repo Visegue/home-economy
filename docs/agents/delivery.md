@@ -5,12 +5,15 @@ The user authorized this workflow on 2026-10-14 for #104 and future user-request
 ## Prepare the PR
 
 1. Keep the implementation in its assigned branch/worktree. Inspect current main and existing PRs before creating or updating anything.
-2. Complete issue-specific tests, repository checks, versioning and working-tree review. Use `git-commit` for task and review-fix commits. Push the issue branch and use `pr`, the repository template and `gh` to create or update its GitHub PR.
-3. Describe the final change, before/after evidence, version choice, material limitations and rollback scope. Apply the user's runtime-model attribution to external text. Link the originating issue and attach the PR to its Codex chat.
+2. Assess documentation impact before PR creation: entry points, topic guides, command examples, cross-references and ADR needs. Check relevant documents outside the diff; update affected instructions and links or explain why no change is needed. Record the assessment in the PR.
+3. Complete issue-specific tests, repository checks, versioning and working-tree review. Use `git-commit` for task and review-fix commits. Push the issue branch and use `pr`, the repository template and `gh` to create or update its GitHub PR.
+4. Describe the final change, before/after evidence, version choice, material limitations and rollback scope. Apply the user's runtime-model attribution to external text. Link the originating issue and attach the PR to its Codex chat.
 
 ## Review in a separate session
 
 Create a fresh Codex chat for the PR review, without forking the implementing conversation. The review may run the `code-review` skill's separate Standards and Spec agents, but those agents alone do not replace the requested independent chat. Read the PR/issue and repository standards in that chat; inspect committed code at a pinned base and head. Keep review operations read-only on the implementation checkout.
+
+Independently verify the documentation assessment against the final behavior and relevant unchanged documents.
 
 The user authorizes messages to that review chat requesting the initial review and subsequent reviews of changed heads, and authorizes posting review findings and replies to the PR. Return the reviewed head SHA, Standards/Spec findings, verification concerns and an explicit disposition. Reviewer text uses the reviewing session's own runtime-model attribution. A COMMENT review with an explicit disposition is valid independent-session evidence when GitHub disallows approving one's own PR; it does not replace any required GitHub approval.
 
