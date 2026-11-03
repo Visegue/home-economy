@@ -1,5 +1,4 @@
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
 import {
   accessSync,
   constants,
@@ -10,36 +9,8 @@ import {
   rmSync,
 } from "node:fs";
 
-const timeout = 2000;
-// Version shims may otherwise download the requested package manager implicitly.
-const probeEnv = {
-  ...process.env,
-  COREPACK_ENABLE_NETWORK: "0",
-  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
-  npm_config_manage_package_manager_versions: "false",
-  MISE_AUTO_INSTALL: "false",
-  MISE_OFFLINE: "true",
-};
-function probe(command, args) {
-  const result = spawnSync(command, args, {
-    env: probeEnv,
-    encoding: "utf8",
-    timeout,
-    killSignal: "SIGKILL",
-    maxBuffer: 4096,
-  });
-  const failure =
-    result.error?.code === "ENOENT"
-      ? "saknas"
-      : result.error?.code === "ETIMEDOUT"
-        ? "timeout (2 s)"
-        : result.error?.code === "EACCES" || result.error?.code === "EPERM"
-          ? "nekad behörighet"
-          : result.error || result.status !== 0
-            ? "misslyckades"
-            : null;
-  return { failure, output: result.stdout?.trim() ?? "" };
-}
+import { matches, probe } from "./local-tools.mjs";
+
 function browserVersion(executable) {
   try {
     accessSync(executable, constants.X_OK);
@@ -65,13 +36,6 @@ function browserVersion(executable) {
     };
   }
   return probe(executable, ["--version"]);
-}
-function matches(version, requirement) {
-  const parts = requirement.replace(/\.x$/, "").split(".");
-  return (
-    /^\d+(?:\.\d+){0,2}$/.test(parts.join(".")) &&
-    parts.every((part, index) => version.split(".")[index] === part)
-  );
 }
 let complete = true;
 function report(label, failure, detail, next) {

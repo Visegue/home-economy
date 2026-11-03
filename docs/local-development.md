@@ -33,6 +33,6 @@ pnpm dev
 
 Öppna [localhost:3000](http://localhost:3000). Appvyerna kräver en session som valideras i databasen. Ekonomidatan kan även köras lokalt med PGlite.
 
-Kör [förtest och kvalitetskontroller](testing.md#förtest) efter installationen. För agenter som kör längre jobb finns [verktygsguiden](agents/tool-jobs.md).
+Kör `./scripts/verify-local` efter installationen för automatiskt runtimeval, förtest och sekventiell check/E2E; se [lokal verifiering](testing.md#lokal-verifiering). För agenter som kör längre jobb finns [verktygsguiden](agents/tool-jobs.md).
 
 [Till dokumentationsindexet](README.md) · [Till projektets README](../README.md)
