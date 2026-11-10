@@ -5,6 +5,7 @@ The user authorized this workflow on 2026-10-14 for #104 and future user-request
 ## Prepare the PR
 
 1. Keep the implementation in its assigned branch/worktree. Inspect current main and existing PRs before creating or updating anything.
+   For authentication changes or related dependency updates, consult [authentication](../authentication.md) and the [release runbook](../release-runbook.md) before implementation. Plan the external checks required there and distinguish them from automated coverage. Request the user's manual test results once a concrete preview is available.
 2. Assess documentation impact before PR creation: entry points, topic guides, command examples, cross-references and ADR needs. Check relevant documents outside the diff; update affected instructions and links or explain why no change is needed. Record the assessment in the PR.
 3. Complete issue-specific tests, repository checks, versioning and working-tree review. Use `git-commit` for task and review-fix commits. Push the issue branch and use `pr`, the repository template and `gh` to create or update its GitHub PR.
 4. Describe the final change, before/after evidence, version choice, material limitations and rollback scope. Apply the user's runtime-model attribution to external text. Link the originating issue and attach the PR to its Codex chat.
@@ -36,3 +37,9 @@ While review or CI is pending, use a thread heartbeat to continue this same deli
 The implementation and reviewer chats are the authorized participants; continue their work without further routine permission prompts. Do not run the same delivery concurrently from unrelated chats.
 
 After merge, verify the CI/deployment/release result against the exact merge commit and the production identity under the release runbook. Only CI creates release tags. Mark project delivery status from verified results, then pause the completed issue's heartbeat. Preserve the branch/worktree until cleanup is explicitly requested. A review/CI/deploy failure is investigated and corrected within the issue scope; an unresolved external blocker is reported as such.
+
+## Requested retrospective and close-out
+
+When the user requests a retrospective, use the `retro` skill and follow its steps, including `writing-for-agents`. If a named skill is absent from the available catalog, search installed skills for its `SKILL.md`. If it cannot be found, report that and agree an alternative with the user before substituting another method.
+
+Present the retrospective's improvement candidates before using `close-out` to archive it. Update the existing session archive with the selected retrospective verbatim. Report which skills were used and verify that the archived retrospective matches the presented version.
