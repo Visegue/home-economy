@@ -34,6 +34,14 @@ export function probe(command, args, env = process.env) {
     killSignal: "SIGKILL",
     maxBuffer: 4096,
   });
+  const missingLinuxLibrary =
+    process.platform === "linux" &&
+    !result.error &&
+    Number.isInteger(result.status) &&
+    result.status !== 0 &&
+    /: error while loading shared libraries: [A-Za-z0-9_+.-]+\.so(?:\.\d+)*: cannot open shared object file: No such file or directory(?:\r?\n|$)/.test(
+      result.stderr ?? "",
+    );
   const failure =
     result.error?.code === "ENOENT"
       ? "saknas"
@@ -42,7 +50,9 @@ export function probe(command, args, env = process.env) {
         : result.error?.code === "EACCES" || result.error?.code === "EPERM"
           ? "nekad behörighet"
           : result.error || result.status !== 0
-            ? "misslyckades"
+            ? missingLinuxLibrary
+              ? "saknat delat Linux-bibliotek"
+              : "misslyckades"
             : null;
   return { failure, output: result.stdout?.trim() ?? "" };
 }

@@ -18,6 +18,8 @@ Förtestet läser `.tool-versions`, `package.json` och installerad Playwright. D
 
 Diagnostiken laddar inte ned verktyg/browser eller ändrar globala trust-inställningar. Den spärrar automatisk installation via Corepack, pnpm och mise i sina uppslag och skapar/tar bort tomma temporära kataloger för skrivkontrollen. Vid shim-, timeout- eller behörighetsfel: välj redan installerade binärer i PATH och kör direktkommandot igen inom tillåten sandbox. Installation eller utökad behörighet är ett separat, uttryckligt steg. Inga personliga sökvägar eller `.tmp`-wrappers behövs. CI:s pinnade installationer och Node 24-undantagen ovan behålls.
 
+`Browser: saknat delat Linux-bibliotek` betyder att browserns körbara fil finns men att Linux-loadern saknar ett systembibliotek. Förtestet visar bara feltypen, utan rå stderr eller lokala sökvägar. Installera browserns systemberoenden som ett separat steg med `pnpm exec playwright install-deps chromium` om systeminstallation är tillgänglig; det kan kräva nätverk och sudo. Annars kan en verifierad redan installerad Chrome väljas via `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`. Kör sedan förtestet igen och verifiera browservalet med `pnpm test:e2e`. Förtestet installerar ingenting automatiskt.
+
 ## Kvalitetskontroller
 
 Efter `pnpm install` kan `pnpm check` köras utan `.env.local`, databas eller egna auth-nycklar. Kommandot kontrollerar versionsformat och UI-gränser och kör format, lint, typkontroll, tester och verifieringsbygge. Kör enskilt med:
