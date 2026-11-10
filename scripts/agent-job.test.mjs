@@ -215,3 +215,92 @@ test("rejects a tiny excerpt budget with a useful bound before starting a job", 
   expect(result.stderr).toContain("256");
   expect(result.stdout).not.toContain("Evidence:");
 });
+
+test.each([
+  { denied: 0, timeout: false },
+  { denied: 0, timeout: true },
+  { denied: "SIGTERM", timeout: true },
+  { denied: "SIGKILL", timeout: true },
+  { denied: "signals", timeout: true },
+])(
+  "preserves a final report when process control is denied: $denied, timeout=$timeout",
+  ({ denied, timeout }) => {
+    // Inject only into the runner, never into the command or the test process.
+    const preload = `const kill = process.kill.bind(process);
+    process.kill = (pid, signal) => {
+      if (pid < 0 && (signal === ${JSON.stringify(denied)} || (${JSON.stringify(denied)} === 'signals' && signal !== 0))) {
+        const error = new Error('synthetic private diagnostic');
+        error.code = 'EPERM'; throw error;
+      }
+      return kill(pid, signal);
+    };`;
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--import",
+        `data:text/javascript,${encodeURIComponent(preload)}`,
+        script,
+        "run",
+        "--timeout-ms",
+        timeout ? "300" : "5000",
+        "--",
+        process.execPath,
+        "-e",
+        denied === "signals"
+          ? "setInterval(() => {}, 1000)"
+          : timeout
+            ? 'process.on("SIGTERM", () => {}); setTimeout(() => process.exit(7), 1800)'
+            : "process.exit(7)",
+      ],
+      { encoding: "utf8", timeout: 10000 },
+    );
+    const directory = /Evidence: (.+)/.exec(result.stdout)?.[1];
+    let report;
+    try {
+      expect(result.status).toBe(125);
+      report = JSON.parse(readFileSync(`${directory}/result.json`, "utf8"));
+      expect(report).toMatchObject({
+        state: "cleanup-failure",
+        exitCode: 125,
+        cleanup: "incomplete",
+        commandState: denied === "signals" ? "unknown" : "completed",
+        processErrors:
+          denied === "signals"
+            ? [
+                { operation: "signal", signal: "SIGTERM", code: "EPERM" },
+                { operation: "signal", signal: "SIGKILL", code: "EPERM" },
+              ]
+            : [
+                {
+                  operation: denied === 0 ? "probe" : "signal",
+                  signal: denied,
+                  code: "EPERM",
+                },
+              ],
+      });
+      expect(report.commandExitCode).toBe(
+        denied === "signals"
+          ? null
+          : !timeout || denied === "SIGKILL"
+            ? 7
+            : 137,
+      );
+      expect(report.stopReason).toEqual(
+        timeout ? { state: "timeout", exitCode: 124 } : undefined,
+      );
+      expect(result.stderr).not.toContain("synthetic private diagnostic");
+      expect(run(["status", directory]).status).toBe(125);
+    } finally {
+      // This test alone owns the intentionally unsignalable job; the runner
+      // correctly reports it as incomplete. The injection is not active here.
+      const ownedPid = Number(
+        /child\/group PID (\d+)/.exec(result.stdout)?.[1],
+      );
+      if (denied === "signals" && ownedPid > 1) {
+        process.kill(-ownedPid, "SIGKILL");
+      }
+      if (directory) rmSync(directory, { recursive: true, force: true });
+    }
+  },
+  10000,
+);
