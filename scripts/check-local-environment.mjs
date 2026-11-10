@@ -127,7 +127,9 @@ try {
         "Browser",
         failure,
         `(${override ? "explicit override" : `chromium-headless-shell build ${selected.revision}`}; version ${version ?? "okänd"}; Playwright förväntar ${selected.version})`,
-        nextBrowser,
+        failure === "saknat delat Linux-bibliotek"
+          ? "installera browserns Linux-systemberoenden med pnpm exec playwright install-deps chromium som ett separat steg (kan kräva sudo), eller välj en verifierad installerad Chrome via PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH. Kör sedan förtestet igen."
+          : nextBrowser,
       );
     }
   }

@@ -209,6 +209,75 @@ test.each(["supported", "missing", "mismatch", "override"])(
   },
 );
 
+test.skipIf(process.platform !== "linux").each(["installed", "override"])(
+  "explains a missing Linux browser library without exposing stderr: %s",
+  (mode) => {
+    const { root, cache, executable } = browserFixture();
+    browser(executable, browserSpec.browserVersion);
+    const selected =
+      mode === "override" ? join(root, "custom-browser") : executable;
+    writeFileSync(
+      selected,
+      `#!${process.execPath}\nconsole.error(${JSON.stringify(`${selected}: error while loading shared libraries: libnspr4.so: cannot open shared object file: No such file or directory\nPRIVATE_SECRET=synthetic-private-diagnostic`)}); process.exit(127);\n`,
+      { mode: 0o755 },
+    );
+    const result = run(root, {
+      PLAYWRIGHT_BROWSERS_PATH: cache,
+      ...(mode === "override"
+        ? { PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: selected }
+        : {}),
+    });
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("Browser: saknat delat Linux-bibliotek");
+    expect(result.stdout).toContain("playwright install-deps chromium");
+    expect(result.stdout).not.toContain(root);
+    expect(result.stdout).not.toContain("synthetic-private-diagnostic");
+    expect(result.stdout).not.toContain("error while loading shared libraries");
+    expect(result.stderr).toBe("");
+  },
+);
+
+test.each([
+  [
+    'require("node:fs").writeSync(2, "browser: error while loading shared libraries: libnspr4.so: cannot open shared object file: No such file or directory\\n"); process.kill(process.pid, "SIGTERM")',
+    "misslyckades",
+  ],
+  [
+    'console.error("PRIVATE_SECRET=synthetic-private-diagnostic libnspr4.so"); process.exit(127)',
+    "misslyckades",
+  ],
+  [
+    'console.error("browser: error while loading shared libraries: libnspr4.so: cannot open shared object file: No such file or directory"); setInterval(() => {}, 1000)',
+    "timeout (2 s)",
+  ],
+  [
+    'process.stderr.write("browser: error while loading shared libraries: libnspr4.so: cannot open shared object file: No such file or directory\\n" + "PRIVATE_SECRET=synthetic-private-diagnostic".repeat(300)); setInterval(() => {}, 1000)',
+    "misslyckades",
+  ],
+])(
+  "retains bounded failures without printing browser stderr: %s",
+  (body, reason) => {
+    const { root, cache, executable } = browserFixture();
+    browser(executable, browserSpec.browserVersion);
+    const override = join(root, "custom-browser");
+    writeFileSync(override, `#!${process.execPath}\n${body}\n`, {
+      mode: 0o755,
+    });
+    const started = Date.now();
+    const result = run(root, {
+      PLAYWRIGHT_BROWSERS_PATH: cache,
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: override,
+    });
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(`Browser: ${reason}`);
+    expect(result.stdout).toContain("explicit override");
+    expect(result.stdout).not.toContain(root);
+    expect(result.stdout).not.toContain("synthetic-private-diagnostic");
+    expect(result.stderr).toBe("");
+    expect(Date.now() - started).toBeLessThan(7000);
+  },
+);
+
 test("reports restricted build-output write permission with an explicit next step", () => {
   const { root, cache, executable } = browserFixture();
   browser(executable, browserSpec.browserVersion);
