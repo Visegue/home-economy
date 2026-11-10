@@ -21,11 +21,11 @@ export function FormDialogContent({
   children: ReactNode;
 } & Omit<React.ComponentProps<typeof DialogContent>, "title" | "children">) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const focusFrameRef = useRef(0);
   const attachContent = useCallback((content: HTMLDivElement | null) => {
     contentRef.current = content;
     const viewport = window.visualViewport;
     if (!content || !viewport) return;
-    let focusFrame = 0;
 
     const updateViewport = () => {
       // The keyboard can shrink the visual viewport without changing dvh.
@@ -74,8 +74,8 @@ export function FormDialogContent({
     };
     // Native focus scrolling does not account for a sticky form footer.
     const updateAfterFocus = () => {
-      cancelAnimationFrame(focusFrame);
-      focusFrame = requestAnimationFrame(updateViewport);
+      cancelAnimationFrame(focusFrameRef.current);
+      focusFrameRef.current = requestAnimationFrame(updateViewport);
     };
 
     updateViewport();
@@ -87,7 +87,7 @@ export function FormDialogContent({
       viewport.removeEventListener("resize", updateViewport);
       viewport.removeEventListener("scroll", updateViewport);
       content.removeEventListener("focusin", updateAfterFocus);
-      cancelAnimationFrame(focusFrame);
+      cancelAnimationFrame(focusFrameRef.current);
     };
   }, []);
 

@@ -167,6 +167,23 @@ if (mode === "status" && positionals.length === 1) {
     stdio: ["ignore", fd, fd],
     detached: true,
   });
+  const processErrors = [];
+  function recordProcessError(operation, signal, error) {
+    const code = redact(String(error.code ?? "UNKNOWN"));
+    if (
+      !processErrors.some(
+        (entry) =>
+          entry.operation === operation &&
+          entry.signal === signal &&
+          entry.code === code,
+      )
+    ) {
+      processErrors.push({ operation, signal, code });
+      console.error(
+        `Owned group ${child.pid}: ${operation} ${signal} failed (${code}); cleanup cannot be confirmed.`,
+      );
+    }
+  }
   const groupExists = () => {
     if (!child.pid) return false;
     try {
@@ -174,7 +191,8 @@ if (mode === "status" && positionals.length === 1) {
       return true;
     } catch (error) {
       if (error.code === "ESRCH") return false;
-      throw error;
+      recordProcessError("probe", 0, error);
+      return null;
     }
   };
   const signalGroup = (signal) => {
@@ -182,17 +200,29 @@ if (mode === "status" && positionals.length === 1) {
     try {
       process.kill(-child.pid, signal);
     } catch (error) {
-      if (error.code !== "ESRCH") throw error;
+      if (error.code !== "ESRCH") recordProcessError("signal", signal, error);
     }
   };
   let stopped;
   let force;
+  let abandon;
+  let finish;
   function stop(state, exitCode) {
     if (stopped) return;
     stopped = { state, exitCode };
     console.log(`Stopping owned group ${child.pid}: ${state}`);
     signalGroup("SIGTERM");
-    force = setTimeout(() => signalGroup("SIGKILL"), 1000);
+    force = setTimeout(() => {
+      signalGroup("SIGKILL");
+      // A denied signal must not leave the runner waiting forever for close.
+      // The command may still be alive: preserve that uncertainty in the report.
+      if (processErrors.length) {
+        abandon = setTimeout(
+          () => finish({ state: "unknown", exitCode: null }),
+          1000,
+        );
+      }
+    }, 1000);
   }
   const handlers = new Map([
     ["SIGINT", () => stop("cancelled", 130)],
@@ -225,6 +255,7 @@ if (mode === "status" && positionals.length === 1) {
   );
   console.log(`Evidence: ${directory}`);
   const outcome = await new Promise((resolve) => {
+    finish = resolve;
     child.once("error", () => resolve({ state: "spawn-error", exitCode: 127 }));
     child.once("close", (code, signal) =>
       resolve({
@@ -235,6 +266,8 @@ if (mode === "status" && positionals.length === 1) {
     );
   });
   clearTimeout(deadline);
+  clearTimeout(force);
+  clearTimeout(abandon);
   clearInterval(activity);
   // Even a successful parent can leave children behind. Account for the entire
   // group before reporting completion or letting an alternative start.
@@ -247,12 +280,18 @@ if (mode === "status" && positionals.length === 1) {
   }
   clearTimeout(force);
   for (const [signal, handler] of handlers) process.off(signal, handler);
-  const cleanup = groupExists() ? "incomplete" : "complete";
+  const remaining = groupExists();
+  const cleanup =
+    remaining === false && processErrors.length === 0
+      ? "complete"
+      : "incomplete";
   const result = {
     ...outcome,
     ...stopped,
     commandExitCode: outcome.exitCode,
     commandState: outcome.state,
+    ...(stopped ? { stopReason: stopped } : {}),
+    ...(processErrors.length ? { processErrors } : {}),
     cleanup,
   };
   if (cleanup !== "complete" || (leftovers && !stopped)) {
@@ -260,6 +299,7 @@ if (mode === "status" && positionals.length === 1) {
     result.exitCode = 125;
   }
   closeSync(fd);
+  if (outcome.state === "unknown") child.unref();
   writeFileSync(
     join(directory, "result.json"),
     JSON.stringify({

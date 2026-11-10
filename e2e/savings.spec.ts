@@ -26,13 +26,13 @@ test("hanterar månadssparande med bestående belopp och uppdaterad totalsumma",
   });
   const total = transfers.getByRole("status", { name: "Totalt att föra över" });
   const summary = page.getByRole("region", { name: "Månadens nyckeltal" });
+  await expectMonth(page, start);
   const cardTitles = await page
     .locator('[data-slot="card-title"]')
     .allTextContents();
   expect(cardTitles.indexOf("Direkta utgifter")).toBeLessThan(
     cardTitles.indexOf("Spara"),
   );
-  await expectMonth(page, start);
   await expect(
     page.getByRole("link", { name: /föregående|nästa månad/i }),
   ).toHaveCount(0);
